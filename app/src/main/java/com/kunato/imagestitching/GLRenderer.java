@@ -36,29 +36,9 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     private FloatBuffer pVertex;
     private FloatBuffer pTexCoord;
     private int hProgram;
-
     private SurfaceTexture mSTexture;
-
     private boolean mUpdateST = false;
-
     private CameraSurfaceView mView;
-    @Override
-    public void onSurfaceCreated ( GL10 unused, EGLConfig config ) {
-        //String extensions = GLES20.glGetString(GLES20.GL_EXTENSIONS);
-        //Log.i("mr", "Gl extensions: " + extensions);
-        //Assert.assertTrue(extensions.contains("OES_EGL_image_external"));
-
-        initTex();
-        mSTexture = new SurfaceTexture ( hTex[0] );
-        mSTexture.setOnFrameAvailableListener(this);
-        Log.d("test","test");
-        GLES20.glClearColor(1.0f, 1.0f, 0.0f, 1.0f);
-
-        hProgram = loadShader ( vss, fss );
-    }
-    public SurfaceTexture getSurfaceTexture(){
-        return mSTexture;
-    }
 
     GLRenderer(CameraSurfaceView view) {
         mView = view;
@@ -72,15 +52,19 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         pTexCoord.position(0);
     }
 
-    public void close()
-    {
-        mUpdateST = false;
-        mSTexture.release();
-        deleteTex();
+    public void onSurfaceCreated ( GL10 unused, EGLConfig config ) {
+        //String extensions = GLES20.glGetString(GLES20.GL_EXTENSIONS);
+        //Log.i("mr", "Gl extensions: " + extensions);
+        //Assert.assertTrue(extensions.contains("OES_EGL_image_external"));
+
+        initTex();
+        mSTexture = new SurfaceTexture ( hTex[0] );
+        mSTexture.setOnFrameAvailableListener(this);
+        GLES20.glClearColor(1.0f, 1.0f, 0.0f, 1.0f);
+
+        hProgram = loadShader ( vss, fss );
     }
-
-
-
+    //Core function
     public void onDrawFrame ( GL10 unused ) {
         GLES20.glClear( GLES20.GL_COLOR_BUFFER_BIT );
 
@@ -102,7 +86,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         GLES20.glUniform1i(th, 0);
 
         GLES20.glVertexAttribPointer(ph, 2, GLES20.GL_FLOAT, false, 4*2, pVertex);
-        GLES20.glVertexAttribPointer(tch, 2, GLES20.GL_FLOAT, false, 4*2, pTexCoord );
+        GLES20.glVertexAttribPointer(tch, 2, GLES20.GL_FLOAT, false, 4 * 2, pTexCoord);
         GLES20.glEnableVertexAttribArray(ph);
         GLES20.glEnableVertexAttribArray(tch);
 
@@ -113,6 +97,11 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     public void onSurfaceChanged ( GL10 unused, int width, int height ) {
         GLES20.glViewport(0, 0, width, height);
         }
+
+    public synchronized void onFrameAvailable ( SurfaceTexture st ) {
+        mUpdateST = true;
+        mView.requestRender();
+    }
 
     private void initTex() {
         hTex = new int[1];
@@ -126,11 +115,6 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
 
     private void deleteTex() {
         GLES20.glDeleteTextures(1, hTex, 0);
-    }
-
-    public synchronized void onFrameAvailable ( SurfaceTexture st ) {
-        mUpdateST = true;
-        mView.requestRender();
     }
 
     private static int loadShader ( String vss, String fss ) {
@@ -165,5 +149,14 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         return program;
     }
 
+    public void close() {
+        mUpdateST = false;
+        mSTexture.release();
+        deleteTex();
+    }
 
+    public SurfaceTexture getSurfaceTexture(){
+
+        return mSTexture;
+    }
 }
