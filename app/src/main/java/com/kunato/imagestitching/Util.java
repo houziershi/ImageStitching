@@ -1,10 +1,17 @@
 package com.kunato.imagestitching;
 
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.hardware.SensorManager;
 import android.hardware.camera2.CameraCharacteristics;
+import android.opengl.GLES20;
+import android.opengl.GLUtils;
 import android.util.Log;
 import android.util.Size;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.Comparator;
 
 import static java.lang.Math.sin;
@@ -122,4 +129,23 @@ public class Util {
 //        Log.d("camera matrix"+code,"["+indexer.getDouble(2,0)+","+indexer.getDouble(2,1)+","+indexer.getDouble(2,2)+"]");
 //        Log.d("camera matrix"+code,"######################################");
 //    }
+    public static void writeBitMap(Bitmap bmp){
+        FileOutputStream out = null;
+        try {
+            out = new FileOutputStream("/sdcard/test.png");
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, out); // bmp is your Bitmap instance
+            // PNG is a lossless format, the compression factor (100) is ignored
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (out != null) {
+                    out.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
 }

@@ -27,6 +27,7 @@ import android.opengl.GLSurfaceView;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.util.Range;
 import android.util.Size;
@@ -38,6 +39,8 @@ import org.opencv.android.Utils;
 import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
@@ -102,7 +105,7 @@ public class CameraSurfaceView extends GLSurfaceView {
                     return;
                 }
                 Log.e("INPUT","Image In");
-                AsyncTask<Mat, Integer, org.opencv.core.Size> imageStitchingTask = new ImageStitchingTask();
+                AsyncTask<Mat, Integer, Mat> imageStitchingTask = new ImageStitchingTask();
                 ByteBuffer jpegBuffer = img.getPlanes()[0].getBuffer();
                 byte[] jpegData = new byte[jpegBuffer.remaining()];
                 jpegBuffer.get(jpegData);
@@ -122,7 +125,8 @@ public class CameraSurfaceView extends GLSurfaceView {
                     mRotationMatrix[10] = 1.0f;
                     mRotationMatrix[15] = 1.0f;
                     firstTime = false;
-                    mSensorManager.registerListener(runningSensorListener, mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE), 10000);
+                    mSensorManager.registerListener(runningSensorListener, mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE), 1000);
+//                    mSensorManager.registerListener(runningSensorListener,mSensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR),10000);
 
                 }
                 Mat rotationMat = new Mat();
@@ -274,7 +278,7 @@ public class CameraSurfaceView extends GLSurfaceView {
                 List<Size> outputSizes = Arrays.asList(map.getOutputSizes(ImageFormat.JPEG));
                 Size largest = Collections.max(outputSizes, new Util.CompareSizesByArea());
 
-                mImageReader = ImageReader.newInstance(largest.getWidth() / 16, largest.getHeight() / 16, ImageFormat.JPEG, 2);
+                mImageReader = ImageReader.newInstance(largest.getWidth()/5, largest.getHeight()/5, ImageFormat.JPEG, 2);
                 mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
                 mCharacteristics = characteristics;
                 mCameraId = cameraId;
@@ -441,7 +445,7 @@ public class CameraSurfaceView extends GLSurfaceView {
                 float axisZ = event.values[2];
 
                 float omegaMagnitude = (float) sqrt(axisX*axisX + axisY*axisY + axisZ*axisZ);
-                if (omegaMagnitude > 1.0) {
+                if (omegaMagnitude > 0.000000001f) {
                     axisX /= omegaMagnitude;
                     axisY /= omegaMagnitude;
                     axisZ /= omegaMagnitude;
@@ -460,17 +464,20 @@ public class CameraSurfaceView extends GLSurfaceView {
             SensorManager.getRotationMatrixFromVector(deltaRotationMatrix, deltaRotationVector);
             return Util.naivMatrixMultiply(mRotationMatrix, deltaRotationMatrix);
         }
+
         @Override
         public void onSensorChanged(SensorEvent event) {
-            if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE){
+            if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
 
                 mRotationMatrix = getRotationFromGyro(event);
+            }
+        }
 //                mRotVec[0] += event.values[0];
 //                mRotVec[1] -= event.values[1];
 //                mRotVec[2] += event.values[2];
 //                timedelta += timestamp;
 //                timestamp = event.timestamp;
-            }
+//            }
 //            if (event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR) {
             // convert the rotation-vector to a 4x4 matrix. the matrix
             // is interpreted by Open GL as the inverse of the
@@ -495,7 +502,7 @@ public class CameraSurfaceView extends GLSurfaceView {
 //            }
 //            Log.d("Matrix","############################");
 
-        }
+//        }
 
 
         @Override
@@ -503,21 +510,34 @@ public class CameraSurfaceView extends GLSurfaceView {
 
         }
     }
-    private class ImageStitchingTask extends AsyncTask<Mat, Integer, org.opencv.core.Size> {
-        protected org.opencv.core.Size doInBackground(Mat... mat) {
+    private class ImageStitchingTask extends AsyncTask<Mat, Integer, Mat> {
+        protected Mat doInBackground(Mat... mat) {
             asyncRunning = true;
             ImageStitchingNative is = new ImageStitchingNative();
             Mat ret = is.addToPano(mat[0], mat[1]);
             mNumPicture++;
-            return ret.size();
+            return ret;
         }
 
         protected void onProgressUpdate(Integer... progress) {
         }
+        //TODO dummy vertices
+        protected void onPostExecute(Mat result) {
 
-        protected void onPostExecute(org.opencv.core.Size result) {
             asyncRunning = false;
-            Log.d("Post","Finished, Size :"+result.width+","+result.height);
+            Log.d("mNumPicture",mNumPicture+"");
+            if(mNumPicture < 3)
+                return;
+            Bitmap bmp = Bitmap.createBitmap(result.cols(), result.rows(), Bitmap.Config.ARGB_8888);
+            Mat test = new Mat(result.height(),result.width(),CvType.CV_8UC3);
+            Imgproc.cvtColor(result,test,Imgproc.COLOR_BGR2RGBA);
+            Utils.matToBitmap(test, bmp);
+            float[] vertices2 = {0.5f,  -0.5f, 0.0f,   // top left
+                    -0.5f, -0.5f, 0.0f,   // bottom left
+                    0.5f, 0.5f, 0.0f,   // bottom right
+                    -0.5f,  0.5f, 0.0f }; // top right
+            glRenderer.getCanvas2().setTexture(bmp,vertices2);
+            Log.d("Post","Finished, Size :"+result.size().width+","+result.size().height);
         }
     }
 }

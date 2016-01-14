@@ -65,7 +65,7 @@ using namespace cv;
 using namespace cv::detail;
 
 
-double work_scale = 1.0, seam_scale = 1.0, compose_scale = 1.0;
+double work_scale = 0.2, seam_scale = 0.2, compose_scale = 1;
 double seam_work_aspect = 1;
 // Default command line args
 
@@ -78,6 +78,7 @@ float match_conf = 0.3f;
 string seam_find_type = "gc_color";
 float blend_strength = 5;
 string result_name = "/mnt/sdcard/result.png";
+int blend_type = Blender::NO;
 #define TAG "NATIVE_DEBUG"
 
 extern "C" {
@@ -317,8 +318,10 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
 //    __android_log_print(ANDROID_LOG_VERBOSE, TAG, "Do SeamFinder %d", 0);
     seam_finder->find(images_warped, corners, masks_warped);
 //    __android_log_print(ANDROID_LOG_VERBOSE, TAG, "Do Composition %d", 0);
-    doComposition(warped_image_scale,cameras,images,nullptr,work_scale,compose_scale,blend_type,result);
+    Mat out;
+    doComposition(warped_image_scale,cameras,images,nullptr,work_scale,compose_scale,blend_type,out);
     __android_log_print(ANDROID_LOG_ERROR,TAG,"Compositioned %d Images",num_images);
+    out.convertTo(result,CV_8UC3);
 //
 //    __android_log_print(ANDROID_LOG_VERBOSE, TAG, "Composition %d", 5);
 //    Mat img;
