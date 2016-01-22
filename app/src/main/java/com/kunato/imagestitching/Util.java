@@ -23,9 +23,8 @@ import static java.lang.StrictMath.cos;
  * Created by kunato on 12/14/15 AD.
  */
 public class Util {
-    /**
-     * Compares two {@code Size}s based on their areas.
-     */
+    private static final float NS2S = 1.0f / 1000000000.0f;
+
     public static class CompareSizesByArea implements Comparator<Size> {
 
         @Override
@@ -36,7 +35,8 @@ public class Util {
         }
 
     }
-    private static final float NS2S = 1.0f / 1000000000.0f;
+
+
     public static float[] naivMatrixMultiply(float[] B, float[] A) {
         int mA, nA, mB, nB;
         mA = nA = (int) Math.sqrt(A.length);
@@ -52,6 +52,7 @@ public class Util {
                     C[i + nA * j] += (A[i + nA * k] * B[k + nB * j]);
         return C;
     }
+
     public static float[] getRotationFromGyro(float[] values,float timestamp,float nowTimeStamp,float[] currentRotMatrix,boolean swapX,boolean swapY,boolean swapZ){
         float[] deltaRotationVector = new float[4];
         if (timestamp != 0) {
@@ -79,6 +80,7 @@ public class Util {
         SensorManager.getRotationMatrixFromVector(deltaRotationMatrix, deltaRotationVector);
         return naivMatrixMultiply(currentRotMatrix, deltaRotationMatrix);
     }
+
     public static float[] getQuadFromGyro(float[] values,float timestamp,float nowTimeStamp,float[] mCurrentRot,boolean swapX,boolean swapY,boolean swapZ){
         float[] deltaRotationVector = new float[4];
         if (timestamp != 0) {
@@ -86,7 +88,7 @@ public class Util {
             float axisX = swapX? -values[0]: values[0];
             float axisY = swapY? -values[1]: values[1];
             float axisZ = swapZ? -values[2]: values[2];
-            float omegaMagnitude = (float) sqrt(axisX*axisX + axisY*axisY + axisZ*axisZ);
+            float omegaMagnitude = (float) sqrt(axisX * axisX + axisY * axisY + axisZ * axisZ);
             if (omegaMagnitude > 0.1f) {
                 axisX /= omegaMagnitude;
                 axisY /= omegaMagnitude;
@@ -103,6 +105,7 @@ public class Util {
         }
         return mCurrentRot;
     }
+
     public static int getJpegOrientation(CameraCharacteristics c, int deviceOrientation) {
         if (deviceOrientation == android.view.OrientationEventListener.ORIENTATION_UNKNOWN) return 0;
         int sensorOrientation = c.get(CameraCharacteristics.SENSOR_ORIENTATION);
@@ -139,17 +142,37 @@ public class Util {
             }
         }
     }
-    public static int loadShader(int type, String shaderCode){
 
-        // create a vertex shader type (GLES20.GL_VERTEX_SHADER)
-        // or a fragment shader type (GLES20.GL_FRAGMENT_SHADER)
-        int shader = GLES20.glCreateShader(type);
+    public static int loadShader ( String vss, String fss ) {
+        int vshader = GLES20.glCreateShader(GLES20.GL_VERTEX_SHADER);
+        GLES20.glShaderSource(vshader, vss);
+        GLES20.glCompileShader(vshader);
+        int[] compiled = new int[1];
+        GLES20.glGetShaderiv(vshader, GLES20.GL_COMPILE_STATUS, compiled, 0);
+        if (compiled[0] == 0) {
+            Log.e("Shader", "Could not compile vshader");
+            Log.v("Shader", "Could not compile vshader:"+GLES20.glGetShaderInfoLog(vshader));
+            GLES20.glDeleteShader(vshader);
+            vshader = 0;
+        }
 
-        // add the source code to the shader and compile it
-        GLES20.glShaderSource(shader, shaderCode);
-        GLES20.glCompileShader(shader);
+        int fshader = GLES20.glCreateShader(GLES20.GL_FRAGMENT_SHADER);
+        GLES20.glShaderSource(fshader, fss);
+        GLES20.glCompileShader(fshader);
+        GLES20.glGetShaderiv(fshader, GLES20.GL_COMPILE_STATUS, compiled, 0);
+        if (compiled[0] == 0) {
+            Log.e("Shader", "Could not compile fshader");
+            Log.v("Shader", "Could not compile fshader:"+GLES20.glGetShaderInfoLog(fshader));
+            GLES20.glDeleteShader(fshader);
+            fshader = 0;
+        }
 
-        return shader;
+        int program = GLES20.glCreateProgram();
+        GLES20.glAttachShader(program, vshader);
+        GLES20.glAttachShader(program, fshader);
+        GLES20.glLinkProgram(program);
+
+        return program;
     }
 
     public static float[] multiplyByQuat(float[] input1,float[] input2) {

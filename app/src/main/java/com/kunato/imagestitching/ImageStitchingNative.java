@@ -20,7 +20,7 @@ public class ImageStitchingNative {
         Log.d("Rotin",rotMat.dump());
         nativeAddStitch(imageMat.getNativeObjAddr(), rotMat.getNativeObjAddr());
         nativeStitch(ret.getNativeObjAddr());
-        //work
+
         Highgui.imwrite("/sdcard/resultjava.jpg",ret);
         return ret;
     }
