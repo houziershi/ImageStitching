@@ -85,8 +85,8 @@ public class CameraSurfaceView extends GLSurfaceView {
     private boolean asyncRunning = false;
     private boolean doingRuning = false;
     private boolean firstTime = true;
-    private float[] mRotationMatrix = new float[16];
-//    private float[] mQuaternion = new float[4];
+    private float[] mQuaternion = new float[4];
+    private float[] mCameraQuaternion = new float[4];
     public int mNumPicture = 1;
     private final ImageReader.OnImageAvailableListener mOnImageAvailableListener = new ImageReader.OnImageAvailableListener() {
 
@@ -111,24 +111,24 @@ public class CameraSurfaceView extends GLSurfaceView {
                 Utils.bitmapToMat(bitmap, rgbaMat);
                 Imgproc.cvtColor(rgbaMat, imageMat, Imgproc.COLOR_RGBA2BGR);
                 if (firstTime) {
-
-                    for (int i = 0; i < mRotationMatrix.length; i++) {
-                        mRotationMatrix[i] = 0;
-                    }
-                    mRotationMatrix[0] = 1.0f;
-                    mRotationMatrix[5] = 1.0f;
-                    mRotationMatrix[10] = 1.0f;
-                    mRotationMatrix[15] = 1.0f;
                     firstTime = false;
+                    mQuaternion[0] = 0f;
+                    mQuaternion[1] = 0f;
+                    mQuaternion[2] = 0f;
+                    mQuaternion[3] = 1f;
+                    mCameraQuaternion[0] = 0f;
+                    mCameraQuaternion[1] = 0f;
+                    mCameraQuaternion[2] = 0f;
+                    mCameraQuaternion[3] = 1f;
                     mSensorManager.registerListener(runningSensorListener, mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_GAME);
-//                    mSensorManager.registerListener(runningSensorListener,mSensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR),10000);
-
                 }
+                float[] cameraRotationMatrix = new float[16];
+                SensorManager.getRotationMatrixFromVector(cameraRotationMatrix,mCameraQuaternion);
                 Mat rotationMat = new Mat();
                 rotationMat.create(3, 3, CvType.CV_32F);
                 for (int i = 0; i < 3; i++) {
                     for (int j = 0; j < 3; j++)
-                        rotationMat.put(i, j, mRotationMatrix[i * 4 + j]);
+                        rotationMat.put(i, j, cameraRotationMatrix[i * 4 + j]);
                 }
                 imageStitchingTask.execute(imageMat, rotationMat);
                 img.close();
@@ -152,17 +152,7 @@ public class CameraSurfaceView extends GLSurfaceView {
         public void onOpened(CameraDevice cameraDevice) {
             mCameraOpenCloseLock.release();
             mCameraDevice = cameraDevice;
-            getActivity().runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        Thread.sleep(1000);
-                        createCameraPreviewSession();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-            });
+            createCameraPreviewSession();
         }
 
         @Override
@@ -349,7 +339,17 @@ public class CameraSurfaceView extends GLSurfaceView {
         try {
             Log.d("Debug","createCameraPreviewSession");
             SurfaceTexture texture = glRenderer.getSurfaceTexture();
+            if (texture == null){
+                try {
+                    Thread.sleep(1000);
+                    Log.d("GLSurface-Camera-connector","Texture not ready yet try again in 1 sec");
+                    createCameraPreviewSession();
 
+                    return;
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
             texture.setDefaultBufferSize(800, 1280);
             Surface surface = new Surface(texture);
             Surface mImageSurface = mImageReader.getSurface();
@@ -434,9 +434,12 @@ public class CameraSurfaceView extends GLSurfaceView {
         @Override
         public void onSensorChanged(SensorEvent event) {
             if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
-                mRotationMatrix = Util.getRotationFromGyro(event,lastTimeStamp,mRotationMatrix);
+                mQuaternion = Util.getQuadFromGyro(event.values,lastTimeStamp,event.timestamp,mQuaternion,false,false,false);
+                mCameraQuaternion = Util.getQuadFromGyro(event.values,lastTimeStamp,event.timestamp,mCameraQuaternion,false,true,false);
                 lastTimeStamp = event.timestamp;
-                glRenderer.setRotationMatrix(mRotationMatrix);
+                float[] rotMat = new float[16];
+                SensorManager.getRotationMatrixFromVector(rotMat,mQuaternion);
+                glRenderer.setRotationMatrix(rotMat);
             }
         }
 

@@ -26,7 +26,6 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     private final float[] mViewMatrix = new float[16];
     private float[] mRotationMatrix = {1f,0,0,0,0,1f,0,0,0,0,1f,0,0,0,0,1f};
     private Canvas canvas;
-    private Canvas canvas2;
     private Sphere mSphere;
 
     GLRenderer(CameraSurfaceView view) {
@@ -34,10 +33,11 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     }
 
     public void onSurfaceCreated ( GL10 unused, EGLConfig config ) {
-        float[] vertices = {1.0f, -1.0f, 0.0f,
-                -1.0f, -1.0f, 0.0f,
-                1.0f, 1.0f, 0.0f,
-                -1.0f, 1.0f, 0.0f};
+        float canvasScale = 0.1f;
+        float[] vertices = {-canvasScale, -canvasScale, 0,
+                canvasScale, -canvasScale, 0,
+                -canvasScale, canvasScale, 0f,
+                canvasScale, canvasScale, 0f};
         float[] textures = {0.0f, 0.0f,
                 0.0f, 1.0f,
                 1.0f, 0.0f,
@@ -46,31 +46,36 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         mSphere = new Sphere(mView.getActivity());
         mSTexture = new SurfaceTexture (canvas.getTexturePos()[0]);
         mSTexture.setOnFrameAvailableListener(this);
-        GLES20.glClearColor(1.0f, 1.0f, 0.0f, 1.0f);
+        GLES20.glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        //(x (vertical),(horizontal)y,z)
+        GLES20.glEnable(GLES20.GL_BLEND);
+        GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+
+        Matrix.setLookAtM(mViewMatrix, 0,
+                0.0f, 0.0f, 0.7f,
+                0.0f, 0.0f, 0.0f,
+                0.0f, 1.0f, 0.0f);
 
     }
     //Core function
     public void onDrawFrame ( GL10 unused ) {
         float[] sphereMat = new float[16];
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
-        //draw
+        Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix, 0, mViewMatrix, 0);
+        Matrix.multiplyMM(sphereMat, 0, mMVPMatrix, 0, mRotationMatrix, 0);
+
+
+        //draws
         synchronized(this) {
             if ( mUpdateST ) {
                 mSTexture.updateTexImage();
                 mUpdateST = false;
             }
         }
-        //(x (vertical),(horizontal)y,z)
-        Matrix.setLookAtM(mViewMatrix, 0,
-                0.0f, 0.0f, 0.7f,
-                0.0f, 0.0f, 0.0f,
-                0.0f, 1.0f, 0.0f);
-        //multiply MM(retMat, retMatOffset, mat1 * mat2 (includeOffset))
-        Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix, 0, mViewMatrix, 0);
-        canvas.draw(mMVPMatrix);
-        Matrix.multiplyMM(sphereMat,0,mMVPMatrix,0,mRotationMatrix,0);
-        mSphere.draw(sphereMat);
 
+        //multiply MM(retMat, retMatOffset, mat1 * mat2 (includeOffset))
+        canvas.draw(mMVPMatrix);
+        mSphere.draw(sphereMat);
         GLES20.glFlush();
     }
 

@@ -23,7 +23,7 @@ public class Canvas {
                     "varying vec2 texCoord;\n" +
                     "void main() {\n" +
                     "  texCoord = vTexCoord;\n" +
-                    "  gl_Position = uMVPMatrix * vec4 ( vPosition.x, vPosition.y, 0.0, 1.0 );\n" +
+                    "  gl_Position = uMVPMatrix * vec4 ( vPosition.x, vPosition.y, vPosition.z, 1.0 );\n" +
                     "}";
 
     private final String fss_ext =
@@ -39,7 +39,8 @@ public class Canvas {
                     "uniform sampler2D sTexture;\n"+
                     "varying vec2 texCoord;\n" +
                     "void main() {\n" +
-                    "  gl_FragColor = texture2D(sTexture,texCoord);\n" +
+                    "gl_FragColor = texture2D(sTexture,texCoord);" +
+                    "gl_FragColor.a = 1.0;" +
                     "}";
 
     private FloatBuffer pVertex;
@@ -47,9 +48,8 @@ public class Canvas {
     private int[] hTex;
     private int hProgram;
     private Context context;
-    public static int counter = 0;
-    private Bitmap queueBmp;
-    private boolean requireUpdate = false;
+    public static final int COORD_PER_VERTEX = 3;
+    public static final int COORD_PER_TEXTURE = 2;
     public Canvas(float[] vertices,float[] textures,Context context) {
         this.hTex = new int[1];
         this.context = context;
@@ -114,8 +114,9 @@ public class Canvas {
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, hTex[0]);
         GLES20.glUniform1i(th, 0);
         GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mMVPMatrix, 0);
-        GLES20.glVertexAttribPointer(ph, 2, GLES20.GL_FLOAT, false, 4 * 3, pVertex);
-        GLES20.glVertexAttribPointer(tch, 2, GLES20.GL_FLOAT, false, 4 * 2, pTexCoord);
+
+        GLES20.glVertexAttribPointer(ph, COORD_PER_VERTEX, GLES20.GL_FLOAT, false, 4 * COORD_PER_VERTEX, pVertex);
+        GLES20.glVertexAttribPointer(tch, COORD_PER_TEXTURE, GLES20.GL_FLOAT, false, 4 * COORD_PER_TEXTURE, pTexCoord);
         GLES20.glEnableVertexAttribArray(ph);
         GLES20.glEnableVertexAttribArray(tch);
 

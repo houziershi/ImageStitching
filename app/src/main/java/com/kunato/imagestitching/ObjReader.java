@@ -20,8 +20,8 @@ public class ObjReader {
     public static List<float[]> verts = new ArrayList<float[]>();
     public static List<float[]> textures = new ArrayList<float[]>();
     public static void readAll(Context context){
-        readVertices(context, "sphere_vertices");
-        readTextures(context, "sphere_texture");
+        readVertices(context, "sphere_vertices.txt");
+        readTextures(context, "sphere_texture.txt");
     }
     public static void readVertices(Context context, String filename){
         AssetManager assetManager = context.getAssets();
@@ -41,7 +41,7 @@ public class ObjReader {
                 verts.add(vert);
             }
         } catch (IOException e) {
-            Log.d("error", e.getLocalizedMessage());
+            Log.e("error", e.getLocalizedMessage());
             e.printStackTrace();
         }
     }
@@ -64,7 +64,7 @@ public class ObjReader {
                 textures.add(cord);
             }
         } catch (IOException e) {
-            Log.d("error", e.getLocalizedMessage());
+            Log.e("error", e.getLocalizedMessage());
             e.printStackTrace();
         }
     }

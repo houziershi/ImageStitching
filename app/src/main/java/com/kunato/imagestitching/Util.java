@@ -52,13 +52,13 @@ public class Util {
                     C[i + nA * j] += (A[i + nA * k] * B[k + nB * j]);
         return C;
     }
-    public static float[] getRotationFromGyro(SensorEvent event,float timestamp,float[] currentRotMatrix){
+    public static float[] getRotationFromGyro(float[] values,float timestamp,float nowTimeStamp,float[] currentRotMatrix,boolean swapX,boolean swapY,boolean swapZ){
         float[] deltaRotationVector = new float[4];
         if (timestamp != 0) {
-            final float dT = (event.timestamp - timestamp) * NS2S;
-            float axisX = event.values[0];
-            float axisY = -event.values[1];
-            float axisZ = event.values[2];
+            final float dT = (nowTimeStamp - timestamp) * NS2S;
+            float axisX = swapX? -values[0]: values[0];
+            float axisY = swapY? -values[1]: values[1];
+            float axisZ = swapZ? -values[2]: values[2];
 
             float omegaMagnitude = (float) Math.sqrt(axisX*axisX + axisY*axisY + axisZ*axisZ);
             if (omegaMagnitude > 0.1f) {
@@ -75,60 +75,33 @@ public class Util {
             deltaRotationVector[2] = sinThetaOverTwo * axisZ;
             deltaRotationVector[3] = cosThetaOverTwo;
         }
-        timestamp = event.timestamp;
         float[] deltaRotationMatrix = new float[16];
         SensorManager.getRotationMatrixFromVector(deltaRotationMatrix, deltaRotationVector);
         return naivMatrixMultiply(currentRotMatrix, deltaRotationMatrix);
     }
-    public static float[] getQuadFromGyro(double timedelta,float[] mRotVec,float[] mCurrentRot){
-        float NS2S = 1.0f / 1000000000.0f;
-        // This timestep's delta rotation to be multiplied by the current rotation
-        // after computing it from the gyro sample data.
+    public static float[] getQuadFromGyro(float[] values,float timestamp,float nowTimeStamp,float[] mCurrentRot,boolean swapX,boolean swapY,boolean swapZ){
         float[] deltaRotationVector = new float[4];
-        if (timedelta != 0) {
-            final double dT = timedelta * NS2S;
-            // Axis of the rotation sample, not normalized yet.
-            float axisX = mRotVec[0];
-            float axisY = mRotVec[1];
-            float axisZ = mRotVec[2];
-
-            // Calculate the angular speed of the sample
-
+        if (timestamp != 0) {
+            final float dT = (nowTimeStamp - timestamp) * NS2S;
+            float axisX = swapX? -values[0]: values[0];
+            float axisY = swapY? -values[1]: values[1];
+            float axisZ = swapZ? -values[2]: values[2];
             float omegaMagnitude = (float) sqrt(axisX*axisX + axisY*axisY + axisZ*axisZ);
-
-            // Normalize the rotation vector if it's big enough to get the axis
-            // (that is, EPSILON should represent your maximum allowable margin of error)
-            //Best
             if (omegaMagnitude > 0.1f) {
                 axisX /= omegaMagnitude;
                 axisY /= omegaMagnitude;
                 axisZ /= omegaMagnitude;
             }
-
-            // Integrate around this axis with the angular speed by the timestep
-            // in order to get a delta rotation from this sample over the timestep
-            // We will convert this axis-angle representation of the delta rotation
-            // into a quaternion before turning it into the rotation matrix.
-
             double thetaOverTwo = omegaMagnitude * dT / 2.0f;
-//                Log.d("thetaOverTwo",""+thetaOverTwo);
             float sinThetaOverTwo = (float) sin(thetaOverTwo);
             float cosThetaOverTwo = (float) cos(thetaOverTwo);
             deltaRotationVector[0] = sinThetaOverTwo * axisX;
             deltaRotationVector[1] = sinThetaOverTwo * axisY;
             deltaRotationVector[2] = sinThetaOverTwo * axisZ;
             deltaRotationVector[3] = cosThetaOverTwo;
-//                Log.d("RotaionVector","["+deltaRotationVector[0]+","+deltaRotationVector[1]+","+deltaRotationVector[2]+","+deltaRotationVector[3]+"]");
             return multiplyByQuat(deltaRotationVector,mCurrentRot);
         }
-        return  mCurrentRot;
-//        SensorManager.getRotationMatrixFromVector(deltaRotationMatrix, deltaRotationVector);
-//            Log.d("deltaRotMat",Arrays.toString(deltaRotationMatrix));
-        // User code should concatenate the delta rotation we computed with the current rotation
-        // in order to get the updated rotation.
-        // rotationCurrent = rotationCurrent * deltaRotationMatrix;
-
-
+        return mCurrentRot;
     }
     public static int getJpegOrientation(CameraCharacteristics c, int deviceOrientation) {
         if (deviceOrientation == android.view.OrientationEventListener.ORIENTATION_UNKNOWN) return 0;

@@ -47,7 +47,7 @@ public class Sphere {
                     // The matrix must be included as a modifier of gl_Position.
                     // Note that the uMVPMatrix factor *must be first* in order
                     // for the matrix multiplication product to be correct.
-                    "  vPosition2 = vec4 ( vPosition.x * 2.0, vPosition.y * 2.0, vPosition.z * 2.0, 1.0 );"+
+                    "  vPosition2 = vec4 ( vPosition.x * 2.0, vPosition.y * 2.0, vPosition.z * 2.0, 1 );"+
                     "  gl_Position = uMVPMatrix * vPosition2;" +
                     "  fragmentColor = vColor;"+
                     "v_TexCoordinate = a_TexCoordinate;"+
@@ -59,7 +59,10 @@ public class Sphere {
             "varying vec2 v_TexCoordinate;"+
             "varying vec4 fragmentColor;" +
             "void main() {" +
-            "  gl_FragColor = texture2D(sTexture,v_TexCoordinate);\n" +
+                    "vec4 color = texture2D(sTexture,v_TexCoordinate);"+
+                    "gl_FragColor = color;" +
+                    "gl_FragColor.a = 0.5;" +
+                    ""+
             "}";
 
     private final FloatBuffer vertexBuffer;
