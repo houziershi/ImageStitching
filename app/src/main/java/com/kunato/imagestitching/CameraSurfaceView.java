@@ -39,8 +39,6 @@ import org.opencv.android.Utils;
 import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
 
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
@@ -57,10 +55,6 @@ import static android.hardware.camera2.CameraMetadata.LENS_FACING_FRONT;
 import static android.hardware.camera2.CaptureRequest.CONTROL_AE_MODE;
 import static android.hardware.camera2.CaptureRequest.CONTROL_AF_MODE;
 import static android.hardware.camera2.CaptureRequest.SENSOR_EXPOSURE_TIME;
-import static java.lang.Math.sin;
-import static java.lang.Math.sqrt;
-import static java.lang.StrictMath.cos;
-
 
 public class CameraSurfaceView extends GLSurfaceView {
     private Activity activity;
@@ -71,7 +65,7 @@ public class CameraSurfaceView extends GLSurfaceView {
     private static final String TAG = CameraSurfaceView.class.getName();
     private final CameraCaptureSession.CaptureCallback mCaptureCallback = new CameraCaptureSession.CaptureCallback() {
         private void process(CaptureResult result) {
-//            Log.d("mCaptureCallBack",result.getFrameNumber()+"");
+
         }
 
         @Override
@@ -92,6 +86,7 @@ public class CameraSurfaceView extends GLSurfaceView {
     private boolean doingRuning = false;
     private boolean firstTime = true;
     private float[] mRotationMatrix = new float[16];
+//    private float[] mQuaternion = new float[4];
     public int mNumPicture = 1;
     private final ImageReader.OnImageAvailableListener mOnImageAvailableListener = new ImageReader.OnImageAvailableListener() {
 
@@ -125,7 +120,7 @@ public class CameraSurfaceView extends GLSurfaceView {
                     mRotationMatrix[10] = 1.0f;
                     mRotationMatrix[15] = 1.0f;
                     firstTime = false;
-                    mSensorManager.registerListener(runningSensorListener, mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE), 1000);
+                    mSensorManager.registerListener(runningSensorListener, mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_GAME);
 //                    mSensorManager.registerListener(runningSensorListener,mSensorManager.getDefaultSensor(Sensor.TYPE_GAME_ROTATION_VECTOR),10000);
 
                 }
@@ -160,7 +155,12 @@ public class CameraSurfaceView extends GLSurfaceView {
             getActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    createCameraPreviewSession();
+                    try {
+                        Thread.sleep(1000);
+                        createCameraPreviewSession();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             });
         }
@@ -427,83 +427,18 @@ public class CameraSurfaceView extends GLSurfaceView {
      * private Class SensorListener + Async
      */
     private class SensorListener implements SensorEventListener {
-        public float[] getRotationFromSensor(SensorEvent event){
-            float[] rotationMatrix = new float[16];
-            SensorManager.getRotationMatrixFromVector(
-                    rotationMatrix, event.values);
-            return rotationMatrix;
-        }
+        private float lastTimeStamp = 0f;
         private static final float NS2S = 1.0f / 1000000000.0f;
 
-        private float timestamp;
-        public float[] getRotationFromGyro(SensorEvent event){
-            float[] deltaRotationVector = new float[4];
-            if (timestamp != 0) {
-                final float dT = (event.timestamp - timestamp) * NS2S;
-                float axisX = event.values[0];
-                float axisY = -event.values[1];
-                float axisZ = event.values[2];
-
-                float omegaMagnitude = (float) sqrt(axisX*axisX + axisY*axisY + axisZ*axisZ);
-                if (omegaMagnitude > 0.000000001f) {
-                    axisX /= omegaMagnitude;
-                    axisY /= omegaMagnitude;
-                    axisZ /= omegaMagnitude;
-                }
-
-                float thetaOverTwo = omegaMagnitude * dT / 2.0f;
-                float sinThetaOverTwo = (float) sin(thetaOverTwo);
-                float cosThetaOverTwo = (float) cos(thetaOverTwo);
-                deltaRotationVector[0] = sinThetaOverTwo * axisX;
-                deltaRotationVector[1] = sinThetaOverTwo * axisY;
-                deltaRotationVector[2] = sinThetaOverTwo * axisZ;
-                deltaRotationVector[3] = cosThetaOverTwo;
-            }
-            timestamp = event.timestamp;
-            float[] deltaRotationMatrix = new float[16];
-            SensorManager.getRotationMatrixFromVector(deltaRotationMatrix, deltaRotationVector);
-            return Util.naivMatrixMultiply(mRotationMatrix, deltaRotationMatrix);
-        }
 
         @Override
         public void onSensorChanged(SensorEvent event) {
             if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
-
-                mRotationMatrix = getRotationFromGyro(event);
+                mRotationMatrix = Util.getRotationFromGyro(event,lastTimeStamp,mRotationMatrix);
+                lastTimeStamp = event.timestamp;
+                glRenderer.setRotationMatrix(mRotationMatrix);
             }
         }
-//                mRotVec[0] += event.values[0];
-//                mRotVec[1] -= event.values[1];
-//                mRotVec[2] += event.values[2];
-//                timedelta += timestamp;
-//                timestamp = event.timestamp;
-//            }
-//            if (event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR) {
-            // convert the rotation-vector to a 4x4 matrix. the matrix
-            // is interpreted by Open GL as the inverse of the
-            // rotation-vector, which is what we want.
-//                mRotationMatrix = getRotationFromSensor(event);
-            // [1,0,0,0]
-            // [0,1,0,0]
-            // [0,0,1,0]
-            // [0,0,0,0]
-//            DecimalFormat matrixFormatter = new DecimalFormat("+#,##0.00;-#");
-//            for(int i = 0 ; i < 4 ; i++) {
-//                StringBuilder sb = new StringBuilder();
-//                sb.append('[');
-//                for(int j = 0 ; j < 4 ; j++){
-//                    sb.append(matrixFormatter.format(mRotationMatrix[i*4+j]));
-//                    if(j != 4)
-//                        sb.append(',');
-//
-//                }
-//                sb.append(']');
-//                Log.d("Matrix",sb.toString());
-//            }
-//            Log.d("Matrix","############################");
-
-//        }
-
 
         @Override
         public void onAccuracyChanged(Sensor sensor, int accuracy) {
@@ -532,11 +467,7 @@ public class CameraSurfaceView extends GLSurfaceView {
             Mat test = new Mat(result.height(),result.width(),CvType.CV_8UC3);
             Imgproc.cvtColor(result,test,Imgproc.COLOR_BGR2RGBA);
             Utils.matToBitmap(test, bmp);
-            float[] vertices2 = {0.5f,  -0.5f, 0.0f,   // top left
-                    -0.5f, -0.5f, 0.0f,   // bottom left
-                    0.5f, 0.5f, 0.0f,   // bottom right
-                    -0.5f,  0.5f, 0.0f }; // top right
-            glRenderer.getCanvas2().setTexture(bmp,vertices2);
+            //Bitmap finish send to texture
             Log.d("Post","Finished, Size :"+result.size().width+","+result.size().height);
         }
     }

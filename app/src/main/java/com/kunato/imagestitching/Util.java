@@ -3,6 +3,7 @@ package com.kunato.imagestitching;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.hardware.SensorEvent;
 import android.hardware.SensorManager;
 import android.hardware.camera2.CameraCharacteristics;
 import android.opengl.GLES20;
@@ -36,7 +37,51 @@ public class Util {
 
     }
     private static final float NS2S = 1.0f / 1000000000.0f;
-    public static float[] getRotationFromGyro(double timedelta,float[] mRotVec,float[] mRotationMatrix){
+    public static float[] naivMatrixMultiply(float[] B, float[] A) {
+        int mA, nA, mB, nB;
+        mA = nA = (int) Math.sqrt(A.length);
+        mB = nB = (int) Math.sqrt(B.length);
+        if (nA != mB)
+            throw new RuntimeException("Illegal matrix dimensions.");
+
+        float[] C = new float[mA * nB];
+
+        for (int i = 0; i < mA; i++)
+            for (int j = 0; j < nB; j++)
+                for (int k = 0; k < nA; k++)
+                    C[i + nA * j] += (A[i + nA * k] * B[k + nB * j]);
+        return C;
+    }
+    public static float[] getRotationFromGyro(SensorEvent event,float timestamp,float[] currentRotMatrix){
+        float[] deltaRotationVector = new float[4];
+        if (timestamp != 0) {
+            final float dT = (event.timestamp - timestamp) * NS2S;
+            float axisX = event.values[0];
+            float axisY = -event.values[1];
+            float axisZ = event.values[2];
+
+            float omegaMagnitude = (float) Math.sqrt(axisX*axisX + axisY*axisY + axisZ*axisZ);
+            if (omegaMagnitude > 0.1f) {
+                axisX /= omegaMagnitude;
+                axisY /= omegaMagnitude;
+                axisZ /= omegaMagnitude;
+            }
+
+            float thetaOverTwo = omegaMagnitude * dT / 2.0f;
+            float sinThetaOverTwo = (float) Math.sin(thetaOverTwo);
+            float cosThetaOverTwo = (float) Math.cos(thetaOverTwo);
+            deltaRotationVector[0] = sinThetaOverTwo * axisX;
+            deltaRotationVector[1] = sinThetaOverTwo * axisY;
+            deltaRotationVector[2] = sinThetaOverTwo * axisZ;
+            deltaRotationVector[3] = cosThetaOverTwo;
+        }
+        timestamp = event.timestamp;
+        float[] deltaRotationMatrix = new float[16];
+        SensorManager.getRotationMatrixFromVector(deltaRotationMatrix, deltaRotationVector);
+        return naivMatrixMultiply(currentRotMatrix, deltaRotationMatrix);
+    }
+    public static float[] getQuadFromGyro(double timedelta,float[] mRotVec,float[] mCurrentRot){
+        float NS2S = 1.0f / 1000000000.0f;
         // This timestep's delta rotation to be multiplied by the current rotation
         // after computing it from the gyro sample data.
         float[] deltaRotationVector = new float[4];
@@ -53,7 +98,8 @@ public class Util {
 
             // Normalize the rotation vector if it's big enough to get the axis
             // (that is, EPSILON should represent your maximum allowable margin of error)
-            if (omegaMagnitude > 5555.0) {
+            //Best
+            if (omegaMagnitude > 0.1f) {
                 axisX /= omegaMagnitude;
                 axisY /= omegaMagnitude;
                 axisZ /= omegaMagnitude;
@@ -73,36 +119,16 @@ public class Util {
             deltaRotationVector[2] = sinThetaOverTwo * axisZ;
             deltaRotationVector[3] = cosThetaOverTwo;
 //                Log.d("RotaionVector","["+deltaRotationVector[0]+","+deltaRotationVector[1]+","+deltaRotationVector[2]+","+deltaRotationVector[3]+"]");
+            return multiplyByQuat(deltaRotationVector,mCurrentRot);
         }
-        float[] deltaRotationMatrix = new float[16];
-        SensorManager.getRotationMatrixFromVector(deltaRotationMatrix, deltaRotationVector);
+        return  mCurrentRot;
+//        SensorManager.getRotationMatrixFromVector(deltaRotationMatrix, deltaRotationVector);
+//            Log.d("deltaRotMat",Arrays.toString(deltaRotationMatrix));
         // User code should concatenate the delta rotation we computed with the current rotation
         // in order to get the updated rotation.
         // rotationCurrent = rotationCurrent * deltaRotationMatrix;
 
-        return Util.naivMatrixMultiply(mRotationMatrix,deltaRotationMatrix);
-    }
-    /**
-     * Performs naiv n^3 matrix multiplication and returns C = A * B
-     *
-     * @param A Matrix in the array form (e.g. 3x3 => 9 values)
-     * @param B Matrix in the array form (e.g. 3x3 => 9 values)
-     * @return A * B
-     */
-    public static float[] naivMatrixMultiply(float[] B, float[] A) {
-        int mA, nA, mB, nB;
-        mA = nA = (int) Math.sqrt(A.length);
-        mB = nB = (int) Math.sqrt(B.length);
-        if (nA != mB)
-            throw new RuntimeException("Illegal matrix dimensions.");
 
-        float[] C = new float[mA * nB];
-
-        for (int i = 0; i < mA; i++)
-            for (int j = 0; j < nB; j++)
-                for (int k = 0; k < nA; k++)
-                    C[i + nA * j] += (A[i + nA * k] * B[k + nB * j]);
-        return C;
     }
     public static int getJpegOrientation(CameraCharacteristics c, int deviceOrientation) {
         if (deviceOrientation == android.view.OrientationEventListener.ORIENTATION_UNKNOWN) return 0;
@@ -121,14 +147,7 @@ public class Util {
 
         return jpegOrientation;
     }
-//    public static void printMatrix(opencv_core.Mat print,String code){
-//        Indexer indexer = print.createIndexer();
-//
-//        Log.d("camera matrix"+code, "[" + indexer.getDouble(0, 0) + "," + indexer.getDouble(0, 1) + "," + indexer.getDouble(0, 2) + "]");
-//        Log.d("camera matrix"+code,"["+indexer.getDouble(1,0)+","+indexer.getDouble(1,1)+","+indexer.getDouble(1,2)+"]");
-//        Log.d("camera matrix"+code,"["+indexer.getDouble(2,0)+","+indexer.getDouble(2,1)+","+indexer.getDouble(2,2)+"]");
-//        Log.d("camera matrix"+code,"######################################");
-//    }
+
     public static void writeBitMap(Bitmap bmp){
         FileOutputStream out = null;
         try {
@@ -146,6 +165,31 @@ public class Util {
                 e.printStackTrace();
             }
         }
+    }
+    public static int loadShader(int type, String shaderCode){
+
+        // create a vertex shader type (GLES20.GL_VERTEX_SHADER)
+        // or a fragment shader type (GLES20.GL_FRAGMENT_SHADER)
+        int shader = GLES20.glCreateShader(type);
+
+        // add the source code to the shader and compile it
+        GLES20.glShaderSource(shader, shaderCode);
+        GLES20.glCompileShader(shader);
+
+        return shader;
+    }
+
+    public static float[] multiplyByQuat(float[] input1,float[] input2) {
+        float[] output = new float[4];
+        output[3] = (input1[3] * input2[3] - input1[0] * input2[0] - input1[1] * input2[1] - input1[2]
+                    * input2[2]); //w = w1w2 - x1x2 - y1y2 - z1z2
+        output[0] = (input1[3] * input2[0] + input1[0] * input2[3] + input1[1] * input2[2] - input1[2]
+                    * input2[1]); //x = w1x2 + x1w2 + y1z2 - z1y2
+        output[1] = (input1[3] * input2[1] + input1[1] * input2[3] + input1[2] * input2[0] - input1[0]
+                    * input2[2]); //y = w1y2 + y1w2 + z1x2 - x1z2
+        output[2] = (input1[3] * input2[2] + input1[2] * input2[3] + input1[0] * input2[1] - input1[1]
+                    * input2[0]); //z = w1z2 + z1w2 + x1y2 - y1x2
+        return output;
     }
 
 }
