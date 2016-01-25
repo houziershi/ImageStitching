@@ -13,6 +13,7 @@ import android.util.Size;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Comparator;
 
 import static java.lang.Math.sin;
@@ -81,13 +82,18 @@ public class Util {
         return naivMatrixMultiply(currentRotMatrix, deltaRotationMatrix);
     }
 
-    public static float[] getQuadFromGyro(float[] values,float timestamp,float nowTimeStamp,float[] mCurrentRot,boolean swapX,boolean swapY,boolean swapZ){
+    public static float[] getQuadFromGyro(float[] values,float timestamp,float nowTimeStamp,float[] mCurrentRot,boolean swapX,boolean swapY,boolean swapZ,boolean usingZ){
         float[] deltaRotationVector = new float[4];
         if (timestamp != 0) {
             final float dT = (nowTimeStamp - timestamp) * NS2S;
             float axisX = swapX? -values[0]: values[0];
             float axisY = swapY? -values[1]: values[1];
             float axisZ = swapZ? -values[2]: values[2];
+//            float axisX = 0;
+//            float axisZ = 0;
+            if(!usingZ){
+                axisZ = 0;
+            }
             float omegaMagnitude = (float) sqrt(axisX * axisX + axisY * axisY + axisZ * axisZ);
             if (omegaMagnitude > 0.1f) {
                 axisX /= omegaMagnitude;
@@ -101,8 +107,10 @@ public class Util {
             deltaRotationVector[1] = sinThetaOverTwo * axisY;
             deltaRotationVector[2] = sinThetaOverTwo * axisZ;
             deltaRotationVector[3] = cosThetaOverTwo;
+//            Log.d("rot", Arrays.toString(mCurrentRot));
             return multiplyByQuat(deltaRotationVector,mCurrentRot);
         }
+
         return mCurrentRot;
     }
 

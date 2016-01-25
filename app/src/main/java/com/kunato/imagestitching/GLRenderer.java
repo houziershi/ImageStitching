@@ -19,6 +19,8 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     private final float[] mMVPMatrix = new float[16];
     private final float[] mProjectionMatrix = new float[16];
     private final float[] mViewMatrix = new float[16];
+    private final float SCREEN_RATIO = 0.6239168f;
+    private final float CANVAS_SIZE = 0.16f;
     private float[] mRotationMatrix = {1f,0,0,0,0,1f,0,0,0,0,1f,0,0,0,0,1f};
     private Canvas mCanvas;
     private Sphere mSphere;
@@ -29,11 +31,11 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
 
     public void onSurfaceCreated ( GL10 unused, EGLConfig config ) {
         mStartTime = System.nanoTime();
-        float canvasScale = 0.1f;
-        float[] vertices = {-canvasScale, -canvasScale, 0,
-                canvasScale, -canvasScale, 0,
-                -canvasScale, canvasScale, 0f,
-                canvasScale, canvasScale, 0f};
+
+        float[] vertices = {-CANVAS_SIZE, -CANVAS_SIZE /SCREEN_RATIO, 0f,
+                CANVAS_SIZE, -CANVAS_SIZE /SCREEN_RATIO, 0f,
+                -CANVAS_SIZE, CANVAS_SIZE /SCREEN_RATIO, 0f,
+                CANVAS_SIZE, CANVAS_SIZE /SCREEN_RATIO, 0f};
         float[] textures = {0.0f, 0.0f,
                 0.0f, 1.0f,
                 1.0f, 0.0f,
@@ -84,7 +86,11 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     public void onSurfaceChanged ( GL10 unused, int width, int height ) {
         GLES20.glViewport(0, 0, width, height);
         float ratio =( float )width / height;
-        Matrix.perspectiveM(mProjectionMatrix, 0, 45, ratio, 0.1f, 100f);
+        Log.d("Ratio",ratio+"");
+        Matrix.perspectiveM(mProjectionMatrix, 0, 40, ratio, 0.1f, 100f);
+
+
+
         }
 
     public synchronized void onFrameAvailable ( SurfaceTexture st ) {

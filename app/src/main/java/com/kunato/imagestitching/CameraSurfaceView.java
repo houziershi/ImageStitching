@@ -102,17 +102,17 @@ public class CameraSurfaceView extends GLSurfaceView {
             byte[] rowData = new byte[planes[0].getRowStride()];
 
             for (int i = 0; i < planes.length; i++) {
+                int bytesPerPixel = ImageFormat.getBitsPerPixel(ImageFormat.YUV_420_888) / 8;
                 buffer = planes[i].getBuffer();
                 rowStride = planes[i].getRowStride();
                 pixelStride = planes[i].getPixelStride();
                 int w = (i == 0) ? width : width / 2;
                 int h = (i == 0) ? height : height / 2;
                 for (int row = 0; row < h; row++) {
-                    int bytesPerPixel = ImageFormat.getBitsPerPixel(ImageFormat.YUV_420_888) / 8;
                     if (pixelStride == bytesPerPixel) {
+                        Log.d("YUV","1");
                         int length = w * bytesPerPixel;
                         buffer.get(data, offset, length);
-
                         // Advance buffer the remainder of the row stride, unless on the last row.
                         // Otherwise, this will throw an IllegalArgumentException because the buffer
                         // doesn't include the last padding.
@@ -121,7 +121,7 @@ public class CameraSurfaceView extends GLSurfaceView {
                         }
                         offset += length;
                     } else {
-
+                        Log.d("YUV","2");
                         // On the last row only read the width of the image minus the pixel stride
                         // plus one. Otherwise, this will throw a BufferUnderflowException because the
                         // buffer doesn't include the last padding.
@@ -137,7 +137,6 @@ public class CameraSurfaceView extends GLSurfaceView {
                     }
                 }
             }
-
             // Finally, create the Mat.
             Mat mat = new Mat(height + height / 2, width, CvType.CV_8UC1);
             mat.put(0, 0, data);
@@ -154,7 +153,7 @@ public class CameraSurfaceView extends GLSurfaceView {
                     return;
                 }
                 Log.e("INPUT","Image In");
-                //TODO support YUV420 format JPEG is so slow.
+
                 AsyncTask<Mat, Integer, Mat> imageStitchingTask = new ImageStitchingTask();
                 Mat yuvMat = imageToMat(image);
                 Mat imageMat = new Mat(image.getHeight(),image.getWidth(),CvType.CV_8UC3);
@@ -165,9 +164,9 @@ public class CameraSurfaceView extends GLSurfaceView {
                 if (mFirstRun) {
                     mFirstRun = false;
                     mQuaternion[0] = 0f;
-                    mQuaternion[1] = 0f;
+                    mQuaternion[1] = 1f;
                     mQuaternion[2] = 0f;
-                    mQuaternion[3] = 1f;
+                    mQuaternion[3] = 0f;
                     mCameraQuaternion[0] = 0f;
                     mCameraQuaternion[1] = 0f;
                     mCameraQuaternion[2] = 0f;
@@ -460,8 +459,8 @@ public class CameraSurfaceView extends GLSurfaceView {
         @Override
         public void onSensorChanged(SensorEvent event) {
             if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
-                mQuaternion = Util.getQuadFromGyro(event.values,lastTimeStamp,event.timestamp,mQuaternion,false,false,false);
-                mCameraQuaternion = Util.getQuadFromGyro(event.values,lastTimeStamp,event.timestamp,mCameraQuaternion,false,true,false);
+                mQuaternion = Util.getQuadFromGyro(event.values,lastTimeStamp,event.timestamp,mQuaternion,true,false,true,true);
+                mCameraQuaternion = Util.getQuadFromGyro(event.values,lastTimeStamp,event.timestamp,mCameraQuaternion,false,true,false,true);
                 lastTimeStamp = event.timestamp;
                 float[] rotMat = new float[16];
                 SensorManager.getRotationMatrixFromVector(rotMat,mQuaternion);

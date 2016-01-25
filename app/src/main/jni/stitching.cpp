@@ -110,7 +110,7 @@ void findWarpForSeam(float warped_image_scale,float seam_scale,float work_scale,
     Ptr<RotationWarper> warper = warper_creator->create(warped_image_scale * seam_work_aspect);
 
     for(int i = 0; i < p_img.size(); i++){
-        printMatrix(cameras[i].R,"R");
+//        printMatrix(cameras[i].R,"R");
         Mat_<float> K;
         Mat images_warped_f;
         Mat masks;
@@ -125,7 +125,6 @@ void findWarpForSeam(float warped_image_scale,float seam_scale,float work_scale,
         corners[i] = p_img[i].corner;
         p_img[i].seam_corner = p_img[i].corner;
         warper->warp(masks, K, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, masks_warped[i]);
-        cout << "point "<< p_img[i].corner << endl;
         images_warped[i].convertTo(images_warped_f, CV_32F);
         images_warped[i] = images_warped_f.clone();
         p_img[i].mask_warped = masks_warped[i];
@@ -182,7 +181,7 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
         else
             img = full_img;
         Size img_size = img.size();
-
+        __android_log_print(ANDROID_LOG_VERBOSE, TAG, "Size of Image %d %d", img_size.width,img_size.height);
         Mat K;
 
         mask.create(img_size, CV_8U);
@@ -211,7 +210,12 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
                 sizes[j] = p_img[j].size;
             }
             blender = Blender::createDefault(blend_type, false);
-            blender->prepare(corners, sizes);
+            //4500?
+            Rect full(-(3406/2),0,3406,3404/2);
+//            blender->prepare(corners, sizes);
+            Rect r = resultRoi(corners,sizes);
+            __android_log_print(ANDROID_LOG_DEBUG,"TAG","Rect r size (%d,%d) (%d,%d)",r.x,r.y,r.width,r.height);
+            blender->prepare(full);
         }
         blender->feed(img_warped_s, mask_warped, corners[img_idx]);
 
@@ -230,22 +234,25 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
     seam_work_aspect = seam_scale / work_scale;
     ImagePackage imagePackage;
     Mat& full_img  = *(Mat*)imgaddr;
+    Point2f center(full_img.cols/2.0F,full_img.rows/2.0F);
+    Mat rot_mat = getRotationMatrix2D(center, 90, 1.0);
+    Mat dst;
+    warpAffine(full_img, dst, rot_mat, full_img.size());
     Mat& rot = *(Mat*)rotaddr;
     imagePackage.rotation = rot;
-    imagePackage.full_size = full_img.size();
-    imagePackage.full_image = full_img;
+    imagePackage.full_size = dst.size();
+    imagePackage.full_image = dst;
     ImageFeatures feature;
     Mat img;
     resize(full_img, img, Size(), work_scale, work_scale);
     //
     Ptr<FeaturesFinder> finder = new OrbFeaturesFinder();
-    (*finder)(full_img, feature);
-    feature.img_idx = images.size();
+//    (*finder)(full_img, feature);
+//    feature.img_idx = images.size();
     resize(full_img, img, Size(), seam_scale, seam_scale);
     imagePackage.image = img.clone();
     imagePackage.size = img.size();
-    imagePackage.feature = feature;
-    // finder = new OrbFeaturesFinder();
+//    imagePackage.feature = feature;
     finder->collectGarbage();
     images.push_back(imagePackage);
 //    __android_log_print(ANDROID_LOG_VERBOSE, TAG, "Number of Image %d", images.size());
@@ -282,8 +289,8 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
         camera.ppx = images[i].size.width/2.0;
         camera.ppy = images[i].size.height/2.0;
 
-        camera.aspect = 1;
-        camera.focal = images[i].size.width * 4.7 / 5.2;
+        camera.aspect = 3.0/4.0;
+        camera.focal = images[i].size.height * 4.7 / 5.2;
         camera.R = images[i].rotation;
         camera.t = Mat::zeros(3,1,CV_64F);
         cameras.push_back(camera);

@@ -51,8 +51,7 @@ public class Sphere {
             "void main() {" +
                     "vec4 color = texture2D(sTexture,v_TexCoordinate);"+
                     "gl_FragColor = color;" +
-                    "gl_FragColor.a = 0.5;" +
-                    ""+
+                    "if(color.r == 0.0){gl_FragColor.a = 0.0;}else{gl_FragColor.a = 1.0;}" +
             "}";
 
     private final FloatBuffer mVertexBuffer;
