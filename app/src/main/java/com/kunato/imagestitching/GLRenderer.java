@@ -20,7 +20,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     private final float[] mProjectionMatrix = new float[16];
     private final float[] mViewMatrix = new float[16];
     private final float SCREEN_RATIO = 0.6239168f;
-    private final float CANVAS_SIZE = 0.16f;
+    private final float CANVAS_SIZE = 0.4f;
     private float[] mRotationMatrix = {1f,0,0,0,0,1f,0,0,0,0,1f,0,0,0,0,1f};
     private Canvas mCanvas;
     private Sphere mSphere;
@@ -32,10 +32,10 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     public void onSurfaceCreated ( GL10 unused, EGLConfig config ) {
         mStartTime = System.nanoTime();
 
-        float[] vertices = {-CANVAS_SIZE, -CANVAS_SIZE /SCREEN_RATIO, 0f,
-                CANVAS_SIZE, -CANVAS_SIZE /SCREEN_RATIO, 0f,
-                -CANVAS_SIZE, CANVAS_SIZE /SCREEN_RATIO, 0f,
-                CANVAS_SIZE, CANVAS_SIZE /SCREEN_RATIO, 0f};
+        float[] vertices = {-CANVAS_SIZE, -CANVAS_SIZE /SCREEN_RATIO, -1.0f,
+                CANVAS_SIZE, -CANVAS_SIZE /SCREEN_RATIO, -1.0f,
+                -CANVAS_SIZE, CANVAS_SIZE /SCREEN_RATIO, -1.0f,
+                CANVAS_SIZE, CANVAS_SIZE /SCREEN_RATIO, -1.0f};
         float[] textures = {0.0f, 0.0f,
                 0.0f, 1.0f,
                 1.0f, 0.0f,
@@ -50,7 +50,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
 
         Matrix.setLookAtM(mViewMatrix, 0,
-                0.0f, 0.0f, 0.7f,
+                0.0f, 0.0f, 0.2f,
                 0.0f, 0.0f, 0.0f,
                 0.0f, 1.0f, 0.0f);
 

@@ -37,10 +37,10 @@ public class Sphere {
                     "varying vec4 fragmentColor;"+
                     "varying vec2 v_TexCoordinate;"+
                     "void main() {" +
-                    "  vPosition2 = vec4 ( vPosition.x * 2.0, vPosition.y * 2.0, vPosition.z * 2.0, 1 );"+
+                    "  vPosition2 = vec4 ( vPosition.x, vPosition.y, vPosition.z, 1 );"+
                     "  gl_Position = uMVPMatrix * vPosition2;" +
                     "  fragmentColor = vColor;"+
-                    "v_TexCoordinate = a_TexCoordinate;"+
+                    "  v_TexCoordinate = a_TexCoordinate;"+
                     "}";
 
     private final String fragmentShaderCode =

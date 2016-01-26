@@ -210,8 +210,8 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
                 sizes[j] = p_img[j].size;
             }
             blender = Blender::createDefault(blend_type, false);
-            //4500?
-            Rect full(-(3406/2),0,3406,3404/2);
+            //(w,h),(w,h)???//final 1 before bundle
+            Rect full(-(3525/2),0,3525,3404/2);
 //            blender->prepare(corners, sizes);
             Rect r = resultRoi(corners,sizes);
             __android_log_print(ANDROID_LOG_DEBUG,"TAG","Rect r size (%d,%d) (%d,%d)",r.x,r.y,r.width,r.height);
@@ -289,8 +289,8 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
         camera.ppx = images[i].size.width/2.0;
         camera.ppy = images[i].size.height/2.0;
 
-        camera.aspect = 3.0/4.0;
-        camera.focal = images[i].size.height * 4.7 / 5.2;
+        camera.aspect = 0.9;
+        camera.focal = (images[i].size.height * 4.7 / 5.2);
         camera.R = images[i].rotation;
         camera.t = Mat::zeros(3,1,CV_64F);
         cameras.push_back(camera);
