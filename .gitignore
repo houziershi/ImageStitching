@@ -6,6 +6,7 @@
 /build
 /app/src/main/obj/local
 /app/src/main/libs
+/openCVLibrary2410
 /captures
 
 *.class
@@ -28,6 +29,7 @@ hs_err_pid*
 
 # Precompiled Headers
 *.gch
+/app/src/main/obj
 *.pch
 
 # Compiled Dynamic libraries
