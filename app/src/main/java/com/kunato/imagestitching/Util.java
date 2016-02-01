@@ -24,6 +24,44 @@ import static java.lang.StrictMath.cos;
  * Created by kunato on 12/14/15 AD.
  */
 public class Util {
+    public static float[] ROTATE_X = { 1,0,0,0,
+            0,0,-1,0,
+            0,1,0,0,
+            0,0,0,1
+    };
+    public static float[] ROTATE_Y = { 0,0,1,0,
+            0,1,0,0,
+            -1,0,0,0,
+            0,0,0,1
+
+    };
+    public static float[] ROTATE_Z = { 0,-1,0,0,
+            1,0,0,0,
+            0,0,1,0,
+            0,0,0,1
+    };
+    public static float[] SWAP_X = {-1,0,0,0,
+            0,1,0,0,
+            0,0,1,0,
+            0,0,0,1
+    };
+    public static float[] SWAP_Y = {1,0,0,0,
+            0,-1,0,0,
+            0,0,1,0,
+            0,0,0,1
+    };
+    public static float[] SWAP_Z = {1,0,0,0,
+            0,1,0,0,
+            0,0,-1,0,
+            0,0,0,1
+    };
+    public static float[] MAGIC_MAT = {
+            -1,0,0,0,
+            0,0,-1,0,
+            0,1,0,0,
+            0,0,0,1
+
+    };
     private static final float NS2S = 1.0f / 1000000000.0f;
 
     public static class CompareSizesByArea implements Comparator<Size> {

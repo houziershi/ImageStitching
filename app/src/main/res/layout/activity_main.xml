@@ -5,8 +5,6 @@
     android:layout_height="match_parent"
     android:background="#000"
     android:orientation="vertical">
-
-
     <LinearLayout
         android:id="@+id/botcontrol"
         android:layout_width="match_parent"
@@ -66,6 +64,7 @@
             android:id="@+id/btn_stop"
             android:layout_alignParentBottom="true"
             android:layout_alignParentEnd="true" />
+
 
     </RelativeLayout>
 

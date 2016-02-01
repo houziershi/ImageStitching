@@ -11,14 +11,14 @@ import android.widget.LinearLayout;
 import android.widget.SeekBar;
 
 public class MainActivity extends FragmentActivity {
-
+    boolean mFirstTime = true;
     CameraSurfaceView mView;
     private void initComponent(){
         LinearLayout linearLayout = new LinearLayout(this);
         final Button b = new Button(this);
         SeekBar isoSeek = new SeekBar(this);
         SeekBar fSeek = new SeekBar(this);
-        b.setText("Capture : 0");
+        b.setText("AE LOCK");
         isoSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -61,8 +61,16 @@ public class MainActivity extends FragmentActivity {
         b.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mView.runProcess();
-                b.setText("Capture : "+ mView.mNumPicture);
+
+                mView.runProcess(mFirstTime);
+                if(mFirstTime){
+                    b.setText("Capture : 0");
+                    mFirstTime = false;
+                }
+                else{
+                    b.setText("Capture : " + mView.mNumPicture);
+                }
+
             }
         });
         linearLayout.setGravity(Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM);
@@ -73,6 +81,7 @@ public class MainActivity extends FragmentActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         mView = new CameraSurfaceView(this);
         setContentView(mView);
         initComponent();

@@ -5,7 +5,6 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.Sensor;
@@ -24,6 +23,7 @@ import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
 import android.opengl.GLSurfaceView;
+import android.opengl.Matrix;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -32,6 +32,7 @@ import android.util.Range;
 import android.util.Size;
 import android.view.Surface;
 import android.view.SurfaceHolder;
+import android.view.ViewGroup;
 import android.widget.Toast;
 
 import org.opencv.android.Utils;
@@ -52,8 +53,11 @@ import static android.hardware.camera2.CameraCharacteristics.SCALER_STREAM_CONFI
 import static android.hardware.camera2.CameraMetadata.CONTROL_AE_MODE_OFF;
 import static android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_OFF;
 import static android.hardware.camera2.CameraMetadata.LENS_FACING_FRONT;
+import static android.hardware.camera2.CaptureRequest.CONTROL_AE_LOCK;
 import static android.hardware.camera2.CaptureRequest.CONTROL_AE_MODE;
 import static android.hardware.camera2.CaptureRequest.CONTROL_AF_MODE;
+import static android.hardware.camera2.CaptureRequest.CONTROL_AF_TRIGGER;
+import static android.hardware.camera2.CaptureRequest.CONTROL_AWB_LOCK;
 import static android.hardware.camera2.CaptureRequest.SENSOR_EXPOSURE_TIME;
 
 public class CameraSurfaceView extends GLSurfaceView {
@@ -96,7 +100,6 @@ public class CameraSurfaceView extends GLSurfaceView {
             int width = image.getWidth();
             int height = image.getHeight();
             int offset = 0;
-
             Image.Plane[] planes = image.getPlanes();
             byte[] data = new byte[image.getWidth() * image.getHeight() * ImageFormat.getBitsPerPixel(ImageFormat.YUV_420_888) / 8];
             byte[] rowData = new byte[planes[0].getRowStride()];
@@ -110,21 +113,13 @@ public class CameraSurfaceView extends GLSurfaceView {
                 int h = (i == 0) ? height : height / 2;
                 for (int row = 0; row < h; row++) {
                     if (pixelStride == bytesPerPixel) {
-                        Log.d("YUV","1");
                         int length = w * bytesPerPixel;
                         buffer.get(data, offset, length);
-                        // Advance buffer the remainder of the row stride, unless on the last row.
-                        // Otherwise, this will throw an IllegalArgumentException because the buffer
-                        // doesn't include the last padding.
                         if (h - row != 1) {
                             buffer.position(buffer.position() + rowStride - length);
                         }
                         offset += length;
                     } else {
-                        Log.d("YUV","2");
-                        // On the last row only read the width of the image minus the pixel stride
-                        // plus one. Otherwise, this will throw a BufferUnderflowException because the
-                        // buffer doesn't include the last padding.
                         if (h - row == 1) {
                             buffer.get(rowData, 0, width - pixelStride + 1);
                         } else {
@@ -146,6 +141,7 @@ public class CameraSurfaceView extends GLSurfaceView {
         @Override
         public void onImageAvailable(ImageReader reader) {
             Image image = reader.acquireLatestImage();
+
             if (!mAsyncRunning) {
                 if (!mRunning) {
                     if(image != null)
@@ -174,7 +170,37 @@ public class CameraSurfaceView extends GLSurfaceView {
                     mSensorManager.registerListener(mSensorListener, mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_GAME);
                 }
                 float[] cameraRotationMatrix = new float[16];
+                //MOCK for X Axis
+                float[] r1 = {-1,0,0,0,
+                        0,0,1,0
+                        ,0,-1,0,0,
+                        0,0,0,1};
+                float[] r2 = {1,0,0,0,
+                0,0,-1,0,
+                0,1,0,0,
+                0,0,0,1};
+                //MOCK for Y Axis
+                float[] r3 = {1,0,0,0,
+                0,1,0,0,
+                0,0,1,0,
+                0,0,0,1};
+                float[] r4 = {0,0,1,0,
+                0,1,0,0
+                -1,0,0,0,
+                0,0,0,1};
+
                 SensorManager.getRotationMatrixFromVector(cameraRotationMatrix,mCameraQuaternion);
+//
+//                if(mNumPicture == 1){
+//                    cameraRotationMatrix = r1;
+//                }
+//                if(mNumPicture == 2){
+//                    cameraRotationMatrix = r2;
+//                }
+//
+
+
+
                 Mat rotationMat = new Mat();
                 rotationMat.create(3, 3, CvType.CV_32F);
                 for (int i = 0; i < 3; i++) {
@@ -273,8 +299,16 @@ public class CameraSurfaceView extends GLSurfaceView {
         updatePreview();
     }
 
-    public void runProcess(){
-        mRunning = true;
+    public void runProcess(boolean firstTime){
+        if(firstTime){
+            mPreviewRequestBuilder.set(CONTROL_AF_TRIGGER,CONTROL_AF_TRIGGER_START);
+            mPreviewRequestBuilder.set(CONTROL_AWB_LOCK, Boolean.TRUE);
+            mPreviewRequestBuilder.set(CONTROL_AE_LOCK, Boolean.TRUE);
+            updatePreview();
+        }
+        else {
+            mRunning = true;
+        }
     }
 
     public void Resume() {
@@ -309,7 +343,8 @@ public class CameraSurfaceView extends GLSurfaceView {
                 List<Size> outputSizes = Arrays.asList(map.getOutputSizes(ImageFormat.JPEG));
                 Size largest = Collections.max(outputSizes, new Util.CompareSizesByArea());
 
-                mImageReader = ImageReader.newInstance(largest.getWidth()/5, largest.getHeight()/5, ImageFormat.YUV_420_888, 2);
+                mImageReader = ImageReader.newInstance(1080, 1440, ImageFormat.YUV_420_888, 2);
+                Log.d("CameraCharacteristic","Create Camera With Size ("+largest.getWidth()+","+largest.getHeight()+")");
                 mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
                 mCharacteristics = characteristics;
                 mCameraId = cameraId;
@@ -385,14 +420,14 @@ public class CameraSurfaceView extends GLSurfaceView {
             if (texture == null){
                 try {
                     Thread.sleep(1000);
-                    Log.i("GLSurface-Camera-connector","Texture not ready yet try again in 1 sec");
+                    Log.i("GLSurface Connector","Texture not ready yet try again in 1 sec");
                     createCameraPreviewSession();
                     return;
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
             }
-            texture.setDefaultBufferSize(800, 1280);
+            texture.setDefaultBufferSize(1080, 1440);
             Surface surface = new Surface(texture);
             Surface mImageSurface = mImageReader.getSurface();
             mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
@@ -411,8 +446,8 @@ public class CameraSurfaceView extends GLSurfaceView {
                             Long minExpT = range.getLower();
                             Long maxExpT = range.getUpper();
                             mPreviewRequestBuilder.set(SENSOR_EXPOSURE_TIME, ((minExpT + maxExpT) / 128));
-                            mPreviewRequestBuilder.set(CONTROL_AF_MODE, CONTROL_AF_MODE_OFF);
-                            mPreviewRequestBuilder.set(CONTROL_AE_MODE, CONTROL_AE_MODE_OFF);
+                            mPreviewRequestBuilder.set(CONTROL_AF_MODE, CONTROL_AF_MODE_AUTO);
+//                            mPreviewRequestBuilder.set(CONTROL_AE_MODE, CONTROL_AE_MODE_OFF);
                             mPreviewRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION, Util.getJpegOrientation(mCharacteristics, getActivity().getWindowManager().getDefaultDisplay().getRotation()));
                             updatePreview();
                         }
@@ -459,11 +494,19 @@ public class CameraSurfaceView extends GLSurfaceView {
         @Override
         public void onSensorChanged(SensorEvent event) {
             if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
-                mQuaternion = Util.getQuadFromGyro(event.values,lastTimeStamp,event.timestamp,mQuaternion,true,false,true,true);
+
+                mQuaternion = Util.getQuadFromGyro(event.values,lastTimeStamp,event.timestamp,mQuaternion,true,true,true,true);
                 mCameraQuaternion = Util.getQuadFromGyro(event.values,lastTimeStamp,event.timestamp,mCameraQuaternion,false,true,false,true);
                 lastTimeStamp = event.timestamp;
                 float[] rotMat = new float[16];
-                SensorManager.getRotationMatrixFromVector(rotMat,mQuaternion);
+                float[] correctedQuat = {mQuaternion[0],mQuaternion[1],mQuaternion[2],-mQuaternion[3]};
+                SensorManager.getRotationMatrixFromVector(rotMat, correctedQuat);
+
+                float[] temp = new float[16];
+
+                Matrix.multiplyMM(temp,0,Util.SWAP_X,0,rotMat,0);
+                Matrix.multiplyMM(rotMat,0,Util.SWAP_Z,0,temp,0);
+//                Matrix.multiplyMM(rotMat,0,Util.MAGIC_MAT,0,temp,0);
                 mGLRenderer.setRotationMatrix(rotMat);
             }
         }
@@ -490,8 +533,9 @@ public class CameraSurfaceView extends GLSurfaceView {
 
             mAsyncRunning = false;
             Log.i("mNumPicture",mNumPicture+"");
-            if(mNumPicture < 3)
+            if(result.empty())
                 return;
+
             Bitmap bitmap = Bitmap.createBitmap(result.cols(), result.rows(), Bitmap.Config.ARGB_8888);
             Mat test = new Mat(result.height(),result.width(),CvType.CV_8UC3);
             Imgproc.cvtColor(result, test, Imgproc.COLOR_BGR2RGBA);

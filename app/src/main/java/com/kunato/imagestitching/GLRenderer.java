@@ -6,6 +6,8 @@ import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.util.Log;
 
+import java.util.Arrays;
+
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
@@ -20,8 +22,13 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     private final float[] mProjectionMatrix = new float[16];
     private final float[] mViewMatrix = new float[16];
     private final float SCREEN_RATIO = 0.6239168f;
-    private final float CANVAS_SIZE = 0.4f;
-    private float[] mRotationMatrix = {1f,0,0,0,0,1f,0,0,0,0,1f,0,0,0,0,1f};
+    private final float ZOOM_RATIO = 1.5f;
+    private final float CANVAS_SIZE = 1f * ZOOM_RATIO;
+    private final float HEIGHT_WIDTH_RATIO = 1f;
+    private float[] mRotationMatrix = {1f,0,0,0
+            ,0,1f,0,0
+            ,0,0,1f,0
+            ,0,0,0,1f};
     private Canvas mCanvas;
     private Sphere mSphere;
 
@@ -32,10 +39,10 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     public void onSurfaceCreated ( GL10 unused, EGLConfig config ) {
         mStartTime = System.nanoTime();
 
-        float[] vertices = {-CANVAS_SIZE, -CANVAS_SIZE /SCREEN_RATIO, -1.0f,
-                CANVAS_SIZE, -CANVAS_SIZE /SCREEN_RATIO, -1.0f,
-                -CANVAS_SIZE, CANVAS_SIZE /SCREEN_RATIO, -1.0f,
-                CANVAS_SIZE, CANVAS_SIZE /SCREEN_RATIO, -1.0f};
+        float[] vertices = {-CANVAS_SIZE, -CANVAS_SIZE * HEIGHT_WIDTH_RATIO, -1.0f,
+                CANVAS_SIZE, -CANVAS_SIZE * HEIGHT_WIDTH_RATIO, -1.0f,
+                -CANVAS_SIZE, CANVAS_SIZE * HEIGHT_WIDTH_RATIO, -1.0f,
+                CANVAS_SIZE, CANVAS_SIZE * HEIGHT_WIDTH_RATIO, -1.0f};
         float[] textures = {0.0f, 0.0f,
                 0.0f, 1.0f,
                 1.0f, 0.0f,
@@ -50,23 +57,21 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
 
         Matrix.setLookAtM(mViewMatrix, 0,
-                0.0f, 0.0f, 0.2f,
+                0.0f, 0.0f, -0.2f,
                 0.0f, 0.0f, 0.0f,
                 0.0f, 1.0f, 0.0f);
-
     }
     //Core function
     public void onDrawFrame ( GL10 unused ) {
         mFrame++;
         if(System.nanoTime() - mStartTime >= 1000000000){
-            Log.d("FPS","fps : "+mFrame);
+            Log.i("FPS","fps : "+mFrame);
             mFrame = 0;
             mStartTime = System.nanoTime();
         }
         float[] sphereMat = new float[16];
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
         Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix, 0, mViewMatrix, 0);
-        Matrix.multiplyMM(sphereMat, 0, mMVPMatrix, 0, mRotationMatrix, 0);
 
 
         //draws
@@ -79,16 +84,21 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
 
         //multiply MM(retMat, retMatOffset, mat1 * mat2 (includeOffset))
         mCanvas.draw(mMVPMatrix);
+
+        Matrix.multiplyMM(sphereMat, 0, mMVPMatrix, 0, mRotationMatrix, 0);
         mSphere.draw(sphereMat);
         GLES20.glFlush();
     }
 
     public void onSurfaceChanged ( GL10 unused, int width, int height ) {
         GLES20.glViewport(0, 0, width, height);
-        float ratio =( float )width / height;
-        Log.d("Ratio",ratio+"");
-        Matrix.perspectiveM(mProjectionMatrix, 0, 40, ratio, 0.1f, 100f);
-
+//        float ratio =( float ) width / height;
+        float ratio = (float) 3/4; //always because camera input as 3/4
+        //48=zoom1.5//72=zoom1
+//        Log.d("Ratio", ratio + "");
+        Matrix.perspectiveM(mProjectionMatrix, 0, 76/ZOOM_RATIO, ratio, 0.1f, 1000f);//48 for 4/3 64 for 1920/1080
+//        Log.d("PerspectiveM",Arrays.toString(mProjectionMatrix));
+//        Matrix.orthoM(mProjectionMatrix,0,-100,100,-100,100,-0.1f,100f);
 
 
         }
@@ -105,6 +115,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     }
     //TODO change to quat?
     public void setRotationMatrix(float[] rot){
+//        Log.i("RotationMat", Arrays.toString(rot));
         mRotationMatrix = rot;
     }
     public Sphere getSphere(){

@@ -20,8 +20,8 @@ public class ObjReader {
     public static List<float[]> mVertices = new ArrayList<float[]>();
     public static List<float[]> mTextures = new ArrayList<float[]>();
     public static void readAll(Context context){
-        readVertices(context, "sphere_vertices.txt");
-        readTextures(context, "sphere_texture.txt");
+        readVertices(context, "iso_sphere_vertices.txt");
+        readTextures(context, "iso_sphere_texture.txt");
     }
 
     public static void readVertices(Context context, String filename){

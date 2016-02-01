@@ -25,6 +25,7 @@ import android.util.Log;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import java.nio.ShortBuffer;
 
 public class Sphere {
 
@@ -51,7 +52,7 @@ public class Sphere {
             "void main() {" +
                     "vec4 color = texture2D(sTexture,v_TexCoordinate);"+
                     "gl_FragColor = color;" +
-                    "if(color.r == 0.0){gl_FragColor.a = 0.0;}else{gl_FragColor.a = 1.0;}" +
+                    "if(color.r == 0.0 && color.b == 0.0 && color.g == 0.0){gl_FragColor.a = 0.0;}else{gl_FragColor.a = 1.0;}" +
             "}";
 
     private final FloatBuffer mVertexBuffer;
@@ -60,7 +61,7 @@ public class Sphere {
     private int mPositionHandle;
     private int mTextureHandle;
     private int mMVPMatrixHandle;
-
+    private SphereObject sphereObject;
     // number of coordinates per vertex in this array
     private float mVertexCoords[];
     private float mTextureCoords[];
@@ -68,14 +69,34 @@ public class Sphere {
     private final int VERTEX_STRIDE = ObjReader.COORD_PER_VERTEX * 4; // 4 bytes per float
     private final int textureCount;
     private final int TEXTURE_STRIDE = ObjReader.COORD_PER_TEXTURE * 4;
+    private FloatBuffer mSphereBuffer;
+    private ShortBuffer mIndexBuffer;
     float color[] = { 0.63671875f, 0.76953125f, 0.22265625f, 0.0f };
     //Only one texture
     private int[] mTextures = new int[1];
     private int mTextureCoordinateHandle;
     private boolean mTexRequireUpdate = false;
     private Bitmap mQueueBitmap;
-    public Sphere(Context context) {
+    private int[] ibo = new int[1];
 
+    public Sphere(Context context) {
+        sphereObject = new SphereObject(20,0,0,0,210,1);
+        mSphereBuffer = sphereObject.getVertices();
+//        mVertexCoords = new float[(fullFloat.length/5)*3];
+//        mTextureCoords = new float[(fullFloat.length/5)*2];
+//        Log.d("FULLFLOAT",""+fullFloat.length);
+//        for(int i = 0 ; i < fullFloat.length/5 ; i++){
+//            for(int j = 0 ; j < 3 ; j++){
+//                mVertexCoords[i * 3 +j] = fullFloat[i*5+j];
+//            }
+//            for(int j = 0 ; j < 2 ; j++){
+//                mTextureCoords[i*2 + j] = fullFloat[i*5+3+j];
+//            }
+//        }
+
+        mSphereBuffer.position(0);
+        mIndexBuffer = sphereObject.getIndices()[0];
+        mIndexBuffer.position(0);
         ObjReader.readAll(context);
         mVertexCoords = new float[ObjReader.mVertices.size()* ObjReader.COORD_PER_VERTEX];
         mTextureCoords = new float[ObjReader.mTextures.size()* ObjReader.COORD_PER_TEXTURE];
@@ -116,19 +137,17 @@ public class Sphere {
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inSampleSize = 4;
         final Bitmap bitmap = BitmapFactory.decodeResource(context.getResources(), texture, options);
-
-        texImage2D(bitmap);
-    }
-
-
-    public void texImage2D(Bitmap bitmap){
         GLES20.glGenTextures(1, this.mTextures, 0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, this.mTextures[0]);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
+//        texImage2D(bitmap);
+    }
+
+
+    public void texImage2D(Bitmap bitmap){
         GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
         bitmap.recycle();
-
     }
 
     public void updateBitmap(Bitmap bitmap){
@@ -148,19 +167,25 @@ public class Sphere {
         //Attrib
         mPositionHandle = GLES20.glGetAttribLocation(mProgram, "vPosition");
         mTextureCoordinateHandle = GLES20.glGetAttribLocation(mProgram, "a_TexCoordinate");
+        mSphereBuffer.position(0);
         GLES20.glEnableVertexAttribArray(mPositionHandle);
-        GLES20.glVertexAttribPointer(mPositionHandle, ObjReader.COORD_PER_VERTEX, GLES20.GL_FLOAT, false, VERTEX_STRIDE, mVertexBuffer);
+        GLES20.glVertexAttribPointer(mPositionHandle, 3, GLES20.GL_FLOAT, false, sphereObject.getVeticesStride(), mSphereBuffer);
+//        GLES20.glVertexAttribPointer(mPositionHandle, ObjReader.COORD_PER_VERTEX, GLES20.GL_FLOAT, false, VERTEX_STRIDE, mVertexBuffer);
+        mSphereBuffer.position(3);
         GLES20.glEnableVertexAttribArray(mTextureCoordinateHandle);
-        GLES20.glVertexAttribPointer(mTextureCoordinateHandle, ObjReader.COORD_PER_TEXTURE, GLES20.GL_FLOAT, false, TEXTURE_STRIDE, mTextureBuffer);
+        GLES20.glVertexAttribPointer(mTextureCoordinateHandle, 2, GLES20.GL_FLOAT, false, sphereObject.getVeticesStride(), mSphereBuffer);
+
+//        GLES20.glVertexAttribPointer(mTextureCoordinateHandle, ObjReader.COORD_PER_TEXTURE, GLES20.GL_FLOAT, false, TEXTURE_STRIDE, mTextureBuffer);
         //Uniform
         mTextureHandle = GLES20.glGetUniformLocation(mProgram, "sTexture");
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glUniform1i(mTextureHandle, 0);
         mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");
         GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mvpMatrix, 0);
+//        GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, ibo[0]);
+//        GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, VERTEX_COUNT);
 
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, VERTEX_COUNT);
-
+        GLES20.glDrawElements(GLES20.GL_TRIANGLES, sphereObject.getNumIndices()[0], GLES20.GL_UNSIGNED_SHORT, mIndexBuffer);
         GLES20.glDisableVertexAttribArray(mPositionHandle);
         GLES20.glDisableVertexAttribArray(mTextureCoordinateHandle);
     }

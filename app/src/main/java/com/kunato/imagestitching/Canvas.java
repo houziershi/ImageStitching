@@ -20,7 +20,7 @@ public class Canvas {
                     "varying vec2 texCoord;\n" +
                     "void main() {\n" +
                     "  texCoord = vTexCoord;\n" +
-                    "  gl_Position = uMVPMatrix * vec4 ( vPosition.x, vPosition.y, vPosition.z, 1.0 );\n" +
+                    "  gl_Position = vec4 ( vPosition.x, vPosition.y, vPosition.z, 1.0 );\n" +
                     "}";
 
     private final String fss_ext =

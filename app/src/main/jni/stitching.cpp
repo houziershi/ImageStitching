@@ -59,14 +59,15 @@
 #include "opencv2/stitching/detail/util.hpp"
 #include "opencv2/stitching/detail/warpers.hpp"
 #include "opencv2/stitching/warpers.hpp"
+#include "opencv2/nonfree/features2d.hpp"
+#include "BundleCeres.h"
 
 using namespace std;
 using namespace cv;
 using namespace cv::detail;
+# define M_PI           3.14159265358979323846
 
-
-double work_scale = 0.2, seam_scale = 0.2, compose_scale = 1;
-double seam_work_aspect = 1;
+double work_scale = 0.4, seam_scale = 0.2, compose_scale = 1.0;
 // Default command line args
 
 float conf_thresh = 1.f;
@@ -107,10 +108,10 @@ void findWarpForSeam(float warped_image_scale,float seam_scale,float work_scale,
 
     double seam_work_aspect = seam_scale/work_scale;
     Ptr<WarperCreator> warper_creator = new cv::SphericalWarper();
-    Ptr<RotationWarper> warper = warper_creator->create(warped_image_scale * seam_work_aspect);
+//    Ptr<WarperCreator> warper_creator = new cv::CylindricalWarper();
+    Ptr<RotationWarper> warper = warper_creator->create(warped_image_scale*seam_work_aspect);
 
     for(int i = 0; i < p_img.size(); i++){
-//        printMatrix(cameras[i].R,"R");
         Mat_<float> K;
         Mat images_warped_f;
         Mat masks;
@@ -140,23 +141,16 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
     vector<Mat> masks_warped(p_img.size());
     vector<Point> corners(p_img.size());
     Ptr<Blender> blender;
-    // Update warped image scale
-    warped_image_scale =  warped_image_scale * static_cast<float>(compose_work_aspect);
-    // Update corners and sizes
+    warped_image_scale =  warped_image_scale * compose_work_aspect;
+//    Ptr<WarperCreator> warper_creator = new cv::CylindricalWarper();
     Ptr<WarperCreator> warper_creator = new cv::SphericalWarper();
     Ptr<RotationWarper> warper = warper_creator->create(warped_image_scale);
     for (int i = 0; i < p_img.size(); ++i)
     {
-        //save mask,point
-
         masks_warped[i] = p_img[i].mask_warped;
-        // Update intrinsics
         cameras[i].focal *= compose_work_aspect;
         cameras[i].ppx *= compose_work_aspect;
         cameras[i].ppy *= compose_work_aspect;
-
-
-        // Update corner and size
         Size sz = p_img[i].full_size;
         if (std::abs(compose_scale - 1) > 1e-1)
         {
@@ -187,12 +181,8 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
         mask.create(img_size, CV_8U);
         mask.setTo(Scalar::all(255));
         cameras[img_idx].K().convertTo(K, CV_32F);
-        // Warp the current image
         warper->warp(img, K, cameras[img_idx].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
-        // Warp the current image mask
         warper->warp(mask, K, cameras[img_idx].R, INTER_NEAREST, BORDER_CONSTANT, mask_warped);
-        // Compensate exposure
-
         img_warped.convertTo(img_warped_s, CV_16S);
         img_warped.release();
         img.release();
@@ -210,11 +200,19 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
                 sizes[j] = p_img[j].size;
             }
             blender = Blender::createDefault(blend_type, false);
+
             //(w,h),(w,h)???//final 1 before bundle
-            Rect full(-(3525/2),0,3525,3404/2);
+//            Rect full(-(3406/2),-(3406/4),3406,3406/2);//Cylinder
+            int width = cameras[0].focal * M_PI * 2;
+            int offset = (cameras[0].focal / cameras[0].aspect)/2;//??1.18 at 1.73 aspect???
+            int height = ((cameras[0].focal / cameras[0].aspect) * M_PI);//??? 1280
+            Rect full(-(width/2),0,width,height);//Sphere(scale=0.2)
 //            blender->prepare(corners, sizes);
+
             Rect r = resultRoi(corners,sizes);
             __android_log_print(ANDROID_LOG_DEBUG,"TAG","Rect r size (%d,%d) (%d,%d)",r.x,r.y,r.width,r.height);
+            __android_log_print(ANDROID_LOG_DEBUG,"TAG","Rect full size (%d,%d) (%d,%d)",full.x,full.y,full.width,full.height);
+//            blender->prepare(r);
             blender->prepare(full);
         }
         blender->feed(img_warped_s, mask_warped, corners[img_idx]);
@@ -231,13 +229,13 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
 JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeAddStitch(JNIEnv*, jobject, jlong imgaddr,jlong rotaddr);
 JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeAddStitch(JNIEnv*, jobject, jlong imgaddr,jlong rotaddr){
 //    __android_log_print(ANDROID_LOG_VERBOSE, TAG, "Add Images");
-    seam_work_aspect = seam_scale / work_scale;
     ImagePackage imagePackage;
     Mat& full_img  = *(Mat*)imgaddr;
     Point2f center(full_img.cols/2.0F,full_img.rows/2.0F);
     Mat rot_mat = getRotationMatrix2D(center, 90, 1.0);
     Mat dst;
     warpAffine(full_img, dst, rot_mat, full_img.size());
+    full_img = dst;
     Mat& rot = *(Mat*)rotaddr;
     imagePackage.rotation = rot;
     imagePackage.full_size = dst.size();
@@ -245,15 +243,34 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
     ImageFeatures feature;
     Mat img;
     resize(full_img, img, Size(), work_scale, work_scale);
-    //
-    Ptr<FeaturesFinder> finder = new OrbFeaturesFinder();
-//    (*finder)(full_img, feature);
-//    feature.img_idx = images.size();
+
+    Ptr<Feature2D> surf = Algorithm::create<Feature2D>("Feature2D.SURF");
+    surf->set("hessianThreshold", 300);
+    surf->set("nOctaves", 3);
+    surf->set("nOctaveLayers", 4);
+
+    std::vector<KeyPoint> keypoints;
+    Mat descriptors;
+    Mat grayImg;
+    cvtColor(img,grayImg,CV_BGR2GRAY);
+    (*surf)(grayImg , Mat(), feature.keypoints, descriptors, false);
+    feature.descriptors = descriptors.reshape(1, (int)keypoints.size());
+
+    feature.img_idx = images.size();
     resize(full_img, img, Size(), seam_scale, seam_scale);
+    feature.img_size = img.size();
+
+//    __android_log_print(ANDROID_LOG_VERBOSE,"Feature","SURF Keypoints Size %d",feature.keypoints.size());
+//    __android_log_print(ANDROID_LOG_VERBOSE,"Feature","SURF Size (%d %d)",feature.descriptors.cols,feature.descriptors.rows);
+//    Ptr<FeaturesFinder> finder = new OrbFeaturesFinder();
+//    (*finder)(img, feature);
+    __android_log_print(ANDROID_LOG_VERBOSE,"Feature","Keypoints Size %d",feature.keypoints.size());
+    __android_log_print(ANDROID_LOG_VERBOSE,"Feature","Size (%d %d)",feature.descriptors.cols,feature.descriptors.rows);
+//    printMatrix(feature.descriptors,"feature");
     imagePackage.image = img.clone();
     imagePackage.size = img.size();
-//    imagePackage.feature = feature;
-    finder->collectGarbage();
+    imagePackage.feature = feature;
+//    finder->collectGarbage();
     images.push_back(imagePackage);
 //    __android_log_print(ANDROID_LOG_VERBOSE, TAG, "Number of Image %d", images.size());
 
@@ -283,36 +300,41 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
     matcher.collectGarbage();
 //    __android_log_print(ANDROID_LOG_VERBOSE, TAG, "Run estimator %d", 5);
     vector<CameraParams> cameras;
-
     for(int i = 0; i < num_images;i++){
+
+        __android_log_print(ANDROID_LOG_VERBOSE,"Native Size","Input Image Size : %d,%d ",images[i].size.height,images[i].size.width);
         CameraParams camera;
-        camera.ppx = images[i].size.width/2.0;
-        camera.ppy = images[i].size.height/2.0;
-
-        camera.aspect = 0.9;
-        camera.focal = (images[i].size.height * 4.7 / 5.2);
+        camera.ppx = images[i].size.width/2.0 * work_scale/seam_scale;
+        camera.ppy = images[i].size.height/2.0 * work_scale/seam_scale;
+//        camera.ppx = 268;
+//        camera.ppy = 5.16;
+//        camera.aspect = 4/3.0;
+        camera.aspect = 1;//??? change to 1(1920/1080??=1.77)
+        camera.focal = (images[i].size.height * 4.7 / 5.2) * work_scale/seam_scale;
+//        camera.focal = 981;
         camera.R = images[i].rotation;
-        camera.t = Mat::zeros(3,1,CV_64F);
+        camera.t = Mat::zeros(3,1,CV_32F);
         cameras.push_back(camera);
+        __android_log_print(ANDROID_LOG_VERBOSE,"CameraParam","focal %lf , ppx %lf , ppy %lf",camera.focal,camera.ppx,camera.ppy);
     }
-
-    //BundleHERE
-    // Find median focal length
-
-
+    //Implement BundleAdjustment
+//    Ptr<detail::BundleAdjusterBase> adjuster = new detail::BundleAdjusterRay();
+//    (*adjuster)(features, pairwise_matches, cameras);
+//    doingBundle(features,pairwise_matches,cameras);
     vector<double> focals;
     for (size_t i = 0; i < cameras.size(); ++i)
     {
+        printMatrix(cameras[i].R,"after");
         focals.push_back(cameras[i].focal);
     }
-//    __android_log_print(ANDROID_LOG_VERBOSE, TAG, "Sort focal %d", 5);
+
     sort(focals.begin(), focals.end());
     float warped_image_scale;
     if (focals.size() % 2 == 1)
         warped_image_scale = static_cast<float>(focals[focals.size() / 2]);
     else
         warped_image_scale = static_cast<float>(focals[focals.size() / 2 - 1] + focals[focals.size() / 2]) * 0.5f;
-
+    __android_log_print(ANDROID_LOG_VERBOSE,"Warped_image_scale","(%lf)",warped_image_scale);
 //    __android_log_print(ANDROID_LOG_VERBOSE, TAG, "Prepare Warp Image %d", 5);
 
     vector<Mat> masks_warped(num_images);
@@ -329,103 +351,6 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
     doComposition(warped_image_scale,cameras,images,nullptr,work_scale,compose_scale,blend_type,out);
     __android_log_print(ANDROID_LOG_ERROR,TAG,"Compositioned %d Images",num_images);
     out.convertTo(result,CV_8UC3);
-//
-//    __android_log_print(ANDROID_LOG_VERBOSE, TAG, "Composition %d", 5);
-//    Mat img;
-//
-//    Mat img_warped, img_warped_s;
-//    Mat dilated_mask, seam_mask, mask, mask_warped;
-//    Ptr<Blender> blender;
-//    //double compose_seam_aspect = 1;
-//    double compose_work_aspect = 1;
-//
-//    for (int img_idx = 0; img_idx < num_images; ++img_idx)
-//    {
-//        LOGLN("Compositing image #" << indices[img_idx]+1);
-//
-//        // Read image and resize it if necessary
-//        images[img_idx].full_image;
-//        if (!is_compose_scale_set)
-//        {
-//            // Compute relative scales
-//            //compose_seam_aspect = compose_scale / seam_scale;
-//            compose_work_aspect = compose_scale / work_scale;
-//
-//            // Update warped image scale
-//            warped_image_scale *= static_cast<float>(compose_work_aspect);
-//            warper = warper_creator->create(warped_image_scale);
-//
-//            // Update corners and sizes
-//            for (int i = 0; i < num_images; ++i)
-//            {
-//                // Update intrinsics
-//                cameras[i].focal *= compose_work_aspect;
-//                cameras[i].ppx *= compose_work_aspect;
-//                cameras[i].ppy *= compose_work_aspect;
-//
-//                // Update corner and size
-//                Size sz = images[i].full_size;
-//                if (std::abs(compose_scale - 1) > 1e-1)
-//                {
-//                    sz.width = cvRound(sz.width * compose_scale);
-//                    sz.height = cvRound(sz.height * compose_scale);
-//                }
-//
-//                Mat K;
-//                cameras[i].K().convertTo(K, CV_32F);
-//                Rect roi = warper->warpRoi(sz, K, cameras[i].R);
-//                images[i].corner = roi.tl();
-//                images[i].size = roi.size();
-//            }
-//        }
-//        if (abs(compose_scale - 1) > 1e-1)
-//            resize(images[img_idx].full_image, img, Size(), compose_scale, compose_scale);
-//        else
-//            img = images[img_idx].full_image;
-//        Size img_size = img.size();
-//
-//        Mat K;
-//        cameras[img_idx].K().convertTo(K, CV_32F);
-//
-//        // Warp the current image
-//        warper->warp(img, K, cameras[img_idx].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
-//
-//        // Warp the current image mask
-//        mask.create(img_size, CV_8U);
-//        mask.setTo(Scalar::all(255));
-//        warper->warp(mask, K, cameras[img_idx].R, INTER_NEAREST, BORDER_CONSTANT, mask_warped);
-//
-//        img_warped.convertTo(img_warped_s, CV_16S);
-//        img_warped.release();
-//        img.release();
-//        mask.release();
-//
-//        dilate(masks_warped[img_idx], dilated_mask, Mat());
-//        resize(dilated_mask, seam_mask, mask_warped.size());
-//        mask_warped = seam_mask & mask_warped;
-//
-//        if (blender.empty())
-//        {
-//            vector<Size> sizes(num_images);
-//            vector<Point> corners(num_images);
-//            for(int j = 0; j < num_images;j++){
-//                corners[j] = images[j].corner;
-//                sizes[j] = images[j].size;
-//            }
-//            blender = Blender::createDefault(Blender::NO, false);
-//            blender->prepare(corners, sizes);
-//        }
-//        __android_log_print(ANDROID_LOG_VERBOSE, TAG, "End Prepared %d", 5);
-//        // Blend the current image
-//        blender->feed(img_warped_s, mask_warped, corners[img_idx]);
-//        __android_log_print(ANDROID_LOG_VERBOSE, TAG, "End feeding %d", img_idx);
-//    }
-//    __android_log_print(ANDROID_LOG_VERBOSE, TAG, "Blending start %d", 5);
-//    Mat result_mask;
-//    blender->blend(result, result_mask);
-//    __android_log_print(ANDROID_LOG_VERBOSE, TAG, "Blending finish %d", 5);
-//    __android_log_print(ANDROID_LOG_VERBOSE, TAG, "Result Size [%d %d]", result.size().height,result.size().width);
-//    imwrite("/sdcard/result.jpg",result);
     return 0;
 }
 void printMatrix(Mat mat,string text){
