@@ -93,9 +93,11 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     public void onSurfaceChanged ( GL10 unused, int width, int height ) {
         GLES20.glViewport(0, 0, width, height);
 //        float ratio =( float ) width / height;
-        float ratio = (float) 3/4; //always because camera input as 3/4
+        float ratio = (float) 3/4f; //always because camera input as 3/4
         //48=zoom1.5//72=zoom1
 //        Log.d("Ratio", ratio + "");
+        //52 for height
+        //
         Matrix.perspectiveM(mProjectionMatrix, 0, 76/ZOOM_RATIO, ratio, 0.1f, 1000f);//48 for 4/3 64 for 1920/1080
 //        Log.d("PerspectiveM",Arrays.toString(mProjectionMatrix));
 //        Matrix.orthoM(mProjectionMatrix,0,-100,100,-100,100,-0.1f,100f);

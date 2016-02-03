@@ -68,16 +68,7 @@ using namespace cv::detail;
 # define M_PI 3.14159265358979323846
 
 double work_scale = 0.4, seam_scale = 0.2, compose_scale = 1.0;
-// Default command line args
 
-float conf_thresh = 1.f;
-bool save_graph = false;
-std::string save_graph_to;
-string warp_type = "spherical";
-int expos_comp_type = ExposureCompensator::GAIN_BLOCKS;
-float match_conf = 0.3f;
-string seam_find_type = "gc_color";
-float blend_strength = 5;
 string result_name = "/mnt/sdcard/result.png";
 int blend_type = Blender::NO;
 #define TAG "NATIVE_DEBUG"
@@ -282,7 +273,7 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
 
     //do matcher
     vector<MatchesInfo> pairwise_matches;
-    BestOf2NearestMatcher matcher(false, match_conf);
+    BestOf2NearestMatcher matcher(false, 0.3f);
     vector<ImageFeatures> features(num_images);
     for(int i = 0; i < num_images; i++){
         features[i] = images[i].feature;
@@ -302,7 +293,9 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
 //        camera.ppy = 5.16;
 //        camera.aspect = 4/3.0;
         camera.aspect = 1;//??? change to 1(1920/1080??=1.77)
-        camera.focal = (images[i].size.height * 4.7 / 5.2) * work_scale/seam_scale;
+        //camera.focal = (images[i].size.height * 4.7 / 5.2) * work_scale/seam_scale; 5.2 - > 10 = bigger
+        //4.8 maybe better
+        camera.focal = (images[i].size.height * 4.7 / 4.8) * work_scale/seam_scale;
 //        camera.focal = 981;
         camera.R = images[i].rotation;
         camera.t = Mat::zeros(3,1,CV_32F);
@@ -314,7 +307,7 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
     //Implement BundleAdjustment
 //    Ptr<detail::BundleAdjusterBase> adjuster = new detail::BundleAdjusterRay();
 //    (*adjuster)(features, pairwise_matches, cameras);
-//    doingBundle(features,pairwise_matches,cameras);
+    doingBundle(features,pairwise_matches,cameras);
 
     vector<double> focals;
     for (size_t i = 0; i < cameras.size(); ++i)

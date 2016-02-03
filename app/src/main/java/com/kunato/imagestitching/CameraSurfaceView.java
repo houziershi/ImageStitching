@@ -93,6 +93,7 @@ public class CameraSurfaceView extends GLSurfaceView {
     private float[] mCameraQuaternion = new float[4];
     public int mNumPicture = 1;
     private final ImageReader.OnImageAvailableListener mOnImageAvailableListener = new ImageReader.OnImageAvailableListener() {
+        //TODO improve this, so slow
         public Mat imageToMat(Image image) {
             ByteBuffer buffer;
             int rowStride;
@@ -345,6 +346,7 @@ public class CameraSurfaceView extends GLSurfaceView {
 
                 mImageReader = ImageReader.newInstance(1080, 1440, ImageFormat.YUV_420_888, 2);
                 Log.d("CameraCharacteristic","Create Camera With Size ("+largest.getWidth()+","+largest.getHeight()+")");
+                Log.d("CameraCharacteristic","LENS_INTRINSIC_CALIBRATION : "+Arrays.toString(characteristics.get(LENS_INTRINSIC_CALIBRATION)));
                 mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
                 mCharacteristics = characteristics;
                 mCameraId = cameraId;

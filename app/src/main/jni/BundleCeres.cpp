@@ -1,15 +1,9 @@
-//
-// Created by Kunat Pipatanakul on 1/26/16 AD.
-//
-
-#include "BundleCeres.h"
 /*
  * BundleCeres.cpp
  *
  *  Created on: Nov 18, 2558 BE
  *      Author: kunato
  */
-#include <android/log.h>
 #include "BundleCeres.h"
 #include "ceres/ceres.h"
 #include "ceres/rotation.h"
@@ -18,32 +12,18 @@
 
 using namespace cv;
 using namespace std;
-using namespace ceres;
+
 typedef Eigen::Matrix<double,3,3> Matrix3d;
 typedef Eigen::Matrix<double,3,1> Vector3d;
-void printMatrix(Mat mat,string text){
-    __android_log_print(ANDROID_LOG_VERBOSE, "Bundle", "Matrix %s############################", text.c_str());
-    __android_log_print(ANDROID_LOG_VERBOSE, "Bundle", "Matrix [%f %f %f]", mat.at<float>(0,0),mat.at<float>(0,1),mat.at<float>(0,2));
-    __android_log_print(ANDROID_LOG_VERBOSE, "Bundle", "Matrix [%f %f %f]", mat.at<float>(1,0),mat.at<float>(1,1),mat.at<float>(1,2));
-    __android_log_print(ANDROID_LOG_VERBOSE, "Bundle", "Matrix [%f %f %f]", mat.at<float>(2,0),mat.at<float>(2,1),mat.at<float>(2,2));
-    __android_log_print(ANDROID_LOG_VERBOSE, "Bundle", "Matrix ##############################");
-}
 struct ReprojectionErrorData
 {
     vector<Point2f> points;
     vector<int> matches_image_idx;
 };
-struct CostFunctor {
-    template <typename T>
-    bool operator()(const T* const x, T* residual) const {
-        residual[0] = T(10.0) - x[0];
-        return true;
-    }
-};
 struct ReprojectionError {
     ReprojectionError(double x1,double y1 , double x2, double y2,double *K1,double *K2)
             : x1(x1), y1(y1) , x2(x2) , y2(y2) , K1(K1), K2(K2){}
-    bool operator()(const double* rvec1,const double* rvec2,const double *f1 ,const double *f2,double* residuals) const {
+    bool operator()(const double* rvec1,const double* rvec2,double* residuals) const {
         double R1[9];
         double R2[9];
         Matrix3d eigen_R1;
@@ -54,11 +34,11 @@ struct ReprojectionError {
         Matrix3d eigen_KMat2;
         Matrix3d eigen_KInv1;
         Matrix3d eigen_KInv2;
-        eigen_KMat1 << *f1, 0.0, *(K1+2),
-                0.0, *f1, *(K1+5),
+        eigen_KMat1 << *(K1+0), 0.0, *(K1+2),
+                0.0, *(K1+4), *(K1+5),
                 0.0,  0.0, 1.0;
-        eigen_KMat2 << *f2, 0.0, *(K2+2),
-                0.0, *f2, *(K2+5),
+        eigen_KMat2 << *(K2+0), 0.0, *(K2+2),
+                0.0, *(K2+4), *(K2+5),
                 0.0,  0.0, 1.0;
         ceres::AngleAxisToRotationMatrix(rvec1,R1);
         ceres::AngleAxisToRotationMatrix(rvec2,R2);
@@ -126,8 +106,7 @@ struct ReprojectionError {
             const double y2,
             double *K1,
             double *K2) {
-        return (new ceres::NumericDiffCostFunction<ReprojectionError,ceres::CENTRAL, 3, 3, 3, 1, 1>(
-                new ReprojectionError(x1,y1,x2,y2,K1,K2)));
+        return (new ceres::NumericDiffCostFunction<ReprojectionError,ceres::CENTRAL, 3, 3, 3>(new ReprojectionError(x1,y1,x2,y2,K1,K2)));
     }
 
     double x1;
@@ -138,36 +117,7 @@ struct ReprojectionError {
     double *K2;
 };
 
-void test() {
-
-    // The variable to solve for with its initial value.
-    double initial_x = 5.0;
-    double x = initial_x;
-
-    // Build the problem.
-    Problem problem;
-
-    // Set up the only cost function (also known as residual). This uses
-    // auto-differentiation to obtain the derivative (jacobian).
-    CostFunction* cost_function =
-            new AutoDiffCostFunction<CostFunctor, 1, 1>(new CostFunctor);
-    problem.AddResidualBlock(cost_function, NULL, &x);
-
-    // Run the solver!
-    Solver::Options options;
-    options.linear_solver_type = ceres::DENSE_SCHUR;
-//    options.linear_solver_type = ceres::DENSE_QR;
-//    options.minimizer_progress_to_stdout = true;
-    Solver::Summary summary;
-
-    Solve(options, &problem , &summary);
-
-    std::cout << summary.BriefReport() << "\n";
-    std::cout << "x : " << initial_x
-    << " -> " << x << "\n";
-}
 //Need to re-done
-//TODO WORK ?
 void doingBundle(vector<ImageFeatures> features,vector<MatchesInfo> pairs,vector<CameraParams> &cameras){
 
     vector<ReprojectionErrorData> rpSet;
@@ -207,10 +157,7 @@ void doingBundle(vector<ImageFeatures> features,vector<MatchesInfo> pairs,vector
         for(int j = 0 ; j < 3 ; j++){
             rotation_array[i*3+j] = rvec.at<float>(j);
         }
-        Mat_<double> K = Mat::eye(3, 3, CV_64F);
-        K(0,0) = focal_array[i]; K(0,2) = features[i].img_size.width * 0.5;
-        K(1,1) = focal_array[i]; K(1,2) = features[i].img_size.height * 0.5;
-        //		K = K.inv();
+        Mat_<double> K = cameras[i].K();
         for(int j = 0 ; j < 9 ; j ++){
             K_array[i*9+j] = K.at<double>(j);
         }
@@ -222,7 +169,7 @@ void doingBundle(vector<ImageFeatures> features,vector<MatchesInfo> pairs,vector
                                                                    K_pointer + rpSet[i].matches_image_idx[0]*9,
                                                                    K_pointer + rpSet[i].matches_image_idx[1]*9);
         problem.AddResidualBlock(cost_func,NULL,rotation_pointer + rpSet[i].matches_image_idx[0]*3
-                ,rotation_pointer + rpSet[i].matches_image_idx[1]*3, focal_pointer+ (rpSet[i].matches_image_idx[0]) ,focal_pointer + (rpSet[i].matches_image_idx[1]));
+                ,rotation_pointer + rpSet[i].matches_image_idx[1]*3);
     }
 
     ceres::Solver::Options options;
@@ -239,7 +186,7 @@ void doingBundle(vector<ImageFeatures> features,vector<MatchesInfo> pairs,vector
         }
         Rodrigues(rvec,R);
         R.convertTo(cameras[i].R,CV_32F);
-        cameras[i].focal = focal_array[i];
+//		cameras[i].focal = focal_array[i];
     }
     Mat R_inv = cameras[0].R.inv();
     for(int i = 0 ; i < cameras.size() ;i++){
