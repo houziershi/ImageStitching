@@ -3,22 +3,30 @@ package com.kunato.imagestitching;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.ImageFormat;
 import android.hardware.SensorEvent;
 import android.hardware.SensorManager;
 import android.hardware.camera2.CameraCharacteristics;
+import android.media.Image;
 import android.opengl.GLES20;
 import android.opengl.GLUtils;
 import android.util.Log;
 import android.util.Size;
 
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.imgproc.Imgproc;
+
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
 
 import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 import static java.lang.StrictMath.cos;
+import static java.lang.System.currentTimeMillis;
 
 /**
  * Created by kunato on 12/14/15 AD.
@@ -74,7 +82,6 @@ public class Util {
         }
 
     }
-
 
     public static float[] naivMatrixMultiply(float[] B, float[] A) {
         int mA, nA, mB, nB;
@@ -150,6 +157,80 @@ public class Util {
         }
 
         return mCurrentRot;
+    }
+    //TODO improve this, so slow
+    public static Mat imageToMat(Image image) {
+        long step1 = currentTimeMillis ();
+        ByteBuffer buffer;
+        int rowStride;
+        int pixelStride;
+        int width = image.getWidth();
+        int height = image.getHeight();
+        int[] rowStrides = new int[3];
+        int[] pixelStrides = new int[3];
+
+        int offset = 0;
+        Image.Plane[] planes = image.getPlanes();
+        ByteBuffer[] buffers = new ByteBuffer[3];
+        byte[] data = new byte[image.getWidth() * image.getHeight() * ImageFormat.getBitsPerPixel(ImageFormat.YUV_420_888) / 8];
+        Log.d("buffer",String.format("data size %d",data.length));
+        Log.d("buffer",String.format("bitformat %d",ImageFormat.getBitsPerPixel(ImageFormat.YUV_420_888)));
+        byte[] rowData = new byte[planes[0].getRowStride()];
+        for(int i = 0; i < planes.length; i++){
+            buffers[i] = planes[i].getBuffer();
+            rowStrides[i] = planes[i].getRowStride();
+            pixelStrides[i] = planes[i].getPixelStride();
+            Log.d("buffer",String.format("Stride %d : %d %d ",i,rowStrides[i],pixelStrides[i]));
+        }
+        Mat test = new Mat();
+        //move this code to native
+        long step1_5 = currentTimeMillis();
+        for (int i = 0; i < planes.length; i++) {
+            int bytesPerPixel = ImageFormat.getBitsPerPixel(ImageFormat.YUV_420_888) / 8;
+            buffer = planes[i].getBuffer();
+            rowStride = planes[i].getRowStride();
+            pixelStride = planes[i].getPixelStride();
+            int w = (i == 0) ? width : width / 2;
+            int h = (i == 0) ? height : height / 2;
+            for (int row = 0; row < h; row++) {
+                //Y
+                if (pixelStride == 1) {
+                    int length = w * bytesPerPixel;
+                    buffer.get(data, offset, length);;
+
+                    Log.w("buffer", String.format("h %d row %d", h, row));
+                    if (h - row != 1) {
+
+                        buffer.position(buffer.position() + rowStride - length);
+                        Log.w("buffer",String.format("position %d",buffer.position()));
+                    }
+
+                    offset += length;
+                    Log.w("buffer",String.format("offset %d",offset));
+                }//UV
+                else {
+                    if (h - row == 1) {
+                        buffer.get(rowData, 0, width - pixelStride + 1);
+                    } else {
+                        buffer.get(rowData, 0, rowStride);
+                    }
+
+                    for (int col = 0; col < w; col++) {
+                        data[offset++] = rowData[col * pixelStride];
+                    }
+                }
+            }
+        }
+        long step2 = currentTimeMillis();
+        // Finally, create the Mat.
+        Mat yuvMat = new Mat(height + height / 2, width, CvType.CV_8UC1);
+        yuvMat.put(0, 0, data);
+        Mat imageMat = new Mat(image.getHeight(),image.getWidth(),CvType.CV_8UC3);
+        Imgproc.cvtColor(yuvMat, imageMat, Imgproc.COLOR_YUV420p2RGB);
+        long step3 = currentTimeMillis();
+        Log.i("Timer","imageToMat : ("+(step1_5-step1)*NS2S+","+((step2-step1_5)*NS2S)+","+((step3-step2)*NS2S)+")");
+        image.close();
+        return imageMat;
     }
 
     public static int getJpegOrientation(CameraCharacteristics c, int deviceOrientation) {

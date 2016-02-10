@@ -23,7 +23,6 @@ import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
 import android.opengl.GLSurfaceView;
-import android.opengl.Matrix;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -32,7 +31,6 @@ import android.util.Range;
 import android.util.Size;
 import android.view.Surface;
 import android.view.SurfaceHolder;
-import android.view.ViewGroup;
 import android.widget.Toast;
 
 import org.opencv.android.Utils;
@@ -50,11 +48,8 @@ import java.util.concurrent.TimeUnit;
 import static android.hardware.camera2.CameraCharacteristics.*;
 import static android.hardware.camera2.CameraCharacteristics.LENS_FACING;
 import static android.hardware.camera2.CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP;
-import static android.hardware.camera2.CameraMetadata.CONTROL_AE_MODE_OFF;
-import static android.hardware.camera2.CameraMetadata.CONTROL_AF_MODE_OFF;
 import static android.hardware.camera2.CameraMetadata.LENS_FACING_FRONT;
 import static android.hardware.camera2.CaptureRequest.CONTROL_AE_LOCK;
-import static android.hardware.camera2.CaptureRequest.CONTROL_AE_MODE;
 import static android.hardware.camera2.CaptureRequest.CONTROL_AF_MODE;
 import static android.hardware.camera2.CaptureRequest.CONTROL_AF_TRIGGER;
 import static android.hardware.camera2.CaptureRequest.CONTROL_AWB_LOCK;
@@ -90,55 +85,9 @@ public class CameraSurfaceView extends GLSurfaceView {
     private boolean mRunning = false;
     private boolean mFirstRun = true;
     private float[] mQuaternion = new float[4];
-    private float[] mCameraQuaternion = new float[4];
     public int mNumPicture = 1;
     private final ImageReader.OnImageAvailableListener mOnImageAvailableListener = new ImageReader.OnImageAvailableListener() {
-        //TODO improve this, so slow
-        public Mat imageToMat(Image image) {
-            ByteBuffer buffer;
-            int rowStride;
-            int pixelStride;
-            int width = image.getWidth();
-            int height = image.getHeight();
-            int offset = 0;
-            Image.Plane[] planes = image.getPlanes();
-            byte[] data = new byte[image.getWidth() * image.getHeight() * ImageFormat.getBitsPerPixel(ImageFormat.YUV_420_888) / 8];
-            byte[] rowData = new byte[planes[0].getRowStride()];
 
-            for (int i = 0; i < planes.length; i++) {
-                int bytesPerPixel = ImageFormat.getBitsPerPixel(ImageFormat.YUV_420_888) / 8;
-                buffer = planes[i].getBuffer();
-                rowStride = planes[i].getRowStride();
-                pixelStride = planes[i].getPixelStride();
-                int w = (i == 0) ? width : width / 2;
-                int h = (i == 0) ? height : height / 2;
-                for (int row = 0; row < h; row++) {
-                    if (pixelStride == bytesPerPixel) {
-                        int length = w * bytesPerPixel;
-                        buffer.get(data, offset, length);
-                        if (h - row != 1) {
-                            buffer.position(buffer.position() + rowStride - length);
-                        }
-                        offset += length;
-                    } else {
-                        if (h - row == 1) {
-                            buffer.get(rowData, 0, width - pixelStride + 1);
-                        } else {
-                            buffer.get(rowData, 0, rowStride);
-                        }
-
-                        for (int col = 0; col < w; col++) {
-                            data[offset++] = rowData[col * pixelStride];
-                        }
-                    }
-                }
-            }
-            // Finally, create the Mat.
-            Mat mat = new Mat(height + height / 2, width, CvType.CV_8UC1);
-            mat.put(0, 0, data);
-
-            return mat;
-        }
         @Override
         public void onImageAvailable(ImageReader reader) {
             Image image = reader.acquireLatestImage();
@@ -149,25 +98,16 @@ public class CameraSurfaceView extends GLSurfaceView {
                         image.close();
                     return;
                 }
-                Log.e("INPUT","Image In");
+                Log.e("INPUT", "Image In");
 
-                AsyncTask<Mat, Integer, Mat> imageStitchingTask = new ImageStitchingTask();
-                Mat yuvMat = imageToMat(image);
-                Mat imageMat = new Mat(image.getHeight(),image.getWidth(),CvType.CV_8UC3);
+                AsyncTask<Object, Integer, Mat> imageStitchingTask = new ImageStitchingTask();
 
-                Imgproc.cvtColor(yuvMat,imageMat,Imgproc.COLOR_YUV420p2RGB);
-                Highgui.imwrite("/sdcard/yuvtest.jpg", yuvMat);
-                Highgui.imwrite("/sdcard/test.jpg", imageMat);
                 if (mFirstRun) {
                     mFirstRun = false;
                     mQuaternion[0] = 0f;
-                    mQuaternion[1] = 1f;
+                    mQuaternion[1] = 0f;
                     mQuaternion[2] = 0f;
-                    mQuaternion[3] = 0f;
-                    mCameraQuaternion[0] = 0f;
-                    mCameraQuaternion[1] = 0f;
-                    mCameraQuaternion[2] = 0f;
-                    mCameraQuaternion[3] = 1f;
+                    mQuaternion[3] = 1f;
                     mSensorManager.registerListener(mSensorListener, mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_GAME);
                 }
                 float[] cameraRotationMatrix = new float[16];
@@ -190,7 +130,7 @@ public class CameraSurfaceView extends GLSurfaceView {
                 -1,0,0,0,
                 0,0,0,1};
 
-                SensorManager.getRotationMatrixFromVector(cameraRotationMatrix,mCameraQuaternion);
+                SensorManager.getRotationMatrixFromVector(cameraRotationMatrix, mQuaternion);
 //
 //                if(mNumPicture == 1){
 //                    cameraRotationMatrix = r1;
@@ -201,15 +141,15 @@ public class CameraSurfaceView extends GLSurfaceView {
 //
 
 
-
                 Mat rotationMat = new Mat();
                 rotationMat.create(3, 3, CvType.CV_32F);
                 for (int i = 0; i < 3; i++) {
                     for (int j = 0; j < 3; j++)
                         rotationMat.put(i, j, cameraRotationMatrix[i * 4 + j]);
                 }
-                imageStitchingTask.execute(imageMat, rotationMat);
-                image.close();
+                //TODO create another thread for convert yuv, tracking
+                imageStitchingTask.execute(image, rotationMat);
+//                image.close();
                 mRunning = false;
             } else {
                 if (image == null)
@@ -344,7 +284,7 @@ public class CameraSurfaceView extends GLSurfaceView {
                 List<Size> outputSizes = Arrays.asList(map.getOutputSizes(ImageFormat.JPEG));
                 Size largest = Collections.max(outputSizes, new Util.CompareSizesByArea());
 
-                mImageReader = ImageReader.newInstance(1080, 1440, ImageFormat.YUV_420_888, 2);
+                mImageReader = ImageReader.newInstance(1080, 1440, ImageFormat.YUV_420_888, 5);
                 Log.d("CameraCharacteristic","Create Camera With Size ("+largest.getWidth()+","+largest.getHeight()+")");
                 Log.d("CameraCharacteristic","LENS_INTRINSIC_CALIBRATION : "+Arrays.toString(characteristics.get(LENS_INTRINSIC_CALIBRATION)));
                 mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
@@ -496,19 +436,11 @@ public class CameraSurfaceView extends GLSurfaceView {
         @Override
         public void onSensorChanged(SensorEvent event) {
             if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
-
-                mQuaternion = Util.getQuadFromGyro(event.values,lastTimeStamp,event.timestamp,mQuaternion,true,true,true,true);
-                mCameraQuaternion = Util.getQuadFromGyro(event.values,lastTimeStamp,event.timestamp,mCameraQuaternion,false,true,false,true);
+                mQuaternion = Util.getQuadFromGyro(event.values,lastTimeStamp,event.timestamp, mQuaternion,false,true,false,true);
                 lastTimeStamp = event.timestamp;
                 float[] rotMat = new float[16];
-                float[] correctedQuat = {mQuaternion[0],mQuaternion[1],mQuaternion[2],-mQuaternion[3]};
+                float[] correctedQuat = {-mQuaternion[0],-mQuaternion[1],-mQuaternion[2], mQuaternion[3]};
                 SensorManager.getRotationMatrixFromVector(rotMat, correctedQuat);
-
-                float[] temp = new float[16];
-
-                Matrix.multiplyMM(temp,0,Util.SWAP_X,0,rotMat,0);
-                Matrix.multiplyMM(rotMat,0,Util.SWAP_Z,0,temp,0);
-//                Matrix.multiplyMM(rotMat,0,Util.MAGIC_MAT,0,temp,0);
                 mGLRenderer.setRotationMatrix(rotMat);
             }
         }
@@ -518,11 +450,12 @@ public class CameraSurfaceView extends GLSurfaceView {
 
         }
     }
-    private class ImageStitchingTask extends AsyncTask<Mat, Integer, Mat> {
-        protected Mat doInBackground(Mat... mat) {
+    //Implement this in JNI
+    private class ImageStitchingTask extends AsyncTask<Object, Integer, Mat> {
+        protected Mat doInBackground(Object... objects) {
             mAsyncRunning = true;
-            ImageStitchingNative is = new ImageStitchingNative();
-            Mat ret = is.addToPano(mat[0], mat[1]);
+            Mat imageMat = Util.imageToMat((Image)objects[0]);
+            Mat ret = ImageStitchingNative.getNativeInstance().addToPano(imageMat, (Mat) objects[1]);
             mNumPicture++;
             return ret;
         }
