@@ -26,6 +26,8 @@ import android.opengl.GLSurfaceView;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.renderscript.Allocation;
+import android.renderscript.RenderScript;
 import android.util.Log;
 import android.util.Range;
 import android.util.Size;
@@ -39,6 +41,7 @@ import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -162,6 +165,7 @@ public class CameraSurfaceView extends GLSurfaceView {
     };
 
 
+
     private CameraCaptureSession mCaptureSession;
     private CameraDevice mCameraDevice;
     private final CameraDevice.StateCallback mStateCallback = new CameraDevice.StateCallback() {
@@ -195,17 +199,23 @@ public class CameraSurfaceView extends GLSurfaceView {
     private ImageReader mImageReader;
     private CaptureRequest.Builder mPreviewRequestBuilder;
     private Semaphore mCameraOpenCloseLock = new Semaphore(1);
-
+    private RSProcessor mProcessor;
     private SensorListener mSensorListener;
     private SensorManager mSensorManager;
     private CameraCharacteristics mCharacteristics;
     private GLRenderer mGLRenderer;
     private String mCameraId;
+    private Surface mProcessingHdrSurface;
+    private RenderScript mRS;
+    private float TARGET_ASPECT = 3.f / 4.f;
+    private float ASPECT_TOLERANCE = 0.1f;
 
 
     public CameraSurfaceView(Context context) {
         super(context);
+
         mActivity = (Activity) context;
+        mRS = RenderScript.create(context);
         mGLRenderer = new GLRenderer(this);
         setEGLContextClientVersion(2);
         setRenderer(mGLRenderer);
@@ -272,7 +282,7 @@ public class CameraSurfaceView extends GLSurfaceView {
     }
 
     private void openCamera() {
-        Log.d("Debug","openCamera");
+        Log.d("Debug", "openCamera");
         CameraManager manager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
         try {
             for (String cameraId : manager.getCameraIdList()) {
@@ -358,8 +368,9 @@ public class CameraSurfaceView extends GLSurfaceView {
     private void createCameraPreviewSession() {
         try {
             Log.d("Debug", "createCameraPreviewSession");
-            SurfaceTexture texture = mGLRenderer.getSurfaceTexture();
-            if (texture == null){
+
+            SurfaceTexture glProcessTexture = mGLRenderer.getProcessSurfaceTexture();
+            if (glProcessTexture == null){
                 try {
                     Thread.sleep(1000);
                     Log.i("GLSurface Connector","Texture not ready yet try again in 1 sec");
@@ -369,13 +380,20 @@ public class CameraSurfaceView extends GLSurfaceView {
                     e.printStackTrace();
                 }
             }
-            texture.setDefaultBufferSize(1080, 1440);
-            Surface surface = new Surface(texture);
-            Surface mImageSurface = mImageReader.getSurface();
-            mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            mPreviewRequestBuilder.addTarget(mImageSurface);
-            mPreviewRequestBuilder.addTarget(surface);
-            mCameraDevice.createCaptureSession(Arrays.asList(mImageSurface, surface),
+            //This is removed because of glProcessTexture via RS can be done the same work.
+//            SurfaceTexture glTexture = mGLRenderer.getSurfaceTexture();
+//            glTexture.setDefaultBufferSize(1440, 1080);
+//            Surface mGLSurface = new Surface(glTexture);
+
+
+            Surface mProcessSurface = mImageReader.getSurface();
+            Surface mGLProcessSurface = new Surface(glProcessTexture);
+            mProcessor = new RSProcessor(mRS,new Size(1440,1080));
+
+            mProcessingHdrSurface = mProcessor.getInputHdrSurface();
+            mProcessor.setOutputSurface(mGLProcessSurface);
+
+            mCameraDevice.createCaptureSession(Arrays.asList(mProcessSurface, mProcessingHdrSurface),
                     new CameraCaptureSession.StateCallback() {
 
                         @Override
@@ -400,6 +418,11 @@ public class CameraSurfaceView extends GLSurfaceView {
                         }
                     }, null
             );
+            mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            mPreviewRequestBuilder.addTarget(mProcessSurface);
+//            mPreviewRequestBuilder.addTarget(mGLSurface);
+            mPreviewRequestBuilder.addTarget(mProcessingHdrSurface);
+
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }

@@ -6,8 +6,6 @@ import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.util.Log;
 
-import java.util.Arrays;
-
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
@@ -15,7 +13,8 @@ import javax.microedition.khronos.opengles.GL10;
 public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFrameAvailableListener {
     private long mStartTime;
     private int mFrame;
-    private SurfaceTexture mSTexture;
+    private SurfaceTexture mTextureNormal;
+    private SurfaceTexture mTextureProcessed;
     private boolean mUpdateST = false;
     private CameraSurfaceView mView;
     private final float[] mMVPMatrix = new float[16];
@@ -31,6 +30,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
             ,0,0,0,1f};
     private Canvas mCanvas;
     private Sphere mSphere;
+    private Canvas mCanvasProcessed;
 
     GLRenderer(CameraSurfaceView view) {
         mView = view;
@@ -48,9 +48,12 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
                 1.0f, 0.0f,
                 1.0f, 1.0f};
         mCanvas = new Canvas(vertices,textures, mView.getActivity());
+        mCanvasProcessed = new Canvas(vertices,textures,mView.getActivity());
         mSphere = new Sphere(mView.getActivity());
-        mSTexture = new SurfaceTexture (mCanvas.getTexturePos()[0]);
-        mSTexture.setOnFrameAvailableListener(this);
+        mTextureNormal = new SurfaceTexture (mCanvas.getTexturePos()[0]);
+        mTextureProcessed = new SurfaceTexture(mCanvasProcessed.getTexturePos()[0]);
+        mTextureNormal.setOnFrameAvailableListener(this);
+        mTextureProcessed.setOnFrameAvailableListener(this);
         GLES20.glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
         //(x (vertical),(horizontal)y,z)
         GLES20.glEnable(GLES20.GL_BLEND);
@@ -77,13 +80,17 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         //draws
         synchronized(this) {
             if ( mUpdateST ) {
-                mSTexture.updateTexImage();
+                //choose whice texture to update
+                //maybe no need for mTextureNormal
+                mTextureProcessed.updateTexImage();
                 mUpdateST = false;
             }
         }
 
         //multiply MM(retMat, retMatOffset, mat1 * mat2 (includeOffset))
-        mCanvas.draw(mMVPMatrix);
+//        mCanvas.draw(mMVPMatrix);
+
+        mCanvasProcessed.draw(mViewMatrix);
 
         Matrix.multiplyMM(sphereMat, 0, mMVPMatrix, 0, mRotationMatrix, 0);
         mSphere.draw(sphereMat);
@@ -98,7 +105,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
 //        Log.d("Ratio", ratio + "");
         //52 for height
         //
-        Matrix.perspectiveM(mProjectionMatrix, 0, 76/ZOOM_RATIO, ratio, 0.1f, 1000f);//48 for 4/3 64 for 1920/1080
+        Matrix.perspectiveM(mProjectionMatrix, 0, 76 / ZOOM_RATIO, ratio, 0.1f, 1000f);//48 for 4/3 64 for 1920/1080
 //        Log.d("PerspectiveM",Arrays.toString(mProjectionMatrix));
 //        Matrix.orthoM(mProjectionMatrix,0,-100,100,-100,100,-0.1f,100f);
 
@@ -112,7 +119,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
 
     public void close() {
         mUpdateST = false;
-        mSTexture.release();
+        mTextureNormal.release();
         mCanvas.deleteTex();
     }
     //TODO change to quat?
@@ -124,7 +131,10 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         return mSphere;
     }
     public SurfaceTexture getSurfaceTexture(){
-        return mSTexture;
+        return mTextureNormal;
+    }
+    public SurfaceTexture getProcessSurfaceTexture() {
+        return mTextureProcessed;
     }
 
 }
