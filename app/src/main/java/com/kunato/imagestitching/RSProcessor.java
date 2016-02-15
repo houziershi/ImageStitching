@@ -44,17 +44,18 @@ public class RSProcessor {
     private HandlerThread mProcessingThread;
     private Handler mProcessingHandler;
     private ScriptC_processing mergeScript;
-    private byte[] mFrameByte = new byte[1080*1440*4];
     public ProcessingTask mTask;
 
     private Size mSize;
+    private CameraSurfaceView mController;
 
     private int mMode;
     private boolean write = true;
 
 
-    public RSProcessor(RenderScript rs, Size dimensions) {
+    public RSProcessor(RenderScript rs, Size dimensions,CameraSurfaceView controller) {
         mSize = dimensions;
+        mController = controller;
 
         Type.Builder yuvTypeBuilder = new Type.Builder(rs, Element.YUV(rs));
         yuvTypeBuilder.setX(dimensions.getWidth());
@@ -111,7 +112,6 @@ public class RSProcessor {
         @Override
         public void onBufferAvailable(Allocation a) {
 
-            Log.d("RS","BufferAvailable");
             synchronized(this) {
                 mPendingFrames++;
                 mProcessingHandler.post(this);
@@ -120,8 +120,6 @@ public class RSProcessor {
 
         @Override
         public void run() {
-
-            Log.d("RS", "running");
             // Find out how many frames have arrived
             int pendingFrames;
             synchronized (this) {
@@ -143,7 +141,14 @@ public class RSProcessor {
             // Run processing pass
             mergeScript.forEach_mergeHdrFrames(mPrevAllocation, mOutputAllocation);
             mOutputAllocation.ioSend();
-            mOutputAllocation.copyTo(mFrameByte);
+            Log.d("Rs",mController.mAsyncRunning+","+mController.mRunning);
+            if(!mController.mAsyncRunning && mController.mRunning){
+                mController.mRunning = false;
+                Log.d("RS","Running");
+                mOutputAllocation.copyTo(mController.mFrameByte);
+                mController.freezeRotMat();
+            }
+
             //WORK
 //            if (write && mFrameByte != null) {
 //                Log.d("RS","Write Mat");

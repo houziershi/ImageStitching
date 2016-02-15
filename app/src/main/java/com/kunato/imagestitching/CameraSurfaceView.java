@@ -84,8 +84,9 @@ public class CameraSurfaceView extends GLSurfaceView {
 
     };
     //Using in OnImageAvailableListener
-    private boolean mAsyncRunning = false;
-    private boolean mRunning = false;
+    public byte[] mFrameByte = new byte[1440*1080*4];
+    public boolean mAsyncRunning = false;
+    public boolean mRunning = false;
     private boolean mFirstRun = true;
     private float[] mQuaternion = new float[4];
     public int mNumPicture = 1;
@@ -93,73 +94,6 @@ public class CameraSurfaceView extends GLSurfaceView {
 
         @Override
         public void onImageAvailable(ImageReader reader) {
-            Image image = reader.acquireLatestImage();
-
-            if (!mAsyncRunning) {
-                if (!mRunning) {
-                    if(image != null)
-                        image.close();
-                    return;
-                }
-                Log.e("INPUT", "Image In");
-
-                AsyncTask<Object, Integer, Mat> imageStitchingTask = new ImageStitchingTask();
-
-                if (mFirstRun) {
-                    mFirstRun = false;
-                    mQuaternion[0] = 0f;
-                    mQuaternion[1] = 0f;
-                    mQuaternion[2] = 0f;
-                    mQuaternion[3] = 1f;
-                    mSensorManager.registerListener(mSensorListener, mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_GAME);
-                }
-                float[] cameraRotationMatrix = new float[16];
-                //MOCK for X Axis
-                float[] r1 = {-1,0,0,0,
-                        0,0,1,0
-                        ,0,-1,0,0,
-                        0,0,0,1};
-                float[] r2 = {1,0,0,0,
-                0,0,-1,0,
-                0,1,0,0,
-                0,0,0,1};
-                //MOCK for Y Axis
-                float[] r3 = {1,0,0,0,
-                0,1,0,0,
-                0,0,1,0,
-                0,0,0,1};
-                float[] r4 = {0,0,1,0,
-                0,1,0,0
-                -1,0,0,0,
-                0,0,0,1};
-
-                SensorManager.getRotationMatrixFromVector(cameraRotationMatrix, mQuaternion);
-//
-//                if(mNumPicture == 1){
-//                    cameraRotationMatrix = r1;
-//                }
-//                if(mNumPicture == 2){
-//                    cameraRotationMatrix = r2;
-//                }
-//
-
-
-                Mat rotationMat = new Mat();
-                rotationMat.create(3, 3, CvType.CV_32F);
-                for (int i = 0; i < 3; i++) {
-                    for (int j = 0; j < 3; j++)
-                        rotationMat.put(i, j, cameraRotationMatrix[i * 4 + j]);
-                }
-                //TODO create another thread for convert yuv, tracking
-                imageStitchingTask.execute(image, rotationMat);
-//                image.close();
-                mRunning = false;
-            } else {
-                if (image == null)
-                    return;
-                image.close();
-            }
-
         }
 
     };
@@ -249,16 +183,49 @@ public class CameraSurfaceView extends GLSurfaceView {
         mPreviewRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, num);
         updatePreview();
     }
+    public float[] mRotmat = new float[16];
+
+    public void freezeRotMat(){
+
+        SensorManager.getRotationMatrixFromVector(mRotmat,mQuaternion);
+        AsyncTask<Object, Integer, Mat> imageStitchingTask = new ImageStitchingTask();
+        if (mFirstRun) {
+            mFirstRun = false;
+            mQuaternion[0] = 0f;
+            mQuaternion[1] = 0f;
+            mQuaternion[2] = 0f;
+            mQuaternion[3] = 1f;
+            mSensorManager.registerListener(mSensorListener, mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_GAME);
+        }
+        Mat rotationMat = new Mat();
+        rotationMat.create(3, 3, CvType.CV_32F);
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++)
+                rotationMat.put(i, j, mRotmat[i * 4 + j]);
+        }
+
+        Mat mat = new Mat(1080, 1440, CvType.CV_8UC4);
+        mat.put(0, 0, mFrameByte);
+        Mat image = new Mat();
+        Imgproc.cvtColor(mat, image, Imgproc.COLOR_RGBA2BGR);
+        //TODO create another thread for convert yuv, tracking
+        Log.i("Rot",Arrays.toString(mRotmat));
+        imageStitchingTask.execute(image, rotationMat);
+    }
 
     public void runProcess(boolean firstTime){
         if(firstTime){
+            Log.d("Surface","Setup");
             mPreviewRequestBuilder.set(CONTROL_AF_TRIGGER,CONTROL_AF_TRIGGER_START);
             mPreviewRequestBuilder.set(CONTROL_AWB_LOCK, Boolean.TRUE);
             mPreviewRequestBuilder.set(CONTROL_AE_LOCK, Boolean.TRUE);
             updatePreview();
         }
         else {
-            mRunning = true;
+
+            Log.d("Surface","Running=true");
+            if(!mAsyncRunning)
+                mRunning = true;
         }
     }
 
@@ -388,7 +355,7 @@ public class CameraSurfaceView extends GLSurfaceView {
 
             Surface mProcessSurface = mImageReader.getSurface();
             Surface mGLProcessSurface = new Surface(glProcessTexture);
-            mProcessor = new RSProcessor(mRS,new Size(1440,1080));
+            mProcessor = new RSProcessor(mRS,new Size(1440,1080),this);
 
             mProcessingHdrSurface = mProcessor.getInputHdrSurface();
             mProcessor.setOutputSurface(mGLProcessSurface);
@@ -419,7 +386,7 @@ public class CameraSurfaceView extends GLSurfaceView {
                     }, null
             );
             mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-            mPreviewRequestBuilder.addTarget(mProcessSurface);
+//            mPreviewRequestBuilder.addTarget(mProcessSurface);
 //            mPreviewRequestBuilder.addTarget(mGLSurface);
             mPreviewRequestBuilder.addTarget(mProcessingHdrSurface);
 
@@ -473,11 +440,15 @@ public class CameraSurfaceView extends GLSurfaceView {
 
         }
     }
+
     //Implement this in JNI
     private class ImageStitchingTask extends AsyncTask<Object, Integer, Mat> {
         protected Mat doInBackground(Object... objects) {
             mAsyncRunning = true;
-            Mat imageMat = Util.imageToMat((Image)objects[0]);
+            Mat mat = new Mat(1080, 1440, CvType.CV_8UC4);
+            mat.put(0, 0, mFrameByte);
+            Mat imageMat = new Mat();
+            Imgproc.cvtColor(mat,imageMat,Imgproc.COLOR_RGBA2BGR);
             Mat ret = ImageStitchingNative.getNativeInstance().addToPano(imageMat, (Mat) objects[1]);
             mNumPicture++;
             return ret;
@@ -493,7 +464,6 @@ public class CameraSurfaceView extends GLSurfaceView {
             Log.i("mNumPicture",mNumPicture+"");
             if(result.empty())
                 return;
-
             Bitmap bitmap = Bitmap.createBitmap(result.cols(), result.rows(), Bitmap.Config.ARGB_8888);
             Mat test = new Mat(result.height(),result.width(),CvType.CV_8UC3);
             Imgproc.cvtColor(result, test, Imgproc.COLOR_BGR2RGBA);

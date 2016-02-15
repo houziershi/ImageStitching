@@ -3,6 +3,7 @@ import android.app.ActionBar;
 import android.graphics.Point;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,6 +14,7 @@ import android.widget.SeekBar;
 public class MainActivity extends FragmentActivity {
     boolean mFirstTime = true;
     CameraSurfaceView mView;
+
     private void initComponent(){
         LinearLayout linearLayout = new LinearLayout(this);
         final Button b = new Button(this);
@@ -68,6 +70,7 @@ public class MainActivity extends FragmentActivity {
                     mFirstTime = false;
                 }
                 else{
+                    Log.d("Activity","Click");
                     b.setText("Capture : " + mView.mNumPicture);
                 }
 
