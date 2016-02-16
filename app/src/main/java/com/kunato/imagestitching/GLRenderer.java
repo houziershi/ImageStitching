@@ -16,7 +16,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     private SurfaceTexture mTextureNormal;
     private SurfaceTexture mTextureProcessed;
     private boolean mUpdateST = false;
-    private CameraSurfaceView mView;
+    private MainController mView;
     private final float[] mMVPMatrix = new float[16];
     private final float[] mProjectionMatrix = new float[16];
     private final float[] mViewMatrix = new float[16];
@@ -32,7 +32,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     private Sphere mSphere;
     private Canvas mCanvasProcessed;
 
-    GLRenderer(CameraSurfaceView view) {
+    GLRenderer(MainController view) {
         mView = view;
     }
 

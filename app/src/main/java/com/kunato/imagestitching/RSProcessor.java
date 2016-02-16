@@ -29,7 +29,6 @@ import android.view.Surface;
 
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-import org.opencv.highgui.Highgui;
 
 /**
  * Renderscript-based for yuv -> rgb convert
@@ -45,15 +44,10 @@ public class RSProcessor {
     private Handler mProcessingHandler;
     private ScriptC_processing mergeScript;
     public ProcessingTask mTask;
-
     private Size mSize;
-    private CameraSurfaceView mController;
-
-    private int mMode;
-    private boolean write = true;
-
-
-    public RSProcessor(RenderScript rs, Size dimensions,CameraSurfaceView controller) {
+    private MainController mController;
+    private boolean homoRequest = false;
+    public RSProcessor(RenderScript rs, Size dimensions, MainController controller) {
         mSize = dimensions;
         mController = controller;
 
@@ -81,8 +75,11 @@ public class RSProcessor {
 
         mTask = new ProcessingTask(mInputAllocation);
         Log.d("RS","RS Processor init");
-    }
 
+    }
+    public void requestHomography(){
+        homoRequest = true;
+    }
     public Surface getInputHdrSurface() {
         return mInputAllocation.getSurface();
     }
@@ -141,13 +138,23 @@ public class RSProcessor {
             // Run processing pass
             mergeScript.forEach_mergeHdrFrames(mPrevAllocation, mOutputAllocation);
             mOutputAllocation.ioSend();
-            Log.d("Rs",mController.mAsyncRunning+","+mController.mRunning);
+            if(homoRequest){
+                Mat mat = new Mat(1080, 1440, CvType.CV_8UC4);
+                byte[] frameByte = new byte[1080*1440*4];
+                mOutputAllocation.copyTo(frameByte);
+                mat.put(0, 0, frameByte);
+                ImageStitchingNative.getNativeInstance().tracking(mat,new Mat());
+                homoRequest = false;
+            }
+
+
             if(!mController.mAsyncRunning && mController.mRunning){
                 mController.mRunning = false;
-                Log.d("RS","Running");
+                Log.d("RS", "Running");
                 mOutputAllocation.copyTo(mController.mFrameByte);
-                mController.freezeRotMat();
+                mController.doStitching();
             }
+
 
             //WORK
 //            if (write && mFrameByte != null) {

@@ -20,13 +20,11 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
-import android.media.Image;
 import android.media.ImageReader;
 import android.opengl.GLSurfaceView;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.renderscript.Allocation;
 import android.renderscript.RenderScript;
 import android.util.Log;
 import android.util.Range;
@@ -37,11 +35,8 @@ import android.widget.Toast;
 
 import org.opencv.android.Utils;
 import org.opencv.core.*;
-import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -58,13 +53,13 @@ import static android.hardware.camera2.CaptureRequest.CONTROL_AF_TRIGGER;
 import static android.hardware.camera2.CaptureRequest.CONTROL_AWB_LOCK;
 import static android.hardware.camera2.CaptureRequest.SENSOR_EXPOSURE_TIME;
 
-public class CameraSurfaceView extends GLSurfaceView {
+public class MainController extends GLSurfaceView {
     private Activity mActivity;
     static {
         System.loadLibrary("nonfree_stitching");
     }
 
-    private static final String TAG = CameraSurfaceView.class.getName();
+    private static final String TAG = MainController.class.getName();
     private final CameraCaptureSession.CaptureCallback mCaptureCallback = new CameraCaptureSession.CaptureCallback() {
         private void process(CaptureResult result) {
 
@@ -145,7 +140,7 @@ public class CameraSurfaceView extends GLSurfaceView {
     private float ASPECT_TOLERANCE = 0.1f;
 
 
-    public CameraSurfaceView(Context context) {
+    public MainController(Context context) {
         super(context);
 
         mActivity = (Activity) context;
@@ -185,7 +180,7 @@ public class CameraSurfaceView extends GLSurfaceView {
     }
     public float[] mRotmat = new float[16];
 
-    public void freezeRotMat(){
+    public void doStitching(){
 
         SensorManager.getRotationMatrixFromVector(mRotmat,mQuaternion);
         AsyncTask<Object, Integer, Mat> imageStitchingTask = new ImageStitchingTask();
@@ -468,8 +463,9 @@ public class CameraSurfaceView extends GLSurfaceView {
             Mat test = new Mat(result.height(),result.width(),CvType.CV_8UC3);
             Imgproc.cvtColor(result, test, Imgproc.COLOR_BGR2RGBA);
             Utils.matToBitmap(test, bitmap);
-            Log.d("Post","Finished, Size :"+result.size().width+","+result.size().height);
+            Log.d("Post", "Finished, Size :" + result.size().width + "," + result.size().height);
             mGLRenderer.getSphere().updateBitmap(bitmap);
+            mProcessor.requestHomography();
         }
     }
 }

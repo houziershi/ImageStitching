@@ -1,6 +1,5 @@
 package com.kunato.imagestitching;
 import android.app.ActionBar;
-import android.graphics.Point;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
@@ -13,7 +12,7 @@ import android.widget.SeekBar;
 
 public class MainActivity extends FragmentActivity {
     boolean mFirstTime = true;
-    CameraSurfaceView mView;
+    MainController mView;
 
     private void initComponent(){
         LinearLayout linearLayout = new LinearLayout(this);
@@ -85,7 +84,7 @@ public class MainActivity extends FragmentActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        mView = new CameraSurfaceView(this);
+        mView = new MainController(this);
         setContentView(mView);
         initComponent();
     }
