@@ -105,16 +105,20 @@ vector<ImagePackage> images;
 Mat stitching_descriptor;
 std::vector<KeyPoint> stitiching_keypoint;
 //No need to re-done
-
-
+Ptr<Feature2D> detector = Algorithm::create<Feature2D>("Feature2D.SURF");
+Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce");
+int detector_setup = 1;
 void findDescriptor(Mat img,std::vector<KeyPoint> &keypoints ,Mat &descriptor){
-	Ptr<Feature2D> surf = Algorithm::create<Feature2D>("Feature2D.SURF");
-	surf->set("hessianThreshold", 300);
-	surf->set("nOctaves", 3);
-	surf->set("nOctaveLayers", 4);
+	if(detector_setup){
+		//for surf
+		detector->set("hessianThreshold", 300);
+		detector->set("nOctaves", 3);
+		detector->set("nOctaveLayers", 4);
+		detector_setup = 0;
+	}
 	Mat grayImg;
 	cvtColor(img,grayImg,CV_BGR2GRAY);
-	(*surf)(grayImg , Mat(), keypoints, descriptor, false);
+	(*detector)(grayImg , Mat(), keypoints, descriptor, false);
 	descriptor = descriptor.reshape(1, (int)keypoints.size());
 }
 
@@ -133,7 +137,7 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	Mat input_descriptor;
 	findDescriptor(dst, input_keypoint, input_descriptor);
 
-	Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce");
+
 	vector<DMatch> matches;
 	__android_log_print(ANDROID_LOG_ERROR,"Native","Descriptor cols %d,%d",stitching_descriptor.cols,input_descriptor.cols );
 	__android_log_print(ANDROID_LOG_ERROR,"Native","Descriptor type %d,%d",stitching_descriptor.type(),input_descriptor.type() );
@@ -313,19 +317,10 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	ImageFeatures feature;
 	Mat img;
 	resize(full_img, img, Size(), work_scale, work_scale);
-
-	Ptr<Feature2D> surf = Algorithm::create<Feature2D>("Feature2D.SURF");
-	surf->set("hessianThreshold", 300);
-	surf->set("nOctaves", 3);
-	surf->set("nOctaveLayers", 4);
-
-	std::vector<KeyPoint> keypoints;
-	Mat descriptors;
-	Mat grayImg;
-	cvtColor(img,grayImg,CV_BGR2GRAY);
-	(*surf)(grayImg , Mat(), feature.keypoints, descriptors, false);
-	feature.descriptors = descriptors.reshape(1, (int)keypoints.size());
-
+	detector->set("hessianThreshold", 300);
+	detector->set("nOctaves", 3);
+	detector->set("nOctaveLayers", 4);
+	findDescriptor(img,feature.keypoints,feature.descriptors);
 	feature.img_idx = images.size();
 	resize(full_img, img, Size(), seam_scale, seam_scale);
 	feature.img_size = img.size();
@@ -337,7 +332,7 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	__android_log_print(ANDROID_LOG_VERBOSE,"Feature","Keypoints Size %d",feature.keypoints.size());
 	__android_log_print(ANDROID_LOG_VERBOSE,"Feature","Size (%d %d)",feature.descriptors.cols,feature.descriptors.rows);
 //    printMatrix(feature.descriptors,"feature");
-	imagePackage.image = img.clone();
+	imagePackage.image = img;
 	imagePackage.size = img.size();
 	imagePackage.feature = feature;
 //    finder->collectGarbage();

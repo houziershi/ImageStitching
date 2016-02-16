@@ -23,9 +23,6 @@ public class ImageStitchingNative {
     private ImageStitchingNative(){
 
     }
-
-
-    //TODO implement (input image, rot) then output the homography matrix
     public native void nativeHomography(long imgAddr,long rotAddr,long retMatAddr);
     public native void nativeStitch(long retAddr);
     public native void nativeAddStitch(long imgAddr,long rotAddr);
