@@ -53,6 +53,7 @@ public class ImageStitchingNative {
         one.put(0,0,f);
         ret.push_back(one);
         Log.d("Homography mat", "Ret Homography" + ret.toString());
+
         for(int i = 0; i < ret.rows() ;i+=3){
             Log.d("Homography mat",String.format("%f %f %f",ret.get(i,0)[0],ret.get(i+1,0)[0],ret.get(i+2,0)[0]));
         }
@@ -62,10 +63,6 @@ public class ImageStitchingNative {
 
         this.context = context;
     }
-//    public void testRenderScript(){
-//        RenderScript rs = RenderScript.create(context);
-//        ScriptC script = new
-//    }
 
     static {
         System.loadLibrary("nonfree_stitching");
