@@ -127,6 +127,8 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	__android_log_print(ANDROID_LOG_DEBUG,"Native","Native homography");
 	Mat& full_img  = *(Mat*)imgaddr;
     Mat img;
+
+	imwrite("/sdcard/stitch/tracking2.jpg",full_img);
     resize(full_img,img,Size(),tracking_scale,tracking_scale);
     Point2f center(img.cols/2.0F,img.rows/2.0F);
     Mat rot_mat = getRotationMatrix2D(center, 90, 1.0);
@@ -136,50 +138,36 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	std::vector<KeyPoint> input_keypoint;
 	Mat input_descriptor;
 	findDescriptor(dst, input_keypoint, input_descriptor);
-
-
 	vector<DMatch> matches;
 	__android_log_print(ANDROID_LOG_ERROR,"Native","Descriptor cols %d,%d",stitching_descriptor.cols,input_descriptor.cols );
 	__android_log_print(ANDROID_LOG_ERROR,"Native","Descriptor type %d,%d",stitching_descriptor.type(),input_descriptor.type() );
 	(*matcher).match(input_descriptor, stitching_descriptor, matches);
 	__android_log_print(ANDROID_LOG_DEBUG,"Native","Tracking,%d",matches.size());
-	Mat& homography = *(Mat*)retaddr;
-	int num_point = 4;
-	float inverse[2*8*num_point];
-	float result[2*num_point];
-	for(int i = 0 ; i < num_point ; i++){
-		Point xy2 = stitiching_keypoint[matches[i].trainIdx].pt;
-		Point xy1 =input_keypoint[matches[i].queryIdx].pt;
-		result[i*2] = xy2.x;
-		result[i*2] = xy2.y;
-		inverse[i*16] = xy1.x;
-		inverse[i*16+1] = xy1.y;
-		inverse[i*16+2] = 1.0;
-		inverse[i*16+3] = 0.0;
-		inverse[i*16+4] = 0.0;
-		inverse[i*16+5] = 0.0;
-		inverse[i*16+6] = (-xy2.x)*xy1.x;
-		inverse[i*16+7] = (-xy2.x)*xy1.y;
-		inverse[i*16+8] = 0.0;
-		inverse[i*16+9] = 0.0;
-		inverse[i*16+10]= 0.0;
-		inverse[i*16+11]= xy1.x;
-		inverse[i*16+12]= xy2.y;
-		inverse[i*16+13]= 1.0;
-		inverse[i*16+14]= (-xy2.y)*xy1.x;
-		inverse[i*16+15]= (-xy2.y)*xy1.y;
-		//get pixel of stitiching img
+	Mat& R = *(Mat*)retaddr;
+	vector<Point2f> in_point;
+	vector<Point2f> in2_point;
+	__android_log_print(ANDROID_LOG_DEBUG,"Match_count","%d",matches.size());
+	for(int i = 0 ; i < matches.size() ;i++){
+		Point2f xy1 = input_keypoint[matches[i].queryIdx].pt;
+		Point2f xy2 = stitiching_keypoint[matches[i].trainIdx].pt;
+		__android_log_print(ANDROID_LOG_DEBUG,"HomoPointBF","(%f,%f) (%f,%f)",xy1.x,xy1.y,xy2.x,xy2.y);
+//		xy1*=5.f;
+//		xy2*=5.f;
+		in_point.push_back(xy1);
+		in2_point.push_back(xy2);
+		__android_log_print(ANDROID_LOG_DEBUG,"HomoPointAT","(%f,%f) (%f,%f)",xy1.x,xy1.y,xy2.x,xy2.y);
 	}
-	Mat mat_inverse(2*num_point,8,CV_32F,inverse);
-	Mat mat_result(2*num_point,1,CV_32F,result);
-	Mat& out = *(Mat*)retaddr;
-//	out = mat_inverse.inv() * mat_result;
-//
-//	__android_log_print(ANDROID_LOG_DEBUG,"Native","homo mat %lf %lf %lf %lf %lf %lf %lf %lf",out.at<float>(0,0),out.at<float>(1,0),out.at<float>(2,0),out.at<float>(3,0),out.at<float>(4,0),out.at<float>(5,0),out.at<float>(6,0),out.at<float>(7,0));
-	__android_log_print(ANDROID_LOG_DEBUG,"Native","Size (%d,%d) (%d,%d)",mat_inverse.rows,mat_inverse.cols,mat_result.rows,mat_result.cols);
+	Mat H = findHomography(in_point,in2_point,CV_RANSAC);
+	CameraParams camera;
+	camera.ppx = dst.size().width/2.0;
+	camera.ppy = dst.size().height/2.0;
+	camera.aspect = 1;//??? change to 1(1920/1080??=1.77)
+	camera.focal = (dst.size().height * 4.7 / 4.8) * work_scale/seam_scale;
+	R = camera.K().inv() * H.inv() * camera.K();
+	printMatrix(H,"H_MAT");
+	printMatrix(R,"R_MAT");
 
-	solve(mat_inverse,mat_result,out,DECOMP_NORMAL);
-	__android_log_print(ANDROID_LOG_DEBUG,"Native","homo mat %lf %lf %lf %lf %lf %lf %lf %lf",out.at<float>(0,0),out.at<float>(1,0),out.at<float>(2,0),out.at<float>(3,0),out.at<float>(4,0),out.at<float>(5,0),out.at<float>(6,0),out.at<float>(7,0));
+
 
 }
 
@@ -297,8 +285,6 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
 	blender->blend(result, result_mask);
 
 
-
-
 }
 
 JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeAddStitch(JNIEnv*, jobject, jlong imgaddr,jlong rotaddr){
@@ -316,10 +302,11 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	imagePackage.full_image = dst;
 	ImageFeatures feature;
 	Mat img;
+	__android_log_print(ANDROID_LOG_DEBUG,"Native","Full Image Size: %d %d",dst.size().width,dst.size().height);
 	resize(full_img, img, Size(), work_scale, work_scale);
-	detector->set("hessianThreshold", 300);
-	detector->set("nOctaves", 3);
-	detector->set("nOctaveLayers", 4);
+//	detector->set("hessianThreshold", 300);
+//	detector->set("nOctaves", 3);
+//	detector->set("nOctaveLayers", 4);
 	findDescriptor(img,feature.keypoints,feature.descriptors);
 	feature.img_idx = images.size();
 	resize(full_img, img, Size(), seam_scale, seam_scale);
@@ -426,7 +413,11 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
 	__android_log_print(ANDROID_LOG_DEBUG,"Native","Save descriptor %d",stitching_descriptor.cols);
 	return 0;
 }
-void printMatrix(Mat mat,string text){
+void printMatrix(Mat tmp,string text){
+	Mat mat;
+	if(mat.type() != CV_32F){
+		tmp.convertTo(mat,CV_32F);
+	}
 	__android_log_print(ANDROID_LOG_VERBOSE, TAG, "Matrix %s############################", text.c_str());
 	__android_log_print(ANDROID_LOG_VERBOSE, TAG, "Matrix [%f %f %f]", mat.at<float>(0,0),mat.at<float>(0,1),mat.at<float>(0,2));
 	__android_log_print(ANDROID_LOG_VERBOSE, TAG, "Matrix [%f %f %f]", mat.at<float>(1,0),mat.at<float>(1,1),mat.at<float>(1,2));
