@@ -22,6 +22,7 @@ import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.ImageReader;
 import android.opengl.GLSurfaceView;
+import android.opengl.Matrix;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -37,6 +38,10 @@ import org.opencv.android.Utils;
 import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -132,7 +137,7 @@ public class MainController extends GLSurfaceView {
     private SensorListener mSensorListener;
     private SensorManager mSensorManager;
     private CameraCharacteristics mCharacteristics;
-    private GLRenderer mGLRenderer;
+    public GLRenderer mGLRenderer;
     private String mCameraId;
     private Surface mProcessingHdrSurface;
     private RenderScript mRS;
@@ -424,8 +429,11 @@ public class MainController extends GLSurfaceView {
                 mQuaternion = Util.getQuadFromGyro(event.values,lastTimeStamp,event.timestamp, mQuaternion,false,true,false,true);
                 lastTimeStamp = event.timestamp;
                 float[] rotMat = new float[16];
-                float[] correctedQuat = {-mQuaternion[0],-mQuaternion[1],-mQuaternion[2], mQuaternion[3]};
+                float[] correctedQuat = {mQuaternion[0],-mQuaternion[1],mQuaternion[2], mQuaternion[3]};
+                float[] temp = new float[16];
                 SensorManager.getRotationMatrixFromVector(rotMat, correctedQuat);
+//                Matrix.multiplyMM(temp, 0, Util.SWAP_X, 0, rotMat, 0);
+//                Matrix.multiplyMM(rotMat, 0, Util.SWAP_Z, 0, temp, 0);
                 mGLRenderer.setRotationMatrix(rotMat);
             }
         }
@@ -463,9 +471,25 @@ public class MainController extends GLSurfaceView {
             Mat test = new Mat(result.height(),result.width(),CvType.CV_8UC3);
             Imgproc.cvtColor(result, test, Imgproc.COLOR_BGR2RGBA);
             Utils.matToBitmap(test, bitmap);
+            //create a file to write bitmap data
+            File f = new File("/sdcard/stitch/", "test.jpg");
+            try {
+                f.createNewFile();
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 0 /*ignored for PNG*/, bos);
+                byte[] bitmapdata = bos.toByteArray();
+                FileOutputStream fos = new FileOutputStream(f);
+                fos.write(bitmapdata);
+                fos.flush();
+                fos.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
             Log.d("Post", "Finished, Size :" + result.size().width + "," + result.size().height);
             mGLRenderer.getSphere().updateBitmap(bitmap);
             mProcessor.requestHomography();
+            mGLRenderer.getSphere().readPixel = true;
         }
     }
 }

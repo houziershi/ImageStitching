@@ -23,7 +23,7 @@ public class ImageStitchingNative {
     private ImageStitchingNative(){
 
     }
-    public native void nativeHomography(long imgAddr,long rotAddr,long retMatAddr);
+    public native void nativeHomography(long imgAddr,long glRotAddr,long glProjAddr,long retMatAddr);
     public native void nativeStitch(long retAddr);
     public native void nativeAddStitch(long imgAddr,long rotAddr);
     public Mat addToPano(Mat imageMat, Mat rotMat){
@@ -35,7 +35,7 @@ public class ImageStitchingNative {
         nativeAddStitch(imageMat.getNativeObjAddr(), rotMat.getNativeObjAddr());
         nativeStitch(ret.getNativeObjAddr());
 
-//        Highgui.imwrite("/sdcard/stitch/resultjava"+mPictureSize+".jpg",ret);
+        Highgui.imwrite("/sdcard/stitch/resultjava" + mPictureSize + ".jpg", ret);
         return ret;
     }
     public static ImageStitchingNative getNativeInstance(){
@@ -44,16 +44,15 @@ public class ImageStitchingNative {
         }
         return instance;
     }
-    public void tracking(Mat input,Mat rot){
-        Mat ret = new Mat();
-        Log.d("Tracking","rotIn"+ rot.toString());
-        nativeHomography(input.getNativeObjAddr(), rot.getNativeObjAddr(), ret.getNativeObjAddr());
-        Mat one = new Mat(1,1,CvType.CV_32F);
-        float[] f = {1f};
-        one.put(0,0,f);
-        ret.push_back(one);
-        Log.d("Homography mat", "Ret Homography" + ret.toString());
+    public void tracking(Mat input,float[] glRot,float[] glProj){
+        Mat glRotMat = new Mat(4,4,CvType.CV_32F);
+        glRotMat.put(0,0,glRot);
+        Mat glProjMat = new Mat(4,4,CvType.CV_32F);
+        glProjMat.put(0,0,glProj);
 
+        Mat ret = new Mat();
+        nativeHomography(input.getNativeObjAddr(),glRotMat.getNativeObjAddr(),glProjMat.getNativeObjAddr(), ret.getNativeObjAddr());
+        Log.d("Homography mat", "Ret Homography" + ret.toString());
         for(int i = 0; i < ret.rows() ;i+=3){
             Log.d("Homography mat",String.format("%f %f %f",ret.get(i,0)[0],ret.get(i+1,0)[0],ret.get(i+2,0)[0]));
         }

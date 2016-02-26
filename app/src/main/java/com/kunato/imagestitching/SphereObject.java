@@ -46,16 +46,14 @@ public class SphereObject {
      * @param x,y,z the origin of the sphere
      * @param r the radius of the sphere
      */
-    public SphereObject(int nSlices, float x, float y, float z, float r, int numIndexBuffers) {
-        int iMax = nSlices + 1;
-        int nVertices = iMax * iMax;
+    public SphereObject(int nSlices, float r, int numIndexBuffers) {
+
+        int nVertices = (nSlices+1) * (nSlices+1);
         if (nVertices > Short.MAX_VALUE) {
             // this cannot be handled in one vertices / indices pair
             throw new RuntimeException("nSlices " + nSlices + " too big for vertex");
         }
         mTotalIndices = nSlices * nSlices * 6;
-        float angleStepI = ((float) Math.PI / nSlices);
-        float angleStepJ = ((2.0f * (float) Math.PI) / nSlices);
         // 3 vertex coords + 2 texture coords
         mVertices = ByteBuffer.allocateDirect(nVertices * 5 * FLOAT_SIZE)
                 .order(ByteOrder.nativeOrder()).asFloatBuffer();
@@ -73,30 +71,44 @@ public class SphereObject {
                     .order(ByteOrder.nativeOrder()).asShortBuffer();
         }
         // calling put for each float took too much CPU time, so put by line instead
-        float[] vLineBuffer = new float[iMax * 5];
-        for (int i = 0; i < iMax; i++) {
-            for (int j = 0; j < iMax; j++) {
+        float[] vLineBuffer = new float[(nSlices+1) * 5];
+
+        for (int i = 0; i <= nSlices; i++) {
+            for (int j = 0; j <= nSlices; j++) {
+
                 int vertexBase = j * 5;
-                float sini = (float) Math.sin(angleStepI * i);
-                float sinj = (float) Math.sin(Math.PI + angleStepJ * j);
-                float cosi = (float) Math.cos(angleStepI * i);
-                float cosj = (float) Math.cos(Math.PI + angleStepJ * j);
+                //mathPi / 1/(nslide * i)
+                //1 * ratio // 1 / ratio
+                float sini = (float) Math.sin((Math.PI * i/(float)nSlices));
+                //mathpi + mathpi+ (2*mathpi)/1/(ratio j)
+                float cosi = (float) Math.cos((Math.PI * i/(float)nSlices));
+                float sinj = (float) Math.sin((2 * Math.PI) * (j / (float) nSlices));
+                float cosj = (float) Math.cos((2 * Math.PI) * (j/(float)nSlices));
                 // vertex x,y,z
-                vLineBuffer[vertexBase + 0] = x + r * sini * sinj;
-                vLineBuffer[vertexBase + 2] = y + r * sini * cosj;
-                vLineBuffer[vertexBase + 1] = z + r * cosi;
+
+                vLineBuffer[vertexBase + 0] = r * sini * sinj;
+                //y
+                vLineBuffer[vertexBase + 1] = r * cosi;
+                //z
+                vLineBuffer[vertexBase + 2] = r * sini * cosj;
+                //x
 //                Log.i("Vertex","("+(x + r * sini * sinj)+","+(y + r * sini * cosj)+","+(z + r * cosi)+")");
 
                 //change u (s)
                 // texture s,t
-                vLineBuffer[vertexBase + 3] = -(float) j / (float) nSlices;
+                vLineBuffer[vertexBase + 3] = 1-(float)j/ (float) nSlices;
                 vLineBuffer[vertexBase + 4] = (float) i / (float)nSlices;
 //                Log.i("Texture","("+((float) j / (float) nSlices)+","+-((1.0f - i) / (float)nSlices)+")");
             }
             mVertices.put(vLineBuffer, 0, vLineBuffer.length);
+            for(int ik = 0 ; ik < vLineBuffer.length; ik+=5){
+                Log.i("SphereCoord,",""+vLineBuffer[ik]+","+vLineBuffer[ik+1]+","+vLineBuffer[ik+2]+","+vLineBuffer[ik+3]+","+vLineBuffer[ik+4]);
+            }
         }
+
         short[] indexBuffer = new short[max(mNumIndices)];
         int index = 0;
+        int iMax = nSlices+1;
         int bufferNum = 0;
         for (int i = 0; i < nSlices; i++) {
             for (int j = 0; j < nSlices; j++) {

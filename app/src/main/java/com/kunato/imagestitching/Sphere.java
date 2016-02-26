@@ -22,10 +22,17 @@ import android.opengl.GLES20;
 import android.opengl.GLUtils;
 import android.util.Log;
 
+import org.opencv.core.Core;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.highgui.Highgui;
+import org.opencv.imgproc.Imgproc;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
+import java.util.Arrays;
 
 public class Sphere {
 
@@ -78,9 +85,14 @@ public class Sphere {
     private boolean mTexRequireUpdate = false;
     private Bitmap mQueueBitmap;
     private int[] ibo = new int[1];
+    public boolean readPixel = false;
+    private ByteBuffer mScreenBuffer;
+    private GLRenderer glRenderer;
 
-    public Sphere(Context context) {
-        sphereObject = new SphereObject(20,0,0,0,210,1);
+    public Sphere(GLRenderer renderer) {
+        glRenderer = renderer;
+        Context context = renderer.mView.getActivity();
+        sphereObject = new SphereObject(20,210,1);
         mSphereBuffer = sphereObject.getVertices();
 //        mVertexCoords = new float[(fullFloat.length/5)*3];
 //        mTextureCoords = new float[(fullFloat.length/5)*2];
@@ -126,9 +138,9 @@ public class Sphere {
         mTextureBuffer = tbb.asFloatBuffer();
         mTextureBuffer.put(mTextureCoords);
         mTextureBuffer.position(0);
-        mProgram = Util.loadShader(vertexShaderCode,fragmentShaderCode);
+        mProgram = Util.loadShader(vertexShaderCode, fragmentShaderCode);
 
-        loadGLTexture(context,R.drawable.pano);
+        loadGLTexture(context, R.drawable.pano);
 
 
     }
@@ -141,7 +153,7 @@ public class Sphere {
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, this.mTextures[0]);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
-//        texImage2D(bitmap);
+        texImage2D(bitmap);
     }
 
 
@@ -188,6 +200,51 @@ public class Sphere {
         GLES20.glDrawElements(GLES20.GL_TRIANGLES, sphereObject.getNumIndices()[0], GLES20.GL_UNSIGNED_SHORT, mIndexBuffer);
         GLES20.glDisableVertexAttribArray(mPositionHandle);
         GLES20.glDisableVertexAttribArray(mTextureCoordinateHandle);
+        if(readPixel) {
+            Log.d("GL","ReadPixel");
+            mScreenBuffer = ByteBuffer.allocateDirect(glRenderer.mHeight * glRenderer.mWidth * 4);
+            mScreenBuffer.order(ByteOrder.nativeOrder());
+            GLES20.glReadPixels(0, 0, glRenderer.mWidth, glRenderer.mHeight, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, mScreenBuffer);
+            Log.d("mScreenBuffer", "Remaining " + mScreenBuffer.remaining());
+            mScreenBuffer.rewind();
+            byte pixelsBuffer[] = new byte[4*glRenderer.mHeight*glRenderer.mWidth];
+            mScreenBuffer.get(pixelsBuffer);
+            Mat mat = new Mat(glRenderer.mHeight,glRenderer.mWidth, CvType.CV_8UC4);
+            mat.put(0, 0, pixelsBuffer);
+            Mat m = new Mat();
+            Imgproc.cvtColor(mat,m,Imgproc.COLOR_RGBA2BGR);
+            Core.flip(m,mat,0);
+            Highgui.imwrite("/sdcard/stitch/readpixel.jpg",mat);
+            readPixel = false;
+
+//            Bitmap bitmap = Bitmap.createBitmap(glRenderer.mWidth,glRenderer.mHeight, Bitmap.Config.RGB_565);
+//            bitmap.setPixels(pixelsBuffer, glRenderer.mWidth*glRenderer.mHeight-glRenderer.mWidth, -glRenderer.mWidth, 0, 0, glRenderer.mWidth, glRenderer.mHeight);
+//            short sBuffer[] = new short[glRenderer.mWidth*glRenderer.mHeight];
+//            ShortBuffer sb = ShortBuffer.wrap(sBuffer);
+//            bitmap.copyPixelsToBuffer(sb);
+//
+//            //Making created bitmap (from OpenGL points) compatible with Android bitmap
+//            for (int i = 0; i < glRenderer.mWidth*glRenderer.mHeight; ++i) {
+//                short v = sBuffer[i];
+//                sBuffer[i] = (short) (((v&0x1f) << 11) | (v&0x7e0) | ((v&0xf800) >> 11));
+//            }
+//            sb.rewind();
+//            bitmap.copyPixelsFromBuffer(sb);
+//            screenPixel = bitmap;
+
+//            File file = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/stitch", "readout.jpg");
+//            try {
+//            FileOutputStream fOut = new FileOutputStream(file);
+//
+//            bitmap.compress(Bitmap.CompressFormat.JPEG, 85, fOut);
+//
+//                fOut.flush();
+//                fOut.close();
+//            } catch (IOException e) {
+//                e.printStackTrace();
+//            }
+
+        }
     }
 
 

@@ -29,6 +29,7 @@ import android.view.Surface;
 
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.imgproc.Imgproc;
 
 /**
  * Renderscript-based for yuv -> rgb convert
@@ -143,7 +144,8 @@ public class RSProcessor {
                 byte[] frameByte = new byte[1080*1440*4];
                 mOutputAllocation.copyTo(frameByte);
                 mat.put(0, 0, frameByte);
-                ImageStitchingNative.getNativeInstance().tracking(mat,new Mat());
+                Imgproc.cvtColor(mat,mat,Imgproc.COLOR_RGBA2BGR);
+                ImageStitchingNative.getNativeInstance().tracking(mat,mController.mGLRenderer.mRotationMatrix,mController.mGLRenderer.mProjectionMatrix);
                 homoRequest = false;
             }
 
