@@ -159,52 +159,47 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	__android_log_print(ANDROID_LOG_DEBUG,"MatchCount","%d",matches.size());
 	int viewport[4] = {0,0,GL_WIDTH,GL_HEIGHT};
 	Mat& gl_proj = *(Mat*) glprojaddr;
-	for(int i = 0; i < p2d[1].size() ;i++){
-		Point3f xyz1 = p3d[1][i];
-		Point2f  xy2 = p2d[1][i];
-		float screenCoord[3];
-		__android_log_print(ANDROID_LOG_DEBUG,"MatchPoint3DRaw","%f %f %f (%f,%f)",xyz1.x,xyz1.y,xyz1.z,xy2.x*5/(work_width/0.4),xy2.y*5/(work_height/0.4));
-		glhProjectf(xyz1.x,xyz1.y,xyz1.z,(float*)gl_rot.data,(float*)gl_proj.data,viewport,screenCoord);
-		if(screenCoord[0] > 0 && screenCoord[0] < GL_WIDTH && screenCoord[1] > 0 && screenCoord[1] < GL_HEIGHT){
-			__android_log_print(ANDROID_LOG_ERROR,"MatchPoint3DComProjt","(%f %f) (%f %f)",screenCoord[0],screenCoord[1],xy2.x*5,xy2.y*5);
-
-		}
-	}
-
-
-//	for(int i = 0 ; i < matches.size() ;i++){
+//	for(int i = 0; i < p2d[1].size() ;i++){
+//		Point3f xyz1 = p3d[1][i];
+//		Point2f  xy2 = p2d[1][i];
 //		float screenCoord[3];
-//		Point2f xy1 = input_keypoint[matches[i].queryIdx].pt;
-////		Point2f xy2 = stitiching_keypoint[matches[i].trainIdx].pt;
-//		//const descriptor (img1)
-//		Point2f xy2 = p2d[1][matches[i].trainIdx];
-//		in_point.push_back(xy1);
-//		in2_point.push_back(xy2);
-//		__android_log_print(ANDROID_LOG_DEBUG,"MatchPoint2D","(%f,%f) (%f,%f)",xy1.x,xy1.y,xy2.x,xy2.y);
-//		Point3f xyz1 = p3d[1][matches[i].trainIdx];
-////		Point3f xyz1 = Point3f(0,0,210);
-//		__android_log_print(ANDROID_LOG_DEBUG,"MatchPoint3DRaw","%f %f %f",xyz1.x,xyz1.y,xyz1.z);
+//		__android_log_print(ANDROID_LOG_DEBUG,"MatchPoint3DRaw","%f %f %f (%f,%f)",xyz1.x,xyz1.y,xyz1.z,xy2.x*5/(work_width/0.4),xy2.y*5/(work_height/0.4));
 //		glhProjectf(xyz1.x,xyz1.y,xyz1.z,(float*)gl_rot.data,(float*)gl_proj.data,viewport,screenCoord);
-//		__android_log_print(ANDROID_LOG_DEBUG,"MatchPoint3DComProj","(%f %f %f) (%f %f)",screenCoord[0],screenCoord[1],screenCoord[2],xy2.x,xy2.y);
 //		if(screenCoord[0] > 0 && screenCoord[0] < GL_WIDTH && screenCoord[1] > 0 && screenCoord[1] < GL_HEIGHT){
-//			__android_log_print(ANDROID_LOG_ERROR,"MatchPoint3DComProjt","(%f %f) (%f %f)",screenCoord[0],screenCoord[1],xy2.x,xy2.y);
-//
-//		}
-//		else{
-//			__android_log_print(ANDROID_LOG_DEBUG,"MatchPoint3DComProjf","(%f %f) (%f %f)",screenCoord[0],screenCoord[1],xy2.x,xy2.y);
+//			__android_log_print(ANDROID_LOG_ERROR,"MatchPoint3DComProjt","(%f %f) (%f %f)",screenCoord[0],GL_HEIGHT-screenCoord[1],xy2.x*5,xy2.y*5);
 //
 //		}
 //	}
 
 
-//	Mat H = findHomography(in_point,in2_point,CV_RANSAC);
+	for(int i = 0 ; i < matches.size() ;i++){
+		float screenCoord[3];
+		Point2f xy1 = input_keypoint[matches[i].queryIdx].pt;
+		//const descriptor (img1)
+		Point2f xy2 = p2d[1][matches[i].trainIdx];
+
+
+		__android_log_print(ANDROID_LOG_DEBUG,"MatchPoint2D","(%f,%f) (%f,%f)",xy1.x,xy1.y,xy2.x,xy2.y);
+		Point3f xyz2 = p3d[1][matches[i].trainIdx];
+		__android_log_print(ANDROID_LOG_DEBUG,"MatchPoint3DRaw","%f %f %f",xyz2.x,xyz2.y,xyz2.z);
+		glhProjectf(xyz2.x,xyz2.y,xyz2.z,(float*)gl_rot.data,(float*)gl_proj.data,viewport,screenCoord);
+		if(screenCoord[0] > 0 && screenCoord[0] < GL_WIDTH && screenCoord[1] > 0 && screenCoord[1] < GL_HEIGHT){
+			__android_log_print(ANDROID_LOG_ERROR,"MatchPoint3DComProjt","(%f %f) (%f %f)",screenCoord[0],GL_HEIGHT-screenCoord[1],xy2.x*5,xy2.y*5);
+			in_point.push_back(xy1);
+			in2_point.push_back(Point2f(screenCoord[0],GL_HEIGHT-screenCoord[1]));
+		}
+	}
+
+
+
+	Mat H = findHomography(in_point,in2_point,CV_RANSAC);
 	CameraParams camera;
 	camera.ppx = dst.size().width/2.0;
 	camera.ppy = dst.size().height/2.0;
 	camera.aspect = 1;//??? change to 1(1920/1080??=1.77)
 	camera.focal = (dst.size().height * 4.7 / 4.8) * work_scale/seam_scale;
 //	R = camera.K().inv() * H.inv() * camera.K();
-//	printMatrix(H,"H_MAT");
+	printMatrix(H,"H_MAT");
 //	printMatrix(R,"R_MAT");
 
 
@@ -519,9 +514,9 @@ void printMatrix(Mat tmp,string text){
 		tmp.convertTo(mat,CV_32F);
 	}
 	__android_log_print(ANDROID_LOG_VERBOSE, TAG, "Matrix %s############################", text.c_str());
-	__android_log_print(ANDROID_LOG_VERBOSE, TAG, "Matrix [%f %f %f]", mat.at<float>(0,0),mat.at<float>(0,1),mat.at<float>(0,2));
-	__android_log_print(ANDROID_LOG_VERBOSE, TAG, "Matrix [%f %f %f]", mat.at<float>(1,0),mat.at<float>(1,1),mat.at<float>(1,2));
-	__android_log_print(ANDROID_LOG_VERBOSE, TAG, "Matrix [%f %f %f]", mat.at<float>(2,0),mat.at<float>(2,1),mat.at<float>(2,2));
+	__android_log_print(ANDROID_LOG_VERBOSE, TAG, "[%f %f %f]", mat.at<float>(0,0),mat.at<float>(0,1),mat.at<float>(0,2));
+	__android_log_print(ANDROID_LOG_VERBOSE, TAG, "[%f %f %f]", mat.at<float>(1,0),mat.at<float>(1,1),mat.at<float>(1,2));
+	__android_log_print(ANDROID_LOG_VERBOSE, TAG, "[%f %f %f]", mat.at<float>(2,0),mat.at<float>(2,1),mat.at<float>(2,2));
 	__android_log_print(ANDROID_LOG_VERBOSE, TAG, "Matrix ##############################");
 }
 inline int glhProjectf(float objx, float objy, float objz, float *modelview, float *projection, int *viewport, float *windowCoordinate)

@@ -86,10 +86,10 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
         GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT);
         Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix, 0, mRotationMatrix, 0);
-        float[] out = new float[3];
-        int[] viewport = {0,0,mWidth,mHeight};
-        GLU.gluProject(123.4349f, 0, -169.89357f, mRotationMatrix, 0, mProjectionMatrix, 0, viewport,0,out,0);
-        Log.d("gluProject", "" + Arrays.toString(out));
+//        float[] out = new float[3];
+//        int[] viewport = {0,0,mWidth,mHeight};
+//        GLU.gluProject(123.4349f, 0, -169.89357f, mRotationMatrix, 0, mProjectionMatrix, 0, viewport,0,out,0);
+//        Log.d("gluProject", "" + Arrays.toString(out));
         //draws
         synchronized(this) {
             if ( mUpdateST ) {
