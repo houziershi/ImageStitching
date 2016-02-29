@@ -46,16 +46,24 @@ public class ImageStitchingNative {
     }
     public void tracking(Mat input,float[] glRot,float[] glProj){
         Mat glRotMat = new Mat(4,4,CvType.CV_32F);
-        glRotMat.put(0,0,glRot);
+        glRotMat.put(0, 0, glRot);
         Mat glProjMat = new Mat(4,4,CvType.CV_32F);
-        glProjMat.put(0,0,glProj);
+        glProjMat.put(0, 0, glProj);
 
         Mat ret = new Mat();
-        nativeHomography(input.getNativeObjAddr(),glRotMat.getNativeObjAddr(),glProjMat.getNativeObjAddr(), ret.getNativeObjAddr());
+        nativeHomography(input.getNativeObjAddr(), glRotMat.getNativeObjAddr(), glProjMat.getNativeObjAddr(), ret.getNativeObjAddr());
         Log.d("Homography mat", "Ret Homography" + ret.toString());
-        for(int i = 0; i < ret.rows() ;i+=3){
-            Log.d("Homography mat",String.format("%f %f %f",ret.get(i,0)[0],ret.get(i+1,0)[0],ret.get(i+2,0)[0]));
+        float[] data = new float[9];
+        ret.get(0,0,data);
+        data[2]/=1080f;
+        data[5]/=1920f;
+
+        for(int i = 0; i < 3 ;i++){
+            Log.d("HomoMat",String.format("[%f %f %f]",data[i*3],data[i*3+1],data[i*3+2]));
         }
+        GLRenderer glRenderer = Factory.getGlRenderer(null);
+        glRenderer.setHomography(data);
+
     }
 
     public void setContext(Context context){

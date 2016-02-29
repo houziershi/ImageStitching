@@ -105,6 +105,7 @@ struct ImagePackage{
 	bool done = false;
 	ImageFeatures feature;
 };
+float focal_divider = 3.45;
 int work_width = 0;
 int work_height = 0;
 vector<ImagePackage> images;
@@ -137,7 +138,7 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	Mat& full_img  = *(Mat*)imgaddr;
     Mat img;
 	Mat dst;
-    resize(full_img,img,Size(),tracking_scale,tracking_scale);
+    resize(full_img,img,Size(1731*tracking_scale,1080*tracking_scale));
 	transpose(img, img);
 	flip(img, dst,0);
 	imwrite("/sdcard/stitch/tracking2.jpg",dst);
@@ -151,7 +152,7 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 
 	(*matcher).match(input_descriptor, feature_descriptor[1], matches);
 	__android_log_print(ANDROID_LOG_DEBUG,"Native","Tracking,%d",matches.size());
-	Mat& R = *(Mat*)retaddr;
+	Mat& H = *(Mat*)retaddr;
 	Mat& gl_rot = *(Mat*) glrotaddr;
 	vector<Point2f> in_point;
 	vector<Point2f> in2_point;
@@ -185,7 +186,7 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 		__android_log_print(ANDROID_LOG_DEBUG,"MatchPoint3DRaw","%f %f %f",xyz2.x,xyz2.y,xyz2.z);
 		glhProjectf(xyz2.x,xyz2.y,xyz2.z,(float*)gl_rot.data,(float*)gl_proj.data,viewport,screenCoord);
 		if(screenCoord[0] > 0 && screenCoord[0] < GL_WIDTH && screenCoord[1] > 0 && screenCoord[1] < GL_HEIGHT){
-			__android_log_print(ANDROID_LOG_ERROR,"MatchPoint3DComProjt","(%f %f) (%f %f)",screenCoord[0],GL_HEIGHT-screenCoord[1],xy2.x*5,xy2.y*5);
+			__android_log_print(ANDROID_LOG_ERROR,"MatchPoint3DComProjt","(%f %f) (%f %f)",screenCoord[0],GL_HEIGHT-screenCoord[1],xy1.x,xy1.y);
 			in_point.push_back(xy1);
 			in2_point.push_back(Point2f(screenCoord[0],GL_HEIGHT-screenCoord[1]));
 		}
@@ -193,14 +194,15 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 
 
 
-	Mat H = findHomography(in_point,in2_point,CV_RANSAC);
+	Mat tmp = findHomography(in_point,in2_point,CV_RANSAC);
+	tmp.convertTo(H,CV_32F);
 	CameraParams camera;
 	camera.ppx = dst.size().width/2.0;
 	camera.ppy = dst.size().height/2.0;
 	camera.aspect = 1;//??? change to 1(1920/1080??=1.77)
-	camera.focal = (dst.size().width * 4.7 / 4.8) * work_scale/seam_scale;
+	camera.focal = (dst.size().width * 4.7 / focal_divider) * work_scale/seam_scale;
 //	R = camera.K().inv() * H.inv() * camera.K();
-	printMatrix(H,"H_MAT");
+//	printMatrix(H,"H_MAT");
 //	printMatrix(R,"R_MAT");
 
 
@@ -450,7 +452,7 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
 		camera.aspect = 1;//??? change to 1(1920/1080??=1.77)
 		//camera.focal = (images[i].size.height * 4.7 / 5.2) * work_scale/seam_scale; 5.2 - > 10 = bigger
 		//4.8 maybe better
-		camera.focal = (images[i].size.width * 4.7 / 4.8) * work_scale/seam_scale;
+		camera.focal = (images[i].size.width * 4.7 / focal_divider) * work_scale/seam_scale;
 //        camera.focal = 981;
 		camera.R = images[i].rotation;
 		camera.t = Mat::zeros(3,1,CV_32F);

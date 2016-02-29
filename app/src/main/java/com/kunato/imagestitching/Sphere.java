@@ -151,7 +151,7 @@ public class Sphere {
         final Bitmap bitmap = BitmapFactory.decodeResource(context.getResources(), texture, options);
         GLES20.glGenTextures(1, this.mTextures, 0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, this.mTextures[0]);
-        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
 //        texImage2D(bitmap);
     }
@@ -212,10 +212,9 @@ public class Sphere {
             Mat mat = new Mat(glRenderer.mHeight,glRenderer.mWidth, CvType.CV_8UC4);
             mat.put(0, 0, pixelsBuffer);
             Mat m = new Mat();
-            Imgproc.cvtColor(mat,m,Imgproc.COLOR_RGBA2BGR);
-            Core.flip(m,mat,0);
+            Imgproc.cvtColor(mat, m, Imgproc.COLOR_RGBA2BGR);
+            Core.flip(m, mat, 0);
             Highgui.imwrite("/sdcard/stitch/readpixel.jpg",mat);
-            readPixel = false;
 
 //            Bitmap bitmap = Bitmap.createBitmap(glRenderer.mWidth,glRenderer.mHeight, Bitmap.Config.RGB_565);
 //            bitmap.setPixels(pixelsBuffer, glRenderer.mWidth*glRenderer.mHeight-glRenderer.mWidth, -glRenderer.mWidth, 0, 0, glRenderer.mWidth, glRenderer.mHeight);

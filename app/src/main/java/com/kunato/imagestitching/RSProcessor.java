@@ -140,8 +140,8 @@ public class RSProcessor {
             mergeScript.forEach_mergeHdrFrames(mPrevAllocation, mOutputAllocation);
             mOutputAllocation.ioSend();
             if(homoRequest){
-                Mat mat = new Mat(1080, 1440, CvType.CV_8UC4);
-                byte[] frameByte = new byte[1080*1440*4];
+                Mat mat = new Mat(1080, 1920, CvType.CV_8UC4);
+                byte[] frameByte = new byte[1080*1920*4];
                 mOutputAllocation.copyTo(frameByte);
                 mat.put(0, 0, frameByte);
                 Imgproc.cvtColor(mat,mat,Imgproc.COLOR_RGBA2BGR);

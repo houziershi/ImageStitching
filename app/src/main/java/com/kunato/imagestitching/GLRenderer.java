@@ -41,11 +41,15 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     private Canvas mCanvasProcessed;
     public int mWidth;
     public int mHeight;
-
+    public float[] mHomography = {1,0,0,0,1,0,0,0,1};
+    private boolean readInProgress = false;
     GLRenderer(MainController view) {
         mView = view;
     }
-
+    public void captureScreen(){
+        mSphere.readPixel = true;
+        readInProgress = true;
+    }
     public void onSurfaceCreated ( GL10 unused, EGLConfig config ) {
         mStartTime = System.nanoTime();
 
@@ -64,7 +68,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         mTextureProcessed = new SurfaceTexture(mCanvasProcessed.getTexturePos()[0]);
         mTextureNormal.setOnFrameAvailableListener(this);
         mTextureProcessed.setOnFrameAvailableListener(this);
-        GLES20.glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         //(x (vertical),(horizontal)y,z)
         GLES20.glEnable(GLES20.GL_BLEND);
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
@@ -102,8 +106,16 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
 
         //multiply MM(retMat, retMatOffset, mat1 * mat2 (includeOffset))
 //        mCanvas.draw(mMVPMatrix);
+        if(readInProgress){
+            GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            mSphere.draw(mMVPMatrix);
+            GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
+            GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT);
+            mSphere.readPixel = false;
+            readInProgress = false;
+        }
 
-        mCanvasProcessed.draw(mViewCanvasMatrix);
+        mCanvasProcessed.draw(mViewCanvasMatrix,mHomography);
 
 //        Matrix.multiplyMM(sphereMat, 0, mMVPMatrix, 0, mRotationMatrix, 0);
         mSphere.draw(mMVPMatrix);
@@ -111,22 +123,27 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     }
 
     public void onSurfaceChanged ( GL10 unused, int width, int height ) {
-        GLES20.glViewport(0, 0, width, height);
         mWidth = width;
         mHeight = height;
-        Log.d("GLScreen", String.format("(Width:Height)[%d,%d]", width,height));
+
+        GLES20.glViewport(0, 0, mWidth, mHeight);
+        Log.d("GLScreen", String.format("(Width:Height)[%d,%d]", mWidth,mHeight));
 //        float ratio =( float ) width / height;
-        float ratio = (float) 3/4f; //always because camera input as 3/4
+        float ratio = (float) 9/16f; //always because camera input as 3/4
         //48=zoom1.5//72=zoom1
 //        Log.d("Ratio", ratio + "");
         //52 for height
-        Matrix.perspectiveM(mProjectionMatrix, 0, 76 / ZOOM_RATIO, ratio, 0.1f, 1000f);//48 for 4/3 64 for 1920/1080
+        //??
+        Matrix.perspectiveM(mProjectionMatrix, 0, 65 / ZOOM_RATIO, ratio, 0.1f, 1000f);//48 for 4/3 64 for 1920/1080
 //        Log.d("PerspectiveM",Arrays.toString(mProjectionMatrix));
 //        Matrix.orthoM(mProjectionMatrix,0,-100,100,-100,100,-0.1f,100f);
 
 
-        }
-
+    }
+    public void setHomography(float[] input){
+        mHomography = input;
+        Log.d("SetHomography",Arrays.toString(input));
+    }
     public synchronized void onFrameAvailable ( SurfaceTexture st ) {
         mUpdateST = true;
         mView.requestRender();
@@ -145,6 +162,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     public Sphere getSphere(){
         return mSphere;
     }
+    public Canvas getCanvas() { return mCanvas; }
     public SurfaceTexture getSurfaceTexture(){
         return mTextureNormal;
     }

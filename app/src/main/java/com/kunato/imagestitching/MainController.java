@@ -84,7 +84,7 @@ public class MainController extends GLSurfaceView {
 
     };
     //Using in OnImageAvailableListener
-    public byte[] mFrameByte = new byte[1440*1080*4];
+    public byte[] mFrameByte = new byte[1920*1080*4];
     public boolean mAsyncRunning = false;
     public boolean mRunning = false;
     private boolean mFirstRun = true;
@@ -150,7 +150,7 @@ public class MainController extends GLSurfaceView {
 
         mActivity = (Activity) context;
         mRS = RenderScript.create(context);
-        mGLRenderer = new GLRenderer(this);
+        mGLRenderer = Factory.getGlRenderer(this);
         setEGLContextClientVersion(2);
         setRenderer(mGLRenderer);
         setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
@@ -204,7 +204,7 @@ public class MainController extends GLSurfaceView {
                 rotationMat.put(i, j, mRotmat[i * 4 + j]);
         }
 
-        Mat mat = new Mat(1080, 1440, CvType.CV_8UC4);
+        Mat mat = new Mat(1080, 1920, CvType.CV_8UC4);
         mat.put(0, 0, mFrameByte);
         Mat image = new Mat();
         Imgproc.cvtColor(mat, image, Imgproc.COLOR_RGBA2BGR);
@@ -260,8 +260,10 @@ public class MainController extends GLSurfaceView {
                 assert map != null;
                 List<Size> outputSizes = Arrays.asList(map.getOutputSizes(ImageFormat.JPEG));
                 Size largest = Collections.max(outputSizes, new Util.CompareSizesByArea());
-
-                mImageReader = ImageReader.newInstance(1080, 1440, ImageFormat.YUV_420_888, 5);
+                for(int i = 0; i < outputSizes.size() ;i++){
+                    Log.i("Size","Valid Size :"+outputSizes.toString());
+                }
+                mImageReader = ImageReader.newInstance(1080, 1920, ImageFormat.YUV_420_888, 5);
                 Log.d("CameraCharacteristic","Create Camera With Size ("+largest.getWidth()+","+largest.getHeight()+")");
                 Log.d("CameraCharacteristic","LENS_INTRINSIC_CALIBRATION : "+Arrays.toString(characteristics.get(LENS_INTRINSIC_CALIBRATION)));
                 mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
@@ -355,7 +357,7 @@ public class MainController extends GLSurfaceView {
 
             Surface mProcessSurface = mImageReader.getSurface();
             Surface mGLProcessSurface = new Surface(glProcessTexture);
-            mProcessor = new RSProcessor(mRS,new Size(1440,1080),this);
+            mProcessor = new RSProcessor(mRS,new Size(1920,1080),this);
 
             mProcessingHdrSurface = mProcessor.getInputHdrSurface();
             mProcessor.setOutputSurface(mGLProcessSurface);
@@ -448,7 +450,7 @@ public class MainController extends GLSurfaceView {
     private class ImageStitchingTask extends AsyncTask<Object, Integer, Mat> {
         protected Mat doInBackground(Object... objects) {
             mAsyncRunning = true;
-            Mat mat = new Mat(1080, 1440, CvType.CV_8UC4);
+            Mat mat = new Mat(1080, 1920, CvType.CV_8UC4);
             mat.put(0, 0, mFrameByte);
             Mat imageMat = new Mat();
             Imgproc.cvtColor(mat,imageMat,Imgproc.COLOR_RGBA2BGR);
@@ -489,7 +491,7 @@ public class MainController extends GLSurfaceView {
             Log.d("Post", "Finished, Size :" + result.size().width + "," + result.size().height);
             mGLRenderer.getSphere().updateBitmap(bitmap);
             mProcessor.requestHomography();
-            mGLRenderer.getSphere().readPixel = true;
+            mGLRenderer.captureScreen();
         }
     }
 }
