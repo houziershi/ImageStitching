@@ -56,8 +56,27 @@ public class Sphere {
             "uniform sampler2D sTexture;"+
             "varying vec2 v_TexCoordinate;"+
             "varying vec4 fragmentColor;" +
-            "void main() {" +
-                    "vec4 color = texture2D(sTexture,v_TexCoordinate);"+
+                    "vec2 coord;" +
+                    "float width_ratio = 1.0/9242.0;" +
+                    "float height_ratio = 1.0/4620.0;" +
+                    "uniform float img_x;" +
+                    "uniform float img_y;" +
+                    "uniform float img_width;" +
+                    "uniform float img_height;" +
+                    "void main() {" +
+                    "vec4 color;" +
+                    "if(v_TexCoordinate.x < img_x*width_ratio || v_TexCoordinate.x > (img_x+img_width)*width_ratio || " +
+                    "v_TexCoordinate.y < img_y*height_ratio || v_TexCoordinate.y > (img_y+img_height)*height_ratio){" +
+                    "coord = vec2(0.0,0.0);" +
+                    "color = texture2D(sTexture,coord);" +
+                    "}" +
+                    "else{" +
+                    "float diff_x = (v_TexCoordinate.x - (img_x*width_ratio))/(img_width*width_ratio);" +
+                    "float diff_y = (v_TexCoordinate.y - (img_y*height_ratio))/(img_height*height_ratio);" +
+                    "coord = vec2(diff_x,diff_y);" +
+                    "color = texture2D(sTexture,coord);" +
+                    "}" +
+                    ""+
                     "gl_FragColor = color;" +
                     "if(color.r == 0.0 && color.b == 0.0 && color.g == 0.0){gl_FragColor.a = 0.0;}else{gl_FragColor.a = 1.0;}" +
             "}";
@@ -88,23 +107,12 @@ public class Sphere {
     public boolean readPixel = false;
     private ByteBuffer mScreenBuffer;
     private GLRenderer glRenderer;
-
+    public float[] mArea = {0,0,0,0};
     public Sphere(GLRenderer renderer) {
         glRenderer = renderer;
         Context context = renderer.mView.getActivity();
         sphereObject = new SphereObject(20,210,1);
         mSphereBuffer = sphereObject.getVertices();
-//        mVertexCoords = new float[(fullFloat.length/5)*3];
-//        mTextureCoords = new float[(fullFloat.length/5)*2];
-//        Log.d("FULLFLOAT",""+fullFloat.length);
-//        for(int i = 0 ; i < fullFloat.length/5 ; i++){
-//            for(int j = 0 ; j < 3 ; j++){
-//                mVertexCoords[i * 3 +j] = fullFloat[i*5+j];
-//            }
-//            for(int j = 0 ; j < 2 ; j++){
-//                mTextureCoords[i*2 + j] = fullFloat[i*5+3+j];
-//            }
-//        }
 
         mSphereBuffer.position(0);
         mIndexBuffer = sphereObject.getIndices()[0];
@@ -162,13 +170,19 @@ public class Sphere {
         bitmap.recycle();
     }
 
-    public void updateBitmap(Bitmap bitmap){
+    public void updateBitmap(Bitmap bitmap,float[] area){
+        this.mArea = area;
         mTexRequireUpdate = true;
         mQueueBitmap = bitmap;
         Log.i("GLSphere", "Bitmap waiting for updated");
     }
 
     public void draw(float[] mvpMatrix) {
+        int xh = GLES20.glGetUniformLocation(mProgram,"img_x");
+        int yh = GLES20.glGetUniformLocation(mProgram,"img_y");
+        int widthh = GLES20.glGetUniformLocation(mProgram,"img_width");
+        int heighth = GLES20.glGetUniformLocation(mProgram,"img_height");
+
         if(mTexRequireUpdate){
             Log.i("GLSphere", "Bitmap updated,Return to normal activity.");
             GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, mQueueBitmap, 0);
@@ -182,24 +196,27 @@ public class Sphere {
         mSphereBuffer.position(0);
         GLES20.glEnableVertexAttribArray(mPositionHandle);
         GLES20.glVertexAttribPointer(mPositionHandle, 3, GLES20.GL_FLOAT, false, sphereObject.getVeticesStride(), mSphereBuffer);
-//        GLES20.glVertexAttribPointer(mPositionHandle, ObjReader.COORD_PER_VERTEX, GLES20.GL_FLOAT, false, VERTEX_STRIDE, mVertexBuffer);
+
         mSphereBuffer.position(3);
         GLES20.glEnableVertexAttribArray(mTextureCoordinateHandle);
         GLES20.glVertexAttribPointer(mTextureCoordinateHandle, 2, GLES20.GL_FLOAT, false, sphereObject.getVeticesStride(), mSphereBuffer);
-
-//        GLES20.glVertexAttribPointer(mTextureCoordinateHandle, ObjReader.COORD_PER_TEXTURE, GLES20.GL_FLOAT, false, TEXTURE_STRIDE, mTextureBuffer);
         //Uniform
         mTextureHandle = GLES20.glGetUniformLocation(mProgram, "sTexture");
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glUniform1i(mTextureHandle, 0);
+        //Area
+        GLES20.glUniform1f(xh,mArea[0]);
+        GLES20.glUniform1f(yh,mArea[1]);
+        GLES20.glUniform1f(widthh,mArea[2]);
+        GLES20.glUniform1f(heighth,mArea[3]);
+
         mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");
         GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mvpMatrix, 0);
-//        GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, ibo[0]);
-//        GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, VERTEX_COUNT);
-
         GLES20.glDrawElements(GLES20.GL_TRIANGLES, sphereObject.getNumIndices()[0], GLES20.GL_UNSIGNED_SHORT, mIndexBuffer);
         GLES20.glDisableVertexAttribArray(mPositionHandle);
         GLES20.glDisableVertexAttribArray(mTextureCoordinateHandle);
+
+
         if(readPixel) {
             Log.d("GL","ReadPixel");
             mScreenBuffer = ByteBuffer.allocateDirect(glRenderer.mHeight * glRenderer.mWidth * 4);
@@ -215,33 +232,6 @@ public class Sphere {
             Imgproc.cvtColor(mat, m, Imgproc.COLOR_RGBA2BGR);
             Core.flip(m, mat, 0);
             Highgui.imwrite("/sdcard/stitch/readpixel.jpg",mat);
-
-//            Bitmap bitmap = Bitmap.createBitmap(glRenderer.mWidth,glRenderer.mHeight, Bitmap.Config.RGB_565);
-//            bitmap.setPixels(pixelsBuffer, glRenderer.mWidth*glRenderer.mHeight-glRenderer.mWidth, -glRenderer.mWidth, 0, 0, glRenderer.mWidth, glRenderer.mHeight);
-//            short sBuffer[] = new short[glRenderer.mWidth*glRenderer.mHeight];
-//            ShortBuffer sb = ShortBuffer.wrap(sBuffer);
-//            bitmap.copyPixelsToBuffer(sb);
-//
-//            //Making created bitmap (from OpenGL points) compatible with Android bitmap
-//            for (int i = 0; i < glRenderer.mWidth*glRenderer.mHeight; ++i) {
-//                short v = sBuffer[i];
-//                sBuffer[i] = (short) (((v&0x1f) << 11) | (v&0x7e0) | ((v&0xf800) >> 11));
-//            }
-//            sb.rewind();
-//            bitmap.copyPixelsFromBuffer(sb);
-//            screenPixel = bitmap;
-
-//            File file = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/stitch", "readout.jpg");
-//            try {
-//            FileOutputStream fOut = new FileOutputStream(file);
-//
-//            bitmap.compress(Bitmap.CompressFormat.JPEG, 85, fOut);
-//
-//                fOut.flush();
-//                fOut.close();
-//            } catch (IOException e) {
-//                e.printStackTrace();
-//            }
 
         }
     }

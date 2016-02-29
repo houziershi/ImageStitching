@@ -80,7 +80,7 @@ extern "C" {
 
 JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeHomography(JNIEnv*, jobject, jlong imgaddr,jlong glRotAddr,jlong glProjAddr,jlong retaddr);
 JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeAddStitch(JNIEnv*, jobject, jlong imgaddr,jlong rotaddr);
-JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeStitch(JNIEnv*, jobject,jlong retAddr);
+JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeStitch(JNIEnv*, jobject,jlong retAddr,jlong areaAddr);
 inline Point3f calc3DPosition(Point2f keyPoint,float multiply_aspect);
 inline int glhProjectf(float objx, float objy, float objz, float *modelview, float *projection, int *viewport, float *windowCoordinate);
 
@@ -94,7 +94,7 @@ struct ImagePackage{
 	Mat full_image;
 	Mat rotation;
 	Size size;
-	Size warped_size;
+	Size compose_size;
 	Size full_size;
 	Point corner;
 	Point compose_corner;
@@ -296,7 +296,7 @@ void findWarpForSeam(float warped_image_scale,float seam_scale,float work_scale,
 
 
 //need to re-done in some part
-void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<ImagePackage> p_img,Ptr<ExposureCompensator> compensator,float work_scale,float compose_scale,int blend_type,Mat &result){
+void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<ImagePackage> p_img,Ptr<ExposureCompensator> compensator,float work_scale,float compose_scale,int blend_type,Mat &result,Mat &area){
 	double compose_work_aspect = compose_scale / work_scale;
 	Mat img_warped;
 	Mat dilated_mask, seam_mask, mask, mask_warped;
@@ -324,7 +324,7 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
 		cameras[i].K().convertTo(K, CV_32F);
 		Rect roi = warper->warpRoi(sz, K, cameras[i].R);
 		p_img[i].compose_corner = roi.tl();
-		p_img[i].warped_size = roi.size();
+		p_img[i].compose_size = roi.size();
 	}
 
 	for (int i = 0; i < p_img.size(); i++)
@@ -365,10 +365,22 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
 			int width = work_width*compose_work_aspect;
 			int offset = work_height*compose_work_aspect/2;//??1.18 at 1.73 aspect???
 			int height = work_height*compose_work_aspect;//??? 1280
-
 			Rect full(-(width/2),0,width,height);//Sphere(scale=0.2)
 			__android_log_print(ANDROID_LOG_DEBUG,"TAG","Rect full size (%d,%d) (%d,%d)",full.x,full.y,full.width,full.height);
-			blender->prepare(full);
+			vector<Point> corners(p_img.size());
+			vector<Size> sizes(p_img.size());
+			for(int i = 0; i < p_img.size() ;i++){
+				corners[i] = p_img[i].compose_corner;
+				sizes[i] = p_img[i].compose_size;
+			}
+			Rect dst = resultRoi(corners, sizes);
+			blender->prepare(dst);
+			area.at<float>(0,0) = (width/2)+dst.x;
+			area.at<float>(0,1) = dst.y;
+			area.at<float>(0,2) = dst.width;
+			area.at<float>(0,3) = dst.height;
+			__android_log_print(ANDROID_LOG_DEBUG,"TAG","Rect area (%f,%f) (%f,%f)",area.at<float>(0,0),area.at<float>(0,1),area.at<float>(0,2),area.at<float>(0,3));
+//			blender->prepare(full);
 		}
 
 		blender->feed(p_img[i].compose_image_warped, mask_warped, p_img[i].compose_corner);
@@ -421,7 +433,7 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 }
 
 
-JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeStitch(JNIEnv*, jobject,jlong retAddr){
+JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeStitch(JNIEnv*, jobject,jlong retAddr,jlong areaAddr){
 	Mat& result = *(Mat*)retAddr;
 	int num_images = static_cast<int>(images.size());
 	if(num_images < 2){
@@ -500,14 +512,11 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
 	seam_finder->find(images_warped, corners, masks_warped);
 
 	Mat out;
-	doComposition(warped_image_scale,cameras,images,nullptr,work_scale,compose_scale,blend_type,out);
+	Mat& area = *(Mat*)areaAddr;
+	doComposition(warped_image_scale,cameras,images,nullptr,work_scale,compose_scale,blend_type,out,area);
 	__android_log_print(ANDROID_LOG_ERROR,TAG,"Compositioned %d Images",num_images);
 	out.convertTo(result,CV_8UC3);
 	Mat small;
-	resize(result,small,Size(),tracking_scale,tracking_scale);
-	findDescriptor(small, stitiching_keypoint, stitching_descriptor);
-	__android_log_print(ANDROID_LOG_DEBUG,"Native","Save descriptor %d",stitching_descriptor.cols);
-
 	return 0;
 }
 void printMatrix(Mat tmp,string text){

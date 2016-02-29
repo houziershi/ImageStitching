@@ -143,14 +143,15 @@ public class MainController extends GLSurfaceView {
     private RenderScript mRS;
     private float TARGET_ASPECT = 3.f / 4.f;
     private float ASPECT_TOLERANCE = 0.1f;
+    private Factory mFactory;
 
 
     public MainController(Context context) {
         super(context);
-
+        mFactory = Factory.getFactory(this);
         mActivity = (Activity) context;
         mRS = RenderScript.create(context);
-        mGLRenderer = Factory.getGlRenderer(this);
+        mGLRenderer = mFactory.getGlRenderer();
         setEGLContextClientVersion(2);
         setRenderer(mGLRenderer);
         setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
@@ -188,7 +189,7 @@ public class MainController extends GLSurfaceView {
     public void doStitching(){
 
         SensorManager.getRotationMatrixFromVector(mRotmat,mQuaternion);
-        AsyncTask<Object, Integer, Mat> imageStitchingTask = new ImageStitchingTask();
+        AsyncTask<Object, Integer, Boolean> imageStitchingTask = new ImageStitchingTask();
         if (mFirstRun) {
             mFirstRun = false;
             mQuaternion[0] = 0f;
@@ -260,9 +261,8 @@ public class MainController extends GLSurfaceView {
                 assert map != null;
                 List<Size> outputSizes = Arrays.asList(map.getOutputSizes(ImageFormat.JPEG));
                 Size largest = Collections.max(outputSizes, new Util.CompareSizesByArea());
-                for(int i = 0; i < outputSizes.size() ;i++){
-                    Log.i("Size","Valid Size :"+outputSizes.toString());
-                }
+//                Log.i("Size","Valid Size :"+outputSizes.toString());
+
                 mImageReader = ImageReader.newInstance(1080, 1920, ImageFormat.YUV_420_888, 5);
                 Log.d("CameraCharacteristic","Create Camera With Size ("+largest.getWidth()+","+largest.getHeight()+")");
                 Log.d("CameraCharacteristic","LENS_INTRINSIC_CALIBRATION : "+Arrays.toString(characteristics.get(LENS_INTRINSIC_CALIBRATION)));
@@ -357,7 +357,7 @@ public class MainController extends GLSurfaceView {
 
             Surface mProcessSurface = mImageReader.getSurface();
             Surface mGLProcessSurface = new Surface(glProcessTexture);
-            mProcessor = new RSProcessor(mRS,new Size(1920,1080),this);
+            mProcessor = mFactory.getRSProcessor(mRS,new Size(1920,1080));
 
             mProcessingHdrSurface = mProcessor.getInputHdrSurface();
             mProcessor.setOutputSurface(mGLProcessSurface);
@@ -447,51 +447,26 @@ public class MainController extends GLSurfaceView {
     }
 
     //Implement this in JNI
-    private class ImageStitchingTask extends AsyncTask<Object, Integer, Mat> {
-        protected Mat doInBackground(Object... objects) {
+    private class ImageStitchingTask extends AsyncTask<Object, Integer, Boolean> {
+        protected Boolean doInBackground(Object... objects) {
             mAsyncRunning = true;
             Mat mat = new Mat(1080, 1920, CvType.CV_8UC4);
             mat.put(0, 0, mFrameByte);
             Mat imageMat = new Mat();
-            Imgproc.cvtColor(mat,imageMat,Imgproc.COLOR_RGBA2BGR);
-            Mat ret = ImageStitchingNative.getNativeInstance().addToPano(imageMat, (Mat) objects[1]);
+            Imgproc.cvtColor(mat, imageMat, Imgproc.COLOR_RGBA2BGR);
+            ImageStitchingNative.getNativeInstance().addToPano(imageMat, (Mat) objects[1]);
             mNumPicture++;
-            return ret;
+            return true;
         }
 
         protected void onProgressUpdate(Integer... progress) {
 
         }
 
-        protected void onPostExecute(Mat result) {
-
+        protected void onPostExecute(Boolean bool) {
             mAsyncRunning = false;
             Log.i("mNumPicture",mNumPicture+"");
-            if(result.empty())
-                return;
-            Bitmap bitmap = Bitmap.createBitmap(result.cols(), result.rows(), Bitmap.Config.ARGB_8888);
-            Mat test = new Mat(result.height(),result.width(),CvType.CV_8UC3);
-            Imgproc.cvtColor(result, test, Imgproc.COLOR_BGR2RGBA);
-            Utils.matToBitmap(test, bitmap);
-            //create a file to write bitmap data
-            File f = new File("/sdcard/stitch/", "test.jpg");
-            try {
-                f.createNewFile();
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 0 /*ignored for PNG*/, bos);
-                byte[] bitmapdata = bos.toByteArray();
-                FileOutputStream fos = new FileOutputStream(f);
-                fos.write(bitmapdata);
-                fos.flush();
-                fos.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
 
-            Log.d("Post", "Finished, Size :" + result.size().width + "," + result.size().height);
-            mGLRenderer.getSphere().updateBitmap(bitmap);
-            mProcessor.requestHomography();
-            mGLRenderer.captureScreen();
         }
     }
 }

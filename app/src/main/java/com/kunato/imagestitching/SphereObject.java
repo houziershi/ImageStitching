@@ -101,9 +101,9 @@ public class SphereObject {
 //                Log.i("Texture","("+((float) j / (float) nSlices)+","+-((1.0f - i) / (float)nSlices)+")");
             }
             mVertices.put(vLineBuffer, 0, vLineBuffer.length);
-            for(int ik = 0 ; ik < vLineBuffer.length; ik+=5){
-                Log.i("SphereCoord,",""+vLineBuffer[ik]+","+vLineBuffer[ik+1]+","+vLineBuffer[ik+2]+","+vLineBuffer[ik+3]+","+vLineBuffer[ik+4]);
-            }
+//            for(int ik = 0 ; ik < vLineBuffer.length; ik+=5){
+//                Log.i("SphereCoord,",""+vLineBuffer[ik]+","+vLineBuffer[ik+1]+","+vLineBuffer[ik+2]+","+vLineBuffer[ik+3]+","+vLineBuffer[ik+4]);
+//            }
         }
 
         short[] indexBuffer = new short[max(mNumIndices)];
