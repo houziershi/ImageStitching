@@ -46,13 +46,13 @@ public class ImageStitchingNative {
         Log.d("Rect Java", Arrays.toString(areaFloat));
         Highgui.imwrite("/sdcard/stitch/resultjava" + mPictureSize + ".jpg", ret);
         if(ret.empty()) {
-
             return;
         }
+        Log.d("Pano type",ret.toString());
         Bitmap bitmap = Bitmap.createBitmap(ret.cols(), ret.rows(), Bitmap.Config.ARGB_8888);
-        Mat test = new Mat(ret.height(),ret.width(),CvType.CV_8UC3);
-        Imgproc.cvtColor(ret, test, Imgproc.COLOR_BGR2RGBA);
-        Utils.matToBitmap(test, bitmap);
+//        Mat test = new Mat(ret.height(),ret.width(),CvType.CV_8UC4);
+//        Imgproc.cvtColor(ret, test, Imgproc.COLOR_BGR2RGBA);
+        Utils.matToBitmap(ret, bitmap);
         //create a file to write bitmap data
         File f = new File("/sdcard/stitch/", "test.jpg");
         try {

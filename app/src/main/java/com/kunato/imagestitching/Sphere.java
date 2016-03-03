@@ -78,7 +78,7 @@ public class Sphere {
                     "}" +
                     ""+
                     "gl_FragColor = color;" +
-                    "if(color.r == 0.0 && color.b == 0.0 && color.g == 0.0){gl_FragColor.a = 0.0;}else{gl_FragColor.a = 1.0;}" +
+                    "" +
             "}";
 
     private final FloatBuffer mVertexBuffer;
@@ -159,9 +159,9 @@ public class Sphere {
         final Bitmap bitmap = BitmapFactory.decodeResource(context.getResources(), texture, options);
         GLES20.glGenTextures(1, this.mTextures, 0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, this.mTextures[0]);
-        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR_MIPMAP_LINEAR);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
-        GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D);
+
         texImage2D(bitmap);
     }
 
@@ -187,6 +187,7 @@ public class Sphere {
         if(mTexRequireUpdate){
             Log.i("GLSphere", "Bitmap updated,Return to normal activity.");
             GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, mQueueBitmap, 0);
+            GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D);
             mQueueBitmap.recycle();
             mTexRequireUpdate = false;
         }
