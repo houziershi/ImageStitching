@@ -82,21 +82,21 @@ public class SphereObject {
                 float sini = (float) Math.sin((Math.PI * i/(float)nSlices));
                 //mathpi + mathpi+ (2*mathpi)/1/(ratio j)
                 float cosi = (float) Math.cos((Math.PI * i/(float)nSlices));
-                float sinj = (float) Math.sin((2 * Math.PI) * (j / (float) nSlices));
-                float cosj = (float) Math.cos((2 * Math.PI) * (j/(float)nSlices));
+                float sinj = (float) Math.sin(Math.PI + (2 * Math.PI) * (j / (float) nSlices));
+                float cosj = (float) Math.cos(Math.PI + (2 * Math.PI) * (j/(float)nSlices));
                 // vertex x,y,z
-
+                //x
                 vLineBuffer[vertexBase + 0] = r * sini * sinj;
                 //y
                 vLineBuffer[vertexBase + 1] = r * cosi;
-                //z
-                vLineBuffer[vertexBase + 2] = r * sini * cosj;
-                //x
+                //z(swap opencv texture and opengl)
+                vLineBuffer[vertexBase + 2] = -r * sini * cosj;
+
 //                Log.i("Vertex","("+(x + r * sini * sinj)+","+(y + r * sini * cosj)+","+(z + r * cosi)+")");
 
                 //change u (s)
-                // texture s,t
-                vLineBuffer[vertexBase + 3] = 1-(float)j/ (float) nSlices;
+                // texture u,v
+                vLineBuffer[vertexBase + 3] = (float) j/ (float) nSlices;
                 vLineBuffer[vertexBase + 4] = (float) i / (float)nSlices;
 //                Log.i("Texture","("+((float) j / (float) nSlices)+","+-((1.0f - i) / (float)nSlices)+")");
             }

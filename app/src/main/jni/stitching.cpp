@@ -192,18 +192,22 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 		}
 	}
 
+    vector<uchar> inliners;
 
-
-	Mat tmp = findHomography(in_point,in2_point,CV_RANSAC);
+	Mat tmp = findHomography(in_point,in2_point,inliners,CV_RANSAC);
 	tmp.convertTo(H,CV_32F);
+
 	CameraParams camera;
 	camera.ppx = dst.size().width/2.0;
 	camera.ppy = dst.size().height/2.0;
 	camera.aspect = 1;//??? change to 1(1920/1080??=1.77)
 	camera.focal = (dst.size().width * 4.7 / focal_divider) * work_scale/seam_scale;
-//	R = camera.K().inv() * H.inv() * camera.K();
-//	printMatrix(H,"H_MAT");
-//	printMatrix(R,"R_MAT");
+	Mat K;
+    camera.K().convertTo(K,CV_32F);
+    Mat R = K.inv() * H * K;
+    Mat R_inv = K.inv() * H.inv() * K;
+	printMatrix(R,"R_MAT");
+	printMatrix(R_inv,"R_inv_MAT");
 
 
 

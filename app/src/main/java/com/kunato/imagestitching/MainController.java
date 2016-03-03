@@ -431,7 +431,7 @@ public class MainController extends GLSurfaceView {
                 mQuaternion = Util.getQuadFromGyro(event.values,lastTimeStamp,event.timestamp, mQuaternion,false,true,false,true);
                 lastTimeStamp = event.timestamp;
                 float[] rotMat = new float[16];
-                float[] correctedQuat = {mQuaternion[0],-mQuaternion[1],mQuaternion[2], mQuaternion[3]};
+                float[] correctedQuat = {mQuaternion[0],-mQuaternion[1], mQuaternion[2], mQuaternion[3]};
                 float[] temp = new float[16];
                 SensorManager.getRotationMatrixFromVector(rotMat, correctedQuat);
 //                Matrix.multiplyMM(temp, 0, Util.SWAP_X, 0, rotMat, 0);

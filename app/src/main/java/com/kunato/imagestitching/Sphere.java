@@ -107,7 +107,7 @@ public class Sphere {
     public boolean readPixel = false;
     private ByteBuffer mScreenBuffer;
     private GLRenderer glRenderer;
-    public float[] mArea = {0,0,0,0};
+    public float[] mArea = {0,0,9242,4620};
     public Sphere(GLRenderer renderer) {
         glRenderer = renderer;
         Context context = renderer.mView.getActivity();
@@ -159,8 +159,9 @@ public class Sphere {
         final Bitmap bitmap = BitmapFactory.decodeResource(context.getResources(), texture, options);
         GLES20.glGenTextures(1, this.mTextures, 0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, this.mTextures[0]);
-        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR_MIPMAP_LINEAR);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
+        GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D);
 //        texImage2D(bitmap);
     }
 
