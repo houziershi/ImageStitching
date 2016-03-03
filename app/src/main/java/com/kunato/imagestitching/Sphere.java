@@ -78,7 +78,7 @@ public class Sphere {
                     "}" +
                     ""+
                     "gl_FragColor = color;" +
-                    "" +
+                    "if(color.r == 0.0 && color.b == 0.0 && color.g == 0.0){gl_FragColor.a = 0.0;}else{gl_FragColor.a = 1.0;}" +
             "}";
 
     private final FloatBuffer mVertexBuffer;
@@ -107,7 +107,7 @@ public class Sphere {
     public boolean readPixel = false;
     private ByteBuffer mScreenBuffer;
     private GLRenderer glRenderer;
-    public float[] mArea = {0,0,9242,4620};
+    public float[] mArea = {0,0,0,0};
     public Sphere(GLRenderer renderer) {
         glRenderer = renderer;
         Context context = renderer.mView.getActivity();
@@ -167,7 +167,11 @@ public class Sphere {
 
 
     public void texImage2D(Bitmap bitmap){
+        mArea[0] = mArea[1] = 0;
+        mArea[2] = 9242;
+        mArea[3] = 4620;
         GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
+        GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D);
         bitmap.recycle();
     }
 
