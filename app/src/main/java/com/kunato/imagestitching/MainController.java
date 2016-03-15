@@ -88,7 +88,7 @@ public class MainController extends GLSurfaceView {
     public boolean mAsyncRunning = false;
     public boolean mRunning = false;
     private boolean mFirstRun = true;
-    private float[] mQuaternion = new float[4];
+    public float[] mQuaternion = new float[4];
     public int mNumPicture = 1;
     private final ImageReader.OnImageAvailableListener mOnImageAvailableListener = new ImageReader.OnImageAvailableListener() {
 

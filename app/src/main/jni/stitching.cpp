@@ -63,117 +63,183 @@ void findDescriptor(Mat img,std::vector<KeyPoint> &keypoints ,Mat &descriptor){
 JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeHomography(JNIEnv*, jobject, jlong imgaddr,jlong glrotaddr,jlong glprojaddr,jlong retaddr){
 	__android_log_print(ANDROID_LOG_DEBUG,"Native","Native homography");
 	Mat& full_img  = *(Mat*)imgaddr;
-    Mat img;
+	Mat img;
 	Mat dst;
-    resize(full_img,img,Size(1731*tracking_scale,1080*tracking_scale));
+	resize(full_img,img,Size(),work_scale,work_scale);
 	transpose(img, img);
 	flip(img, dst,0);
 	imwrite("/sdcard/stitch/tracking2.jpg",dst);
-	std::vector<KeyPoint> input_keypoint;
+	ImageFeatures input_feature;
 	Mat input_descriptor;
-	findDescriptor(dst, input_keypoint, input_descriptor);
-	vector<DMatch> matches;
-	__android_log_print(ANDROID_LOG_ERROR,"Native","Descriptor cols %d,%d",stitching_descriptor.cols,input_descriptor.cols );
-	__android_log_print(ANDROID_LOG_ERROR,"Native","Descriptor type %d,%d",stitching_descriptor.type(),input_descriptor.type() );
+	findDescriptor(dst, input_feature.keypoints, input_feature.descriptors);
+	vector<MatchesInfo> tracking_matches;
 	//const descriptor (img1)
+	vector<ImageFeatures> tracking_feature(2);
+	input_feature.img_idx = -1;
+	input_feature.img_size = img.size();
+	int nearest_index = 1;
 
-	(*matcher).match(input_descriptor, images[1].feature.descriptors, matches);
-	__android_log_print(ANDROID_LOG_DEBUG,"Native","Tracking,%d",matches.size());
-	Mat& H = *(Mat*)retaddr;
+	imwrite("/sdcard/stitch/tracking3.jpg",images[nearest_index].image);
+	tracking_feature[0] = images[nearest_index].feature;
+	tracking_feature[1] = input_feature;
+	BestOf2NearestMatcher matcher(false, 0.3f);
+	matcher(tracking_feature,tracking_matches);
+	matcher.collectGarbage();
+	__android_log_print(ANDROID_LOG_DEBUG,"Native","Tracking,%d",tracking_matches.size());
 	Mat& gl_rot = *(Mat*) glrotaddr;
-	vector<Point2f> in_point;
-	vector<Point2f> in2_point;
-	__android_log_print(ANDROID_LOG_DEBUG,"MatchCount","%d",matches.size());
-	int viewport[4] = {0,0,GL_WIDTH,GL_HEIGHT};
-	Mat& gl_proj = *(Mat*) glprojaddr;
-//	for(int i = 0; i < p2d[1].size() ;i++){
-//		Point3f xyz1 = p3d[1][i];
-//		Point2f  xy2 = p2d[1][i];
-//		float screenCoord[3];
-//		__android_log_print(ANDROID_LOG_DEBUG,"MatchPoint3DRaw","%f %f %f (%f,%f)",xyz1.x,xyz1.y,xyz1.z,xy2.x*5/(work_width/0.4),xy2.y*5/(work_height/0.4));
-//		glhProjectf(xyz1.x,xyz1.y,xyz1.z,(float*)gl_rot.data,(float*)gl_proj.data,viewport,screenCoord);
-//		if(screenCoord[0] > 0 && screenCoord[0] < GL_WIDTH && screenCoord[1] > 0 && screenCoord[1] < GL_HEIGHT){
-//			__android_log_print(ANDROID_LOG_ERROR,"MatchPoint3DComProjt","(%f %f) (%f %f)",screenCoord[0],GL_HEIGHT-screenCoord[1],xy2.x*5,xy2.y*5);
-//
-//		}
-//	}
+	vector<CameraParams> tracking_cameras(2);
+	int matches_index = - 1;
+	for(int i = 0 ; i < tracking_matches.size() ;i++){
 
-
-	for(int i = 0 ; i < matches.size() ;i++){
-		float screenCoord[3];
-		Point2f xy1 = input_keypoint[matches[i].queryIdx].pt;
-		xy1.x /= tracking_scale;
-		xy1.y /= tracking_scale;
-		//const descriptor (img1)
-		Point2f xy2 = p2d[1][matches[i].trainIdx];
-
-
-		__android_log_print(ANDROID_LOG_DEBUG,"MatchPoint2D","(%f,%f) (%f,%f)",xy1.x,xy1.y,xy2.x,xy2.y);
-		Point3f xyz2 = p3d[1][matches[i].trainIdx];
-		__android_log_print(ANDROID_LOG_DEBUG,"MatchPoint3DRaw","%f %f %f",xyz2.x,xyz2.y,xyz2.z);
-		glhProjectf(xyz2.x,xyz2.y,xyz2.z,(float*)gl_rot.data,(float*)gl_proj.data,viewport,screenCoord);
-		if(screenCoord[0] > 0 && screenCoord[0] < GL_WIDTH && screenCoord[1] > 0 && screenCoord[1] < GL_HEIGHT){
-			__android_log_print(ANDROID_LOG_ERROR,"MatchPoint3DComProjt","(%f %f) (%f %f)",screenCoord[0],GL_HEIGHT-screenCoord[1],xy1.x,xy1.y);
-			in_point.push_back(xy1);
-			in2_point.push_back(Point2f(screenCoord[0],GL_HEIGHT-screenCoord[1]));
+		__android_log_print(ANDROID_LOG_DEBUG,"Native","pair ,%d %d %d",tracking_matches[i].src_img_idx , tracking_matches[i].dst_img_idx,tracking_matches[i].matches.size());
+		if(tracking_matches[i].dst_img_idx == 1 && tracking_matches[i].src_img_idx == 0){
+			matches_index = i;
 		}
 	}
-
-    vector<uchar> inliners;
-
-	Mat tmp = findHomography(in_point,in2_point,inliners,CV_RANSAC);
-
-	tmp.convertTo(H,CV_32F);
-	CameraParams camera;
-	camera.aspect = 1;//??? change to 1(1920/1080??=1.77)
-	camera.focal = (dst.size().width * 4.7 / focal_divider) * work_scale/seam_scale;
-	Mat K;
-    camera.K().convertTo(K,CV_32F);
-    Mat R = K.inv() * H.inv() * K;
-	printMatrix(H,"H_MAT");
-	printMatrix(R,"R_MAT");
-	vector<Point2f> src_points;
-	vector<Point2f> dst_points;
-	int inlier_idx = 0;
-	for(int i = 0 ; i < inliners.size() ; i++){
-		if(!inliners[i])
-			continue;
-		Point2f p1 = in_point[i];
-		Point2f p2 = in2_point[i];
-		src_points.push_back(p1);
-		dst_points.push_back(p2);
-		__android_log_print(ANDROID_LOG_ERROR,"MatchPoint3DFF","(%f %f) (%f %f)",p1.x,p1.y,p2.x,p2.y);
-		inlier_idx++;
-	}
-	tmp = findHomography(src_points,dst_points,CV_RANSAC);
-	tmp.convertTo(H,CV_32F);
-	printMatrix(H.inv(),"H");
-	R = K.inv() * H.inv() * K;
-	printMatrix(R,"R_MAT");
-	//doingBundle(){}
-	vector<CameraParams> camera_homo(2);
 	for(int i = 0 ; i < 2; i++){
-		CameraParams c;
-		c.aspect = 1;//??? change to 1(1920/1080??=1.77)
-		c.focal = (dst.size().width * 4.7 / focal_divider) * work_scale/seam_scale;
-		c.ppx = 1080/2.0;
-		c.ppy = 1080/2.0;
-		if(i == 0){
 
-			c.R = Mat::eye(3,3,CV_32F);
+		CameraParams tracking_camera;
+		tracking_camera.ppx = tracking_feature[i].img_size.width/2;
+		tracking_camera.ppy = tracking_feature[i].img_size.height/2;
+		tracking_camera.focal = (tracking_feature[i].img_size.width * 4.7 / focal_divider);
+		if( i == 1 ){
+			Mat input_R(3,3,CV_32F);
+			for(int j = 0 ; j < 3 ;j++){
+				for(int k = 0; k < 3 ;k++){
+					input_R.at<float>(j,k) = gl_rot.at<float>(j,k);
+				}
+			}
+			tracking_camera.R = input_R;
 		}
 		else{
-			c.R = R;
+			tracking_camera.R = images[nearest_index].rotation;
 		}
+		tracking_cameras[i] = tracking_camera;
 
-		camera_homo[i] = c;
 	}
-	doingBundle(src_points,dst_points,camera_homo);
-	printMatrix(camera_homo[0].R,"R_adjust0");
-	printMatrix(camera_homo[1].R,"R_adjusted");
-	//another choice doingbundle on H
-	H = K * R * K.inv();
-	printMatrix(H,"H2_MAT");
+	vector<Point2f> src_points;
+	vector<Point2f> dst_points;
+	for(int i = 0 ; i < tracking_matches[matches_index].matches.size();i++){
+		if(tracking_matches[matches_index].inliers_mask[i]){
+			src_points.push_back(tracking_feature[0].keypoints[tracking_matches[matches_index].matches[i].queryIdx].pt);
+			dst_points.push_back(tracking_feature[1].keypoints[tracking_matches[matches_index].matches[i].trainIdx].pt);
+
+//			__android_log_print(ANDROID_LOG_DEBUG,"tracking_matches","%d : %lf %lf %lf %lf",i,src_points[src_points.size()-1].x,src_points[src_points.size()-1].y,dst_points[src_points.size()-1].x,dst_points[src_points.size()-1].y);
+		}
+	}
+	printMatrix(tracking_cameras[0].R,"R 0");
+	printMatrix(tracking_cameras[1].R,"R 1");
+	doingBundle(src_points,dst_points,tracking_cameras);
+	printMatrix(tracking_cameras[0].R,"RA 0");
+	printMatrix(tracking_cameras[1].R,"RA 1");
+	Mat K;
+	tracking_cameras[1].K().convertTo(K,CV_32F);
+
+	Mat& H = *(Mat*)retaddr;
+	for(int i = 0; i < 4 ; i++){
+		for(int j = 0; j < 4 ;j++){
+			if(i == 3 && j == 3){
+				H.at<float>(i,j) = 1;
+			}
+			else if(i == 3 || j == 3){
+				H.at<float>(i,j) = 0;
+			}
+			else{
+				H.at<float>(i,j) = tracking_cameras[1].R.at<float>(i,j);
+
+			}
+
+		}
+	}
+
+//	H = K * tracking_cameras[1].R * K.inv();
+	//return only R no-need for homography
+//	H = tracking_cameras[1].R;
+
+
+//
+//	vector<Point2f> in_point;
+//	vector<Point2f> in2_point;
+//	__android_log_print(ANDROID_LOG_DEBUG,"MatchCount","%d",matches.size());
+//	int viewport[4] = {0,0,GL_WIDTH,GL_HEIGHT};
+//	Mat& gl_proj = *(Mat*) glprojaddr;
+//
+//
+//	for(int i = 0 ; i < matches.size() ;i++){
+//		float screenCoord[3];
+//		Point2f xy1 = input_keypoint[matches[i].queryIdx].pt;
+//		xy1.x /= tracking_scale;
+//		xy1.y /= tracking_scale;
+//		//const descriptor (img1)
+//		Point2f xy2 = p2d[1][matches[i].trainIdx];
+//
+//
+//		__android_log_print(ANDROID_LOG_DEBUG,"MatchPoint2D","(%f,%f) (%f,%f)",xy1.x,xy1.y,xy2.x,xy2.y);
+//		Point3f xyz2 = p3d[1][matches[i].trainIdx];
+//		__android_log_print(ANDROID_LOG_DEBUG,"MatchPoint3DRaw","%f %f %f",xyz2.x,xyz2.y,xyz2.z);
+//		glhProjectf(xyz2.x,xyz2.y,xyz2.z,(float*)gl_rot.data,(float*)gl_proj.data,viewport,screenCoord);
+//		if(screenCoord[0] > 0 && screenCoord[0] < GL_WIDTH && screenCoord[1] > 0 && screenCoord[1] < GL_HEIGHT){
+//			__android_log_print(ANDROID_LOG_ERROR,"MatchPoint3DComProjt","(%f %f) (%f %f)",screenCoord[0],GL_HEIGHT-screenCoord[1],xy1.x,xy1.y);
+//			in_point.push_back(xy1);
+//			in2_point.push_back(Point2f(screenCoord[0],GL_HEIGHT-screenCoord[1]));
+//		}
+//	}
+//
+//    vector<uchar> inliners;
+//
+//	Mat tmp = findHomography(in_point,in2_point,inliners,CV_RANSAC);
+//
+//	tmp.convertTo(H,CV_32F);
+//	CameraParams camera;
+//	camera.aspect = 1;//??? change to 1(1920/1080??=1.77)
+//	camera.focal = (dst.size().width * 4.7 / focal_divider) * work_scale/seam_scale;
+//	Mat K;
+//    camera.K().convertTo(K,CV_32F);
+//    Mat R = K.inv() * H.inv() * K;
+//	printMatrix(H,"H_MAT");
+//	printMatrix(R,"R_MAT");
+//	vector<Point2f> src_points;
+//	vector<Point2f> dst_points;
+//	int inlier_idx = 0;
+//	for(int i = 0 ; i < inliners.size() ; i++){
+//		if(!inliners[i])
+//			continue;
+//		Point2f p1 = in_point[i];
+//		Point2f p2 = in2_point[i];
+//		src_points.push_back(p1);
+//		dst_points.push_back(p2);
+//		__android_log_print(ANDROID_LOG_ERROR,"MatchPoint3DFF","(%f %f) (%f %f)",p1.x,p1.y,p2.x,p2.y);
+//		inlier_idx++;
+//	}
+//	tmp = findHomography(src_points,dst_points,CV_RANSAC);
+//	tmp.convertTo(H,CV_32F);
+//	printMatrix(H.inv(),"H");
+//	R = K.inv() * H.inv() * K;
+//	printMatrix(R,"R_MAT");
+//	//doingBundle(){}
+//	vector<CameraParams> camera_homo(2);
+//	for(int i = 0 ; i < 2; i++){
+//		CameraParams c;
+//		c.aspect = 1;//??? change to 1(1920/1080??=1.77)
+//		c.focal = (dst.size().width * 4.7 / focal_divider) * work_scale/seam_scale;
+//		c.ppx = 1080/2.0;
+//		c.ppy = 1080/2.0;
+//		if(i == 0){
+//
+//			c.R = Mat::eye(3,3,CV_32F);
+//		}
+//		else{
+//			c.R = R;
+//		}
+//
+//		camera_homo[i] = c;
+//	}
+//	doingBundle(src_points,dst_points,camera_homo);
+//	printMatrix(camera_homo[0].R,"R_adjust0");
+//	printMatrix(camera_homo[1].R,"R_adjusted");
+//	//another choice doingbundle on H
+//	H = K * R * K.inv();
+//	printMatrix(H,"H2_MAT");
 
 
 }
@@ -190,11 +256,8 @@ void warpFeature(float warped_image_scale , vector<CameraParams> cameras,vector<
 			Mat k_temp;
 
 			cameras[i].K().convertTo(k_temp,CV_32F);
-			__android_log_print(ANDROID_LOG_DEBUG,"warpfeature","3D Point camera: %d ",i);
-			__android_log_print(ANDROID_LOG_ERROR,"TEstPoint","%lf %lf",features[i].keypoints[j].pt.x,features[i].keypoints[j].pt.y);
 			Point2f warped_point = warper->warpPoint(features[i].keypoints[j].pt,k_temp,cameras[i].R);
 			warped_point.x += work_width*track_work_aspect/2;
-			__android_log_print(ANDROID_LOG_DEBUG,"warpedPoint","%lf %lf",warped_point.x,warped_point.y);
 			p3d_per_camera.push_back(calc3DPosition(warped_point,track_work_aspect));
 			p2d_per_camera.push_back(warped_point);
 
@@ -226,7 +289,7 @@ inline Point3f calc3DPosition(Point2f keyPoint,float multiplier){
 	float y = 210 * cosi;
 	float z = 210 * sini * cosj;
 
-	__android_log_print(ANDROID_LOG_DEBUG,"Point3d","%f %f %f %f (%f)",x,y,z,ratio_i,ratio_j);
+//	__android_log_print(ANDROID_LOG_DEBUG,"Point3D","%f %f %f %f (%f)",x,y,z,ratio_i,ratio_j);
 	//xzy ??
 	Point3f p(x,y,-z);
 	return p;
@@ -383,13 +446,11 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	Mat img;
 	__android_log_print(ANDROID_LOG_DEBUG,"Native","Full Image Size: %d %d",full_img.size().width,full_img.size().height);
 	resize(full_img, img, Size(), work_scale, work_scale);
-//	detector->set("hessianThreshold", 300);
-//	detector->set("nOctaves", 3);
-//	detector->set("nOctaveLayers", 4);
 	findDescriptor(img,feature.keypoints,feature.descriptors);
 	feature.img_idx = images.size();
-	resize(full_img, img, Size(), seam_scale, seam_scale);
 	feature.img_size = img.size();
+	resize(full_img, img, Size(), seam_scale, seam_scale);
+
 
 //    __android_log_print(ANDROID_LOG_VERBOSE,"Feature","SURF Keypoints Size %d",feature.keypoints.size());
 //    __android_log_print(ANDROID_LOG_VERBOSE,"Feature","SURF Size (%d %d)",feature.descriptors.cols,feature.descriptors.rows);
@@ -431,15 +492,16 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
 
 		__android_log_print(ANDROID_LOG_VERBOSE,"Native Size","Input Image Size : %d,%d ",images[i].size.height,images[i].size.width);
 		CameraParams camera;
-		camera.ppx = images[i].size.width/2.0 * work_scale/seam_scale;
-		camera.ppy = images[i].size.height/2.0 * work_scale/seam_scale;
+		camera.ppx = images[i].feature.img_size.width/2.0;
+		camera.ppy = images[i].feature.img_size.height/2.0;
 //        camera.ppx = 268;
 //        camera.ppy = 5.16;
 //        camera.aspect = 4/3.0;
 		camera.aspect = 1;//??? change to 1(1920/1080??=1.77)
 		//camera.focal = (images[i].size.height * 4.7 / 5.2) * work_scale/seam_scale; 5.2 - > 10 = bigger
 		//4.8 maybe better
-		camera.focal = (images[i].size.width * 4.7 / focal_divider) * work_scale/seam_scale;
+		camera.focal = (images[i].feature.img_size.width * 4.7 / focal_divider);
+
 //        camera.focal = 981;
 		camera.R = images[i].rotation;
 		camera.t = Mat::zeros(3,1,CV_32F);
@@ -509,33 +571,33 @@ void printMatrix(Mat tmp,string text){
 	__android_log_print(ANDROID_LOG_VERBOSE, TAG, "Matrix ##############################");
 }
 inline int glhProjectf(float objx, float objy, float objz, float *modelview, float *projection, int *viewport, float *windowCoordinate) {
-      //Transformation vectors
-      float fTempo[8];
-      //Modelview transform
-      fTempo[0]=modelview[0]*objx+modelview[4]*objy+modelview[8]*objz+modelview[12];  //w is always 1
-      fTempo[1]=modelview[1]*objx+modelview[5]*objy+modelview[9]*objz+modelview[13];
-      fTempo[2]=modelview[2]*objx+modelview[6]*objy+modelview[10]*objz+modelview[14];
-      fTempo[3]=modelview[3]*objx+modelview[7]*objy+modelview[11]*objz+modelview[15];
-      //Projection transform, the final row of projection matrix is always [0 0 -1 0]
-      //so we optimize for that.
-      fTempo[4]=projection[0]*fTempo[0]+projection[4]*fTempo[1]+projection[8]*fTempo[2]+projection[12]*fTempo[3];
-      fTempo[5]=projection[1]*fTempo[0]+projection[5]*fTempo[1]+projection[9]*fTempo[2]+projection[13]*fTempo[3];
-      fTempo[6]=projection[2]*fTempo[0]+projection[6]*fTempo[1]+projection[10]*fTempo[2]+projection[14]*fTempo[3];
-      fTempo[7]=-fTempo[2];
-      //The result normalizes between -1 and 1
-      if(fTempo[7]==0.0)	//The w value
-         return 0;
-      fTempo[7]=1.0/fTempo[7];
-      //Perspective division
-      fTempo[4]*=fTempo[7];
-      fTempo[5]*=fTempo[7];
-      fTempo[6]*=fTempo[7];
-      //Window coordinates
-      //Map x, y to range 0-1
-      windowCoordinate[0]=(fTempo[4]*0.5+0.5)*viewport[2]+viewport[0];
-      windowCoordinate[1]=(fTempo[5]*0.5+0.5)*viewport[3]+viewport[1];
-      //This is only correct when glDepthRange(0.0, 1.0)
-      windowCoordinate[2]=(1.0+fTempo[6])*0.5;	//Between 0 and 1
-      return 1;
-  }
+	//Transformation vectors
+	float fTempo[8];
+	//Modelview transform
+	fTempo[0]=modelview[0]*objx+modelview[4]*objy+modelview[8]*objz+modelview[12];  //w is always 1
+	fTempo[1]=modelview[1]*objx+modelview[5]*objy+modelview[9]*objz+modelview[13];
+	fTempo[2]=modelview[2]*objx+modelview[6]*objy+modelview[10]*objz+modelview[14];
+	fTempo[3]=modelview[3]*objx+modelview[7]*objy+modelview[11]*objz+modelview[15];
+	//Projection transform, the final row of projection matrix is always [0 0 -1 0]
+	//so we optimize for that.
+	fTempo[4]=projection[0]*fTempo[0]+projection[4]*fTempo[1]+projection[8]*fTempo[2]+projection[12]*fTempo[3];
+	fTempo[5]=projection[1]*fTempo[0]+projection[5]*fTempo[1]+projection[9]*fTempo[2]+projection[13]*fTempo[3];
+	fTempo[6]=projection[2]*fTempo[0]+projection[6]*fTempo[1]+projection[10]*fTempo[2]+projection[14]*fTempo[3];
+	fTempo[7]=-fTempo[2];
+	//The result normalizes between -1 and 1
+	if(fTempo[7]==0.0)	//The w value
+		return 0;
+	fTempo[7]=1.0/fTempo[7];
+	//Perspective division
+	fTempo[4]*=fTempo[7];
+	fTempo[5]*=fTempo[7];
+	fTempo[6]*=fTempo[7];
+	//Window coordinates
+	//Map x, y to range 0-1
+	windowCoordinate[0]=(fTempo[4]*0.5+0.5)*viewport[2]+viewport[0];
+	windowCoordinate[1]=(fTempo[5]*0.5+0.5)*viewport[3]+viewport[1];
+	//This is only correct when glDepthRange(0.0, 1.0)
+	windowCoordinate[2]=(1.0+fTempo[6])*0.5;	//Between 0 and 1
+	return 1;
+}
 

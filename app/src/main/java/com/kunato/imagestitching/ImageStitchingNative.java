@@ -87,18 +87,38 @@ public class ImageStitchingNative {
         glRotMat.put(0, 0, glRot);
         Mat glProjMat = new Mat(4,4,CvType.CV_32F);
         glProjMat.put(0, 0, glProj);
+        for (int i = 0; i < 4; i++) {
 
-        Mat ret = new Mat();
-        nativeHomography(input.getNativeObjAddr(), glRotMat.getNativeObjAddr(), glProjMat.getNativeObjAddr(), ret.getNativeObjAddr());
-        Log.d("Homography mat", "Ret Homography" + ret.toString());
-        float[] data = new float[9];
-        ret.get(0,0,data);
-        data[2]/=1080f;
-        data[5]/=1920f;
-
-        for(int i = 0; i < 3 ;i++){
-            Log.d("HomoMat",String.format("[%f %f %f]",data[i*3],data[i*3+1],data[i*3+2]));
+            Log.d("inputRot", String.format("[%f %f %f %f]", glRot[i * 4], glRot[i * 4 + 1], glRot[i * 4 + 2], glRot[i*4 +3]));
         }
+        Mat ret = new Mat(4,4,CvType.CV_32F);
+        nativeHomography(input.getNativeObjAddr(), glRotMat.getNativeObjAddr(), glProjMat.getNativeObjAddr(), ret.getNativeObjAddr());
+        Log.d("Tracking Mat", "Ret Homography" + ret.toString());
+        //using return as homo
+        float[] data;
+        if(false) {
+            data = new float[9];
+            ret.get(0, 0, data);
+            data[2] /= 1080f;
+            data[5] /= 1920f;
+
+
+            for (int i = 0; i < 3; i++) {
+
+                Log.d("HomoMat", String.format("[%f %f %f]", data[i * 3], data[i * 3 + 1], data[i * 3 + 2]));
+            }
+        }
+        else{
+            data = new float[]{1,0,0,0,1,0,0,0,1};
+            float[] rotmat = new float[16];
+            ret.get(0,0,rotmat);
+            float[] quad = Util.matrixToQuad(rotmat);
+            Log.d("quad-",Arrays.toString(Factory.mainController.mQuaternion));
+            Factory.mainController.mQuaternion = quad;
+            Log.d("quad+",Arrays.toString(Factory.mainController.mQuaternion));
+//            Factory.mainController.mRotmat = rotmat;
+        }
+
         GLRenderer glRenderer = Factory.getFactory(null).getGlRenderer();
         glRenderer.setHomography(data);
 

@@ -83,7 +83,23 @@ public class Util {
         }
 
     }
+    public static float[] matrixToQuad(float[] matrix){
+        float[] quad = new float[4];
 
+        //[0 1 2 3]
+        //[4 5 6 7]
+        //[8 9 10 11]
+        //[12 13 14 15]
+        //qw= √(1 + m00 + m11 + m22) /2
+        quad[3] = (float)Math.sqrt(1f+matrix[0]+matrix[5]+matrix[10])/2.0f;
+//        qx = (m21 - m12)/( 4 *qw)
+//        qy = (m02 - m20)/( 4 *qw)
+//        qz = (m10 - m01)/( 4 *qw)
+        quad[0] = (matrix[9]-matrix[6])/(4*quad[3]);
+        quad[1] = (matrix[2]-matrix[8])/(4*quad[3]);
+        quad[2] = (matrix[4]-matrix[1])/(4*quad[3]);
+        return quad;
+    }
     public static float[] naivMatrixMultiply(float[] B, float[] A) {
         int mA, nA, mB, nB;
         mA = nA = (int) Math.sqrt(A.length);
