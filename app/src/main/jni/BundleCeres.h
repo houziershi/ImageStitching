@@ -18,6 +18,7 @@ using namespace std;
 using namespace cv;
 using namespace cv::detail;
 void doingBundle(std::vector<ImageFeatures> features,vector<MatchesInfo> pairs,vector<CameraParams> &cameras);
+void doingBundle(vector<Point2f> src,vector<Point2f> dst,vector<CameraParams> &cameras);
 void test();
 
 

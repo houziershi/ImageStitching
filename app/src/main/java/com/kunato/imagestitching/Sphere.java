@@ -52,7 +52,7 @@ public class Sphere {
                     "}";
 
     private final String fragmentShaderCode =
-            "precision mediump float;" +
+            "precision highp float;" +
             "uniform sampler2D sTexture;"+
             "varying vec2 v_TexCoordinate;"+
             "varying vec4 fragmentColor;" +
@@ -64,6 +64,10 @@ public class Sphere {
                     "uniform float img_width;" +
                     "uniform float img_height;" +
                     "void main() {" +
+                    "if(img_x == 0.0 && img_y == 0.0 && img_width == 0.0 && img_height == 0.0){" +
+                    "gl_FragColor = vec4(0,0,0,0);" +
+                    "return;" +
+                    "}" +
                     "vec4 color;" +
                     "if(v_TexCoordinate.x < img_x*width_ratio || v_TexCoordinate.x > (img_x+img_width)*width_ratio || " +
                     "v_TexCoordinate.y < img_y*height_ratio || v_TexCoordinate.y > (img_y+img_height)*height_ratio){" +
@@ -78,7 +82,7 @@ public class Sphere {
                     "}" +
                     ""+
                     "gl_FragColor = color;" +
-                    "if(color.r == 0.0 && color.b == 0.0 && color.g == 0.0){gl_FragColor.a = 0.0;}else{gl_FragColor.a = 1.0;}" +
+                    "" +
             "}";
 
     private final FloatBuffer mVertexBuffer;
@@ -162,7 +166,7 @@ public class Sphere {
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR_MIPMAP_LINEAR);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
 
-        texImage2D(bitmap);
+//        texImage2D(bitmap);
     }
 
 

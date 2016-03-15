@@ -195,20 +195,58 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
     vector<uchar> inliners;
 
 	Mat tmp = findHomography(in_point,in2_point,inliners,CV_RANSAC);
-	tmp.convertTo(H,CV_32F);
 
+	tmp.convertTo(H,CV_32F);
 	CameraParams camera;
-	camera.ppx = dst.size().width/2.0;
-	camera.ppy = dst.size().height/2.0;
 	camera.aspect = 1;//??? change to 1(1920/1080??=1.77)
 	camera.focal = (dst.size().width * 4.7 / focal_divider) * work_scale/seam_scale;
 	Mat K;
     camera.K().convertTo(K,CV_32F);
-    Mat R = K.inv() * H * K;
-    Mat R_inv = K.inv() * H.inv() * K;
+    Mat R = K.inv() * H.inv() * K;
+	printMatrix(H,"H_MAT");
 	printMatrix(R,"R_MAT");
-	printMatrix(R_inv,"R_inv_MAT");
+	vector<Point2f> src_points;
+	vector<Point2f> dst_points;
+	int inlier_idx = 0;
+	for(int i = 0 ; i < inliners.size() ; i++){
+		if(!inliners[i])
+			continue;
+		Point2f p1 = in_point[i];
+		Point2f p2 = in2_point[i];
+		src_points.push_back(p1);
+		dst_points.push_back(p2);
+		__android_log_print(ANDROID_LOG_ERROR,"MatchPoint3DFF","(%f %f) (%f %f)",p1.x,p1.y,p2.x,p2.y);
+		inlier_idx++;
+	}
+	tmp = findHomography(src_points,dst_points,CV_RANSAC);
+	tmp.convertTo(H,CV_32F);
+	printMatrix(H.inv(),"H");
+	R = K.inv() * H.inv() * K;
+	printMatrix(R,"R_MAT");
+	//doingBundle(){}
+	vector<CameraParams> camera_homo(2);
+	for(int i = 0 ; i < 2; i++){
+		CameraParams c;
+		c.aspect = 1;//??? change to 1(1920/1080??=1.77)
+		c.focal = (dst.size().width * 4.7 / focal_divider) * work_scale/seam_scale;
+		c.ppx = 1080/2.0;
+		c.ppy = 1080/2.0;
+		if(i == 0){
 
+			c.R = Mat::eye(3,3,CV_32F);
+		}
+		else{
+			c.R = R;
+		}
+
+		camera_homo[i] = c;
+	}
+	doingBundle(src_points,dst_points,camera_homo);
+	printMatrix(camera_homo[0].R,"R_adjust0");
+	printMatrix(camera_homo[1].R,"R_adjusted");
+	//another choice doingbundle on H
+	H = K * R * K.inv();
+	printMatrix(H,"H2_MAT");
 
 
 }

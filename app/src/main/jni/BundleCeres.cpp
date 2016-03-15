@@ -92,6 +92,7 @@ struct ReprojectionError {
     const double *K2;
 };
 
+
 //Need to re-done
 void doingBundle(vector<ImageFeatures> features,vector<MatchesInfo> pairs,vector<CameraParams> &cameras){
 
@@ -182,6 +183,85 @@ void doingBundle(vector<ImageFeatures> features,vector<MatchesInfo> pairs,vector
     }
 
 }
+void doingBundle(vector<Point2f> src,vector<Point2f> dst,vector<CameraParams> &cameras){
 
+    vector<ReprojectionErrorData> rpSet;
+    cout << "point set" << endl;
 
+        for(int j = 0 ; j < src.size() ; j++){
+            vector<Point2f> pointSet;
+            vector<int> image_idx;
+            pointSet.push_back(src[j]);
+            image_idx.push_back(0);
+            pointSet.push_back(dst[j]);
+            image_idx.push_back(1);
+            ReprojectionErrorData rpData;
+            rpData.points = pointSet;
+            rpData.matches_image_idx = image_idx;
+            rpSet.push_back(rpData);
+        }
+    cout << "Ending add rpSet" <<endl;
+    ceres::Problem problem;
+    double focal_array[cameras.size()];
+    double *focal_pointer = focal_array;
+    double rotation_array[cameras.size()*3];
+    double *rotation_pointer = rotation_array;
+    double K_array[cameras.size()*9];
+    double *K_pointer = K_array;
+    for(int i = 0 ; i < cameras.size() ; i++){
+        focal_array[i] = cameras[i].focal;
+        Mat R = cameras[i].R;
+        Mat rvec;
+        Rodrigues(R,rvec);
+        for(int j = 0 ; j < 3 ; j++){
+            rotation_array[i*3+j] = rvec.at<float>(j);
+        }
+        Mat_<double> K = cameras[i].K();
+        for(int j = 0 ; j < 9 ; j ++){
+            K_array[i*9+j] = K.at<double>(j);
+        }
+    }
+    cout << "Ending create rotation array" << endl;
+    cout << "Ending create K Matrix" << endl;
+    double p1[rpSet.size()*3];
+    double p2[rpSet.size()*3];
+    for(int i = 0 ; i < rpSet.size();i++){
+        p1[i*3] = rpSet[i].points[0].x;
+        p1[i*3+1] = rpSet[i].points[0].y;
+        p1[i*3+2] = 1;
+        p2[i*3] = rpSet[i].points[1].x;
+        p2[i*3+1] = rpSet[i].points[1].y;
+        p2[i*3+2] = 1;
+    }
+    for(int i = rpSet.size() -1 ; i >= 0  ; i--){
+        double *p1_pointer = (p1+(i*3));
+        double *p2_pointer = (p2+(i*3));
 
+        ceres::CostFunction* cost_func = ReprojectionError::Create(p1_pointer,p2_pointer,
+                                                                   K_pointer + rpSet[i].matches_image_idx[0]*9,
+                                                                   K_pointer + rpSet[i].matches_image_idx[1]*9);
+        problem.AddResidualBlock(cost_func,NULL,rotation_pointer + rpSet[i].matches_image_idx[0]*3
+                ,rotation_pointer + rpSet[i].matches_image_idx[1]*3);
+    }
+
+    ceres::Solver::Options options;
+    options.linear_solver_type = ceres::DENSE_SCHUR;
+    options.minimizer_progress_to_stdout = true;
+    ceres::Solver::Summary summary;
+    ceres::Solve(options, &problem, &summary);
+    std::cout << summary.FullReport() << "\n";
+    for(int i = 0 ; i < cameras.size() ; i ++){
+        Mat R;
+        Mat rvec = Mat::zeros(3,1,CV_64F);
+        for(int j = 0 ; j < 3 ; j++){
+            rvec.at<double>(j) = rotation_array[i*3+j];
+        }
+        Rodrigues(rvec,R);
+        R.convertTo(cameras[i].R,CV_32F);
+//		cameras[i].focal = focal_array[i];
+    }
+    Mat R_inv = cameras[0].R.inv();
+    for(int i = 0 ; i < cameras.size() ;i++){
+        cameras[i].R = R_inv * cameras[i].R;
+    }
+}

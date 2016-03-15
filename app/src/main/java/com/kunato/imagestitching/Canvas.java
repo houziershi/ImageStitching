@@ -58,7 +58,7 @@ public class Canvas {
                     "return pixelCoords.xy;}" +
                     "void main() {\n" +
                     "vec3 coord = vec3(texCoord.x,texCoord.y,1.0);" +
-                    "gl_FragColor = texture2D(sTexture,convertToTexCoord(coord*inverse(homography)));\n" +
+                    "gl_FragColor = texture2D(sTexture,convertToTexCoord(inverse(homography)*coord));\n" +
                     "}";
     private final String fss_int =
             "precision mediump float;\n" +
