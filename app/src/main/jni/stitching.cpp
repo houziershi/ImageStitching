@@ -40,84 +40,11 @@
 //
 //
 //M*/
-#include <android/log.h>
-#include <jni.h>
-#include <vector>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <math.h>
-#include "opencv2/opencv_modules.hpp"
-#include "opencv2/highgui/highgui.hpp"
-#include "opencv2/stitching/detail/autocalib.hpp"
-#include "opencv2/stitching/detail/blenders.hpp"
-#include "opencv2/stitching/detail/camera.hpp"
-#include "opencv2/stitching/detail/exposure_compensate.hpp"
-#include "opencv2/stitching/detail/matchers.hpp"
-#include "opencv2/stitching/detail/motion_estimators.hpp"
-#include "opencv2/stitching/detail/seam_finders.hpp"
-#include "opencv2/stitching/detail/util.hpp"
-#include "opencv2/stitching/detail/warpers.hpp"
-#include "opencv2/stitching/warpers.hpp"
-#include "opencv2/nonfree/features2d.hpp"
-#include "BundleCeres.h"
+#include "stitching.h"
 
 using namespace std;
 using namespace cv;
 using namespace cv::detail;
-# define M_PI 3.14159265358979323846
-
-double work_scale = 0.4, seam_scale = 0.2, compose_scale = 1.0;
-double tracking_scale = 0.2;
-string result_name = "/mnt/sdcard/result.png";
-int blend_type = Blender::NO;
-#define TAG "NATIVE_DEBUG"
-#define GL_HEIGHT 1731
-#define GL_WIDTH 1080
-
-extern "C" {
-
-JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeHomography(JNIEnv*, jobject, jlong imgaddr,jlong glRotAddr,jlong glProjAddr,jlong retaddr);
-JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeAddStitch(JNIEnv*, jobject, jlong imgaddr,jlong rotaddr);
-JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeStitch(JNIEnv*, jobject,jlong retAddr,jlong areaAddr);
-inline Point3f calc3DPosition(Point2f keyPoint,float multiply_aspect);
-inline int glhProjectf(float objx, float objy, float objz, float *modelview, float *projection, int *viewport, float *windowCoordinate);
-
-
-void printMatrix(Mat mat,string text);
-
-
-struct ImagePackage{
-	String name;
-	Mat image;
-	Mat full_image;
-	Mat rotation;
-	Size size;
-	Size compose_size;
-	Size full_size;
-	Point corner;
-	Point compose_corner;
-	Mat mask_warped;
-	Mat compose_mask_warped;
-	Mat image_warped;
-	Mat compose_image_warped;
-	bool done = false;
-	ImageFeatures feature;
-};
-float focal_divider = 3.45;
-int work_width = 0;
-int work_height = 0;
-vector<ImagePackage> images;
-Mat stitching_descriptor;
-std::vector<KeyPoint> stitiching_keypoint;
-vector<vector<Point2f>> p2d;
-vector<vector<Point3f>> p3d;
-vector<Mat> feature_descriptor;
-//No need to re-done
-Ptr<Feature2D> detector = Algorithm::create<Feature2D>("Feature2D.SURF");
-Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce");
-int detector_setup = 1;
 void findDescriptor(Mat img,std::vector<KeyPoint> &keypoints ,Mat &descriptor){
 	if(detector_setup){
 		//for surf
@@ -150,7 +77,7 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	__android_log_print(ANDROID_LOG_ERROR,"Native","Descriptor type %d,%d",stitching_descriptor.type(),input_descriptor.type() );
 	//const descriptor (img1)
 
-	(*matcher).match(input_descriptor, feature_descriptor[1], matches);
+	(*matcher).match(input_descriptor, images[1].feature.descriptors, matches);
 	__android_log_print(ANDROID_LOG_DEBUG,"Native","Tracking,%d",matches.size());
 	Mat& H = *(Mat*)retaddr;
 	Mat& gl_rot = *(Mat*) glrotaddr;
@@ -255,12 +182,10 @@ void warpFeature(float warped_image_scale , vector<CameraParams> cameras,vector<
 	float track_work_aspect = tracking_scale/ work_scale;
 	Ptr<WarperCreator> warper_creator = new cv::SphericalWarper();
 	Ptr<RotationWarper> warper = warper_creator->create(warped_image_scale * track_work_aspect);
-	feature_descriptor.clear();
 	p2d.clear();
 	for(int i = 0; i < cameras.size() ;i++){
 		vector<Point2f> p2d_per_camera;
 		vector<Point3f> p3d_per_camera;
-		feature_descriptor.push_back(features[i].descriptors);
 		for(int j = 0; j < features[i].keypoints.size() ;j++){
 			Mat k_temp;
 
@@ -566,6 +491,9 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
 	doComposition(warped_image_scale,cameras,images,nullptr,work_scale,compose_scale,blend_type,out,area);
 	__android_log_print(ANDROID_LOG_ERROR,TAG,"Compositioned %d Images",num_images);
 	out.convertTo(result,CV_8UC3);
+	for(int i = 0; i < images.size() ;i++){
+		images[i].rotation = cameras[i].R;
+	}
 	Mat small;
 	return 0;
 }
@@ -580,8 +508,7 @@ void printMatrix(Mat tmp,string text){
 	__android_log_print(ANDROID_LOG_VERBOSE, TAG, "[%f %f %f]", mat.at<float>(2,0),mat.at<float>(2,1),mat.at<float>(2,2));
 	__android_log_print(ANDROID_LOG_VERBOSE, TAG, "Matrix ##############################");
 }
-inline int glhProjectf(float objx, float objy, float objz, float *modelview, float *projection, int *viewport, float *windowCoordinate)
-  {
+inline int glhProjectf(float objx, float objy, float objz, float *modelview, float *projection, int *viewport, float *windowCoordinate) {
       //Transformation vectors
       float fTempo[8];
       //Modelview transform
@@ -611,4 +538,4 @@ inline int glhProjectf(float objx, float objy, float objz, float *modelview, flo
       windowCoordinate[2]=(1.0+fTempo[6])*0.5;	//Between 0 and 1
       return 1;
   }
-}
+

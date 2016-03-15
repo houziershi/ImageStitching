@@ -30,6 +30,7 @@ LOCAL_C_INCLUDES :=				\
 	$(EIGEN_PATH)
 
 LOCAL_SRC_FILES :=				\
+	stitching.h					\
 	stitching.cpp               \
 	BundleCeres.h               \
 	BundleCeres.cpp
@@ -37,7 +38,7 @@ LOCAL_SRC_FILES :=				\
 LOCAL_MODULE := nonfree_stitching
 LOCAL_SHARED_LIBRARIES += nonfree
 LOCAL_STATIC_LIBRARIES += ceres
-LOCAL_CFLAGS := -Werror -O3 -ffast-math
+LOCAL_CFLAGS := -O3 -ffast-math
 LOCAL_LDLIBS := -llog -ldl
 LOCAL_LDLIBS += -latomic
 
