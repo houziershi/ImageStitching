@@ -60,7 +60,7 @@ std::vector<KeyPoint> stitiching_keypoint;
 vector<vector<Point2f>> p2d;
 vector<vector<Point3f>> p3d;
 //No need to re-done
-Ptr<Feature2D> detector = Algorithm::create<Feature2D>("Feature2D.SURF");
+Ptr<Feature2D> detector = Algorithm::create<Feature2D>("Feature2D.ORB");
 Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce");
 int detector_setup = 1;
 extern "C" {

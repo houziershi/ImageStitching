@@ -48,9 +48,9 @@ using namespace cv::detail;
 void findDescriptor(Mat img,std::vector<KeyPoint> &keypoints ,Mat &descriptor){
 	if(detector_setup){
 		//for surf
-		detector->set("hessianThreshold", 300);
-		detector->set("nOctaves", 3);
-		detector->set("nOctaveLayers", 4);
+//		detector->set("hessianThreshold", 300);
+//		detector->set("nOctaves", 3);
+//		detector->set("nOctaveLayers", 4);
 		detector_setup = 0;
 	}
 	Mat grayImg;
@@ -68,7 +68,7 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	resize(full_img,img,Size(),work_scale,work_scale);
 	transpose(img, img);
 	flip(img, dst,0);
-	imwrite("/sdcard/stitch/tracking2.jpg",dst);
+//	imwrite("/sdcard/stitch/tracking2.jpg",dst);
 	ImageFeatures input_feature;
 	Mat input_descriptor;
 	findDescriptor(dst, input_feature.keypoints, input_feature.descriptors);
@@ -79,7 +79,7 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	input_feature.img_size = img.size();
 	int nearest_index = 1;
 
-	imwrite("/sdcard/stitch/tracking3.jpg",images[nearest_index].image);
+//	imwrite("/sdcard/stitch/tracking3.jpg",images[nearest_index].image);
 	tracking_feature[0] = images[nearest_index].feature;
 	tracking_feature[1] = input_feature;
 	BestOf2NearestMatcher matcher(false, 0.3f);

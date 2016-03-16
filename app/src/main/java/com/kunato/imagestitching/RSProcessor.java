@@ -17,6 +17,7 @@
 package com.kunato.imagestitching;
 
 import android.graphics.ImageFormat;
+import android.hardware.SensorManager;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.renderscript.Allocation;
@@ -140,13 +141,8 @@ public class RSProcessor {
             mergeScript.forEach_mergeHdrFrames(mPrevAllocation, mOutputAllocation);
             mOutputAllocation.ioSend();
             if(homoRequest){
-                Mat mat = new Mat(1080, 1920, CvType.CV_8UC4);
-                byte[] frameByte = new byte[1080*1920*4];
-                mOutputAllocation.copyTo(frameByte);
-                mat.put(0, 0, frameByte);
-                Imgproc.cvtColor(mat,mat,Imgproc.COLOR_RGBA2BGR);
-                ImageStitchingNative.getNativeInstance().tracking(mat,mController.mGLRenderer.mRotationMatrix,mController.mGLRenderer.mProjectionMatrix);
-                homoRequest = false;
+
+                homoAction();
             }
 
 
@@ -166,6 +162,19 @@ public class RSProcessor {
 //                Highgui.imwrite("/sdcard/rs.jpeg", mat);
 //
 //            }
+        }
+
+        private void homoAction() {
+            Mat mat = new Mat(1080, 1920, CvType.CV_8UC4);
+            byte[] frameByte = new byte[1080*1920*4];
+            mOutputAllocation.copyTo(frameByte);
+            mat.put(0, 0, frameByte);
+            Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGBA2BGR);
+            float[] rotMat = new float[16];
+
+            SensorManager.getRotationMatrixFromVector(rotMat, mController.mQuaternion);
+            ImageStitchingNative.getNativeInstance().tracking(mat,rotMat,mController.mGLRenderer.mProjectionMatrix);
+//            homoRequest = false;
         }
     }
 

@@ -430,10 +430,13 @@ public class MainController extends GLSurfaceView {
             if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
                 mQuaternion = Util.getQuadFromGyro(event.values,lastTimeStamp,event.timestamp, mQuaternion,false,true,false,true);
                 lastTimeStamp = event.timestamp;
+                float[] swapMat = new float[16];
+                SensorManager.getRotationMatrixFromVector(swapMat,mQuaternion);
                 float[] rotMat = new float[16];
                 float[] correctedQuat = {mQuaternion[0],-mQuaternion[1], mQuaternion[2], mQuaternion[3]};
                 float[] temp = new float[16];
                 SensorManager.getRotationMatrixFromVector(rotMat, correctedQuat);
+                Matrix.multiplyMM(temp,0,Util.ROTATE_Y_270,0,swapMat,0);
 //                Matrix.multiplyMM(temp, 0, Util.SWAP_X, 0, rotMat, 0);
 //                Matrix.multiplyMM(rotMat, 0, Util.SWAP_Z, 0, temp, 0);
                 mGLRenderer.setRotationMatrix(rotMat);

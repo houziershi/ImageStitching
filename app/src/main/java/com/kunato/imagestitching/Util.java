@@ -37,9 +37,9 @@ public class Util {
             0,1,0,0,
             0,0,0,1
     };
-    public static float[] ROTATE_Y = { 0,0,1,0,
+    public static float[] ROTATE_Y_270 = { 0,0,-1,0,
             0,1,0,0,
-            -1,0,0,0,
+            1,0,0,0,
             0,0,0,1
 
     };
