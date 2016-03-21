@@ -58,7 +58,9 @@ void findDescriptor(Mat img,std::vector<KeyPoint> &keypoints ,Mat &descriptor){
 	(*detector)(grayImg , Mat(), keypoints, descriptor, false);
 	descriptor = descriptor.reshape(1, (int)keypoints.size());
 }
-
+inline float calcDistance(float x1,float y1,float z1,float x2,float y2, float z2){
+	return ((x1-x2)*(x1-x2))+((y1-y2)*(y1-y2))+((z1-z2)*(z1-z2));
+}
 
 JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeHomography(JNIEnv*, jobject, jlong imgaddr,jlong glrotaddr,jlong glprojaddr,jlong retaddr){
 	__android_log_print(ANDROID_LOG_DEBUG,"Native","Native homography");
@@ -68,6 +70,8 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	resize(full_img,img,Size(),work_scale,work_scale);
 	transpose(img, img);
 	flip(img, dst,0);
+
+	Mat& gl_rot = *(Mat*) glrotaddr;
 //	imwrite("/sdcard/stitch/tracking2.jpg",dst);
 	ImageFeatures input_feature;
 	Mat input_descriptor;
@@ -77,8 +81,38 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	vector<ImageFeatures> tracking_feature(2);
 	input_feature.img_idx = -1;
 	input_feature.img_size = img.size();
-	int nearest_index = 1;
+	Mat input_R(3,3,CV_32F);
+	for(int j = 0 ; j < 3 ;j++){
+		for(int k = 0; k < 3 ;k++){
+			input_R.at<float>(j,k) = gl_rot.at<float>(j,k);
+		}
+	}
 
+	// nearest_index edit
+	int nearest_index = -1;
+	CameraParams dummy_K;
+	dummy_K.ppx = images[0].feature.img_size.width/2;
+	dummy_K.ppy = images[0].feature.img_size.height/2;
+	dummy_K.focal = (images[0].feature.img_size.width * 4.7 / focal_divider);
+	Mat dummy_K_mat;
+	dummy_K.K().convertTo(dummy_K_mat,CV_32F);
+	float max_distance = FLT_MAX;
+	for(int i = 0 ; i < images.size(); i++){
+
+		Mat test_point(1,3,CV_32F,Scalar(1));
+		Mat out = test_point * input_R;
+		Mat out2 = test_point * images[i].rotation;
+		float dist = calcDistance(out2.at<float>(0,0),out2.at<float>(0,1),out2.at<float>(0,2),out.at<float>(0,0),out.at<float>(0,1),out.at<float>(0,2));
+		if(dist < max_distance){
+			max_distance = dist;
+			nearest_index = i;
+
+			__android_log_print(ANDROID_LOG_DEBUG,"distance","%f",dist);
+		}
+
+
+	}
+	__android_log_print(ANDROID_LOG_DEBUG,"index","%d %f",nearest_index,max_distance);
 //	imwrite("/sdcard/stitch/tracking3.jpg",images[nearest_index].image);
 	tracking_feature[0] = images[nearest_index].feature;
 	tracking_feature[1] = input_feature;
@@ -86,9 +120,9 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	matcher(tracking_feature,tracking_matches);
 	matcher.collectGarbage();
 	__android_log_print(ANDROID_LOG_DEBUG,"Native","Tracking,%d",tracking_matches.size());
-	Mat& gl_rot = *(Mat*) glrotaddr;
 	vector<CameraParams> tracking_cameras(2);
 	int matches_index = - 1;
+
 	for(int i = 0 ; i < tracking_matches.size() ;i++){
 
 		__android_log_print(ANDROID_LOG_DEBUG,"Native","pair ,%d %d %d",tracking_matches[i].src_img_idx , tracking_matches[i].dst_img_idx,tracking_matches[i].matches.size());
@@ -103,12 +137,7 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 		tracking_camera.ppy = tracking_feature[i].img_size.height/2;
 		tracking_camera.focal = (tracking_feature[i].img_size.width * 4.7 / focal_divider);
 		if( i == 1 ){
-			Mat input_R(3,3,CV_32F);
-			for(int j = 0 ; j < 3 ;j++){
-				for(int k = 0; k < 3 ;k++){
-					input_R.at<float>(j,k) = gl_rot.at<float>(j,k);
-				}
-			}
+
 			tracking_camera.R = input_R;
 		}
 		else{

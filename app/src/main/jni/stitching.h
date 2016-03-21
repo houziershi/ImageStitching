@@ -9,6 +9,7 @@
 #include <sstream>
 #include <string>
 #include <math.h>
+#include <float.h>
 #include "opencv2/opencv_modules.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/stitching/detail/autocalib.hpp"
@@ -23,7 +24,6 @@
 #include "opencv2/stitching/warpers.hpp"
 #include "opencv2/nonfree/features2d.hpp"
 #include "BundleCeres.h"
-
 #define M_PI 3.14159265358979323846
 
 double work_scale = 0.4, seam_scale = 0.2, compose_scale = 1.0;
@@ -75,7 +75,7 @@ void tracking(jlong imgaddr,jlong glrotaddr,jlong glprojaddr,jlong retaddr);
 void findDescriptor(Mat img,std::vector<KeyPoint> &keypoints ,Mat &descriptor);
 inline Point3f calc3DPosition(Point2f keyPoint,float multiply_aspect);
 inline int glhProjectf(float objx, float objy, float objz, float *modelview, float *projection, int *viewport, float *windowCoordinate);
-
+inline float calcDistance(float x1,float y1, float z1,float x2,float y2,float z2);
 
 void printMatrix(Mat mat,string text);
 }
