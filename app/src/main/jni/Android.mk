@@ -33,7 +33,9 @@ LOCAL_SRC_FILES :=				\
 	stitching.h					\
 	stitching.cpp               \
 	BundleCeres.h               \
-	BundleCeres.cpp
+	BundleCeres.cpp				\
+	composer.h					\
+	composer.cpp
 
 LOCAL_MODULE := nonfree_stitching
 LOCAL_SHARED_LIBRARIES += nonfree

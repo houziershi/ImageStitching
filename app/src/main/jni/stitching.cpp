@@ -64,6 +64,7 @@ inline float calcDistance(float x1,float y1,float z1,float x2,float y2, float z2
 
 JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeHomography(JNIEnv*, jobject, jlong imgaddr,jlong glrotaddr,jlong glprojaddr,jlong retaddr){
 	__android_log_print(ANDROID_LOG_DEBUG,"Native","Native homography");
+	clock_t c_start = std::clock();
 	Mat& full_img  = *(Mat*)imgaddr;
 	Mat img;
 	Mat dst;
@@ -75,7 +76,9 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 //	imwrite("/sdcard/stitch/tracking2.jpg",dst);
 	ImageFeatures input_feature;
 	Mat input_descriptor;
+	clock_t c_before_desc = std::clock();
 	findDescriptor(dst, input_feature.keypoints, input_feature.descriptors);
+	clock_t c_after_desc = std::clock();
 	vector<MatchesInfo> tracking_matches;
 	//const descriptor (img1)
 	vector<ImageFeatures> tracking_feature(2);
@@ -116,9 +119,11 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 //	imwrite("/sdcard/stitch/tracking3.jpg",images[nearest_index].image);
 	tracking_feature[0] = images[nearest_index].feature;
 	tracking_feature[1] = input_feature;
+	clock_t c_before_matcher = std::clock();
 	BestOf2NearestMatcher matcher(false, 0.3f);
 	matcher(tracking_feature,tracking_matches);
 	matcher.collectGarbage();
+	clock_t c_after_matcher = std::clock();
 	__android_log_print(ANDROID_LOG_DEBUG,"Native","Tracking,%d",tracking_matches.size());
 	vector<CameraParams> tracking_cameras(2);
 	int matches_index = - 1;
@@ -158,7 +163,9 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	}
 	printMatrix(tracking_cameras[0].R,"R 0");
 	printMatrix(tracking_cameras[1].R,"R 1");
-	doingBundle(src_points,dst_points,tracking_cameras);
+	clock_t c_before_bundle = clock();
+	minimizeRotation(src_points,dst_points,tracking_cameras);
+	clock_t c_after_bundle = clock();
 	printMatrix(tracking_cameras[0].R,"RA 0");
 	printMatrix(tracking_cameras[1].R,"RA 1");
 	Mat K;
@@ -180,7 +187,12 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 
 		}
 	}
-
+	clock_t c_end = clock();
+	double a = ((c_end-c_start)/(double)CLOCKS_PER_SEC);
+	double b = ((c_after_bundle-c_before_bundle)/(double)CLOCKS_PER_SEC);
+	double c = ((c_after_matcher-c_before_matcher)/(double)CLOCKS_PER_SEC);
+	double d = ((c_after_desc-c_before_desc)/(double)CLOCKS_PER_SEC);
+	__android_log_print(ANDROID_LOG_DEBUG,"Timer","A : %lf Desc : %lf Matcher : %lf  Bundle : %lf",a,d,c,b);
 //	H = K * tracking_cameras[1].R * K.inv();
 	//return only R no-need for homography
 //	H = tracking_cameras[1].R;
@@ -245,7 +257,7 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 //	printMatrix(H.inv(),"H");
 //	R = K.inv() * H.inv() * K;
 //	printMatrix(R,"R_MAT");
-//	//doingBundle(){}
+//	//minimizeRotation(){}
 //	vector<CameraParams> camera_homo(2);
 //	for(int i = 0 ; i < 2; i++){
 //		CameraParams c;
@@ -263,7 +275,7 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 //
 //		camera_homo[i] = c;
 //	}
-//	doingBundle(src_points,dst_points,camera_homo);
+//	minimizeRotation(src_points,dst_points,camera_homo);
 //	printMatrix(camera_homo[0].R,"R_adjust0");
 //	printMatrix(camera_homo[1].R,"R_adjusted");
 //	//another choice doingbundle on H
@@ -359,7 +371,8 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
 	double compose_work_aspect = compose_scale / work_scale;
 	Mat img_warped;
 	Mat dilated_mask, seam_mask, mask, mask_warped;
-	Ptr<Blender> blender;
+	unsigned char blender_created = 0;
+//	Ptr<Blender> blender;
 //    Ptr<WarperCreator> warper_creator = new cv::CylindricalWarper();
 	Ptr<WarperCreator> warper_creator = new cv::SphericalWarper();
 	Ptr<RotationWarper> warper = warper_creator->create(warped_image_scale * compose_work_aspect);
@@ -407,7 +420,7 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
 			cameras[i].K().convertTo(K, CV_32F);
 			warper->warp(img, K, cameras[i].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
 			warper->warp(mask, K, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, mask_warped);
-			img_warped.convertTo(p_img[i].compose_image_warped, CV_16S);
+			img_warped.convertTo(p_img[i].compose_image_warped, CV_8U);
 			img_warped.release();
 			img.release();
 			mask.release();
@@ -418,9 +431,10 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
 			p_img[i].compose_mask_warped = mask_warped;
 			p_img[i].done = true;
 		}
-		if (!blender)
+		if (!blender_created)
 		{
-			blender = Blender::createDefault(blend_type, false);
+			blender_created = 1;
+//			blender = Blender::createDefault(blend_type, false);
 			int width = work_width*compose_work_aspect;
 			int offset = work_height*compose_work_aspect/2;//??1.18 at 1.73 aspect???
 			int height = work_height*compose_work_aspect;//??? 1280
@@ -433,7 +447,8 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
 				sizes[i] = p_img[i].compose_size;
 			}
 			Rect dst = resultRoi(corners, sizes);
-			blender->prepare(dst);
+			composer::prepare(dst);
+//			blender->prepare(dst);
 			area.at<float>(0,0) = (width/2)+dst.x;
 			area.at<float>(0,1) = dst.y;
 			area.at<float>(0,2) = dst.width;
@@ -441,19 +456,22 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
 			__android_log_print(ANDROID_LOG_DEBUG,"TAG","Rect area (%f,%f) (%f,%f)",area.at<float>(0,0),area.at<float>(0,1),area.at<float>(0,2),area.at<float>(0,3));
 //			blender->prepare(full);
 		}
-
-		blender->feed(p_img[i].compose_image_warped, mask_warped, p_img[i].compose_corner);
+		composer::feed(p_img[i].compose_image_warped, mask_warped, p_img[i].compose_corner);
+//		blender->feed(p_img[i].compose_image_warped, mask_warped, p_img[i].compose_corner);
 
 	}
 	Mat out,result_mask;
-	blender->blend(out, result_mask);
-	Mat rgb[3];
-	Mat result_mask_temp;
-	result_mask.convertTo(result_mask_temp,CV_16S);
-	split(out,rgb);
-	__android_log_print(ANDROID_LOG_DEBUG,"resultmasktype","%d %d %d %d %d %d %d %d",rgb[0].cols,rgb[0].rows,result_mask_temp.cols,result_mask_temp.rows,rgb[0].depth(),result_mask_temp.depth(),rgb[0].type(),result_mask_temp.type());
-	Mat rgba[4] = {rgb[2],rgb[1],rgb[0],result_mask_temp};
-	merge(rgba,4,result);
+	composer::process(result,result_mask);
+	//out as rgba
+
+//	blender->blend(out, result_mask);
+//	Mat rgb[3];
+//	Mat result_mask_temp;
+//	result_mask.convertTo(result_mask_temp,CV_16S);
+//	split(out,rgb);
+//	__android_log_print(ANDROID_LOG_DEBUG,"resultmasktype","%d %d %d %d %d %d %d %d",rgb[0].cols,rgb[0].rows,result_mask_temp.cols,result_mask_temp.rows,rgb[0].depth(),result_mask_temp.depth(),rgb[0].type(),result_mask_temp.type());
+//	Mat rgba[4] = {rgb[2],rgb[1],rgb[0],result_mask_temp};
+//	merge(rgba,4,result);
 
 
 
@@ -542,7 +560,7 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
 	//Implement BundleAdjustment
 //    Ptr<detail::BundleAdjusterBase> adjuster = new detail::BundleAdjusterRay();
 //    (*adjuster)(features, pairwise_matches, cameras);
-	doingBundle(features,pairwise_matches,cameras);
+	minimizeRotation(features,pairwise_matches,cameras);
 
 	vector<double> focals;
 	for (size_t i = 0; i < cameras.size(); ++i)
@@ -577,11 +595,11 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
 	Ptr<SeamFinder> seam_finder =  new detail::GraphCutSeamFinder(GraphCutSeamFinderBase::COST_COLOR);
 	seam_finder->find(images_warped, corners, masks_warped);
 
-	Mat out;
+//	Mat out;
 	Mat& area = *(Mat*)areaAddr;
-	doComposition(warped_image_scale,cameras,images,nullptr,work_scale,compose_scale,blend_type,out,area);
+	doComposition(warped_image_scale,cameras,images,nullptr,work_scale,compose_scale,blend_type,result,area);
 	__android_log_print(ANDROID_LOG_ERROR,TAG,"Compositioned %d Images",num_images);
-	out.convertTo(result,CV_8UC3);
+//	out.convertTo(result,CV_8U);
 	for(int i = 0; i < images.size() ;i++){
 		images[i].rotation = cameras[i].R;
 	}

@@ -71,7 +71,7 @@ public class Util {
             0,0,0,1
 
     };
-    private static final float NS2S = 1.0f / 1000000000.0f;
+    public static final float NS2S = 1.0f / 1000000000.0f;
 
     public static class CompareSizesByArea implements Comparator<Size> {
 

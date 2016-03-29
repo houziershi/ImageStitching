@@ -69,10 +69,9 @@ public class Sphere {
                     "return;" +
                     "}" +
                     "vec4 color;" +
-                    "if(v_TexCoordinate.x < img_x*width_ratio || v_TexCoordinate.x > (img_x+img_width)*width_ratio || " +
-                    "v_TexCoordinate.y < img_y*height_ratio || v_TexCoordinate.y > (img_y+img_height)*height_ratio){" +
-                    "coord = vec2(0.0,0.0);" +
-                    "color = texture2D(sTexture,coord);" +
+                    "if(v_TexCoordinate.x <= img_x*width_ratio || v_TexCoordinate.x >= (img_x+img_width)*width_ratio || " +
+                    "v_TexCoordinate.y <= img_y*height_ratio || v_TexCoordinate.y >= (img_y+img_height)*height_ratio){" +
+                    "color = vec4(0,0,0,0);"+
                     "}" +
                     "else{" +
                     "float diff_x = (v_TexCoordinate.x - (img_x*width_ratio))/(img_width*width_ratio);" +
@@ -115,7 +114,7 @@ public class Sphere {
     public Sphere(GLRenderer renderer) {
         glRenderer = renderer;
         Context context = renderer.mView.getActivity();
-        sphereObject = new SphereObject(20,210,1);
+        sphereObject = new SphereObject(50,210,1);
         mSphereBuffer = sphereObject.getVertices();
 
         mSphereBuffer.position(0);
@@ -166,7 +165,7 @@ public class Sphere {
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR_MIPMAP_LINEAR);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
 
-        texImage2D(bitmap);
+//        texImage2D(bitmap);
     }
 
 

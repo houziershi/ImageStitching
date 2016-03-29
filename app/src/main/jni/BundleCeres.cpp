@@ -168,7 +168,7 @@ struct ReprojectionErrorOneVector {
 
 
 //Need to re-done
-void doingBundle(vector<ImageFeatures> features,vector<MatchesInfo> pairs,vector<CameraParams> &cameras){
+void minimizeRotation(vector<ImageFeatures> features,vector<MatchesInfo> pairs,vector<CameraParams> &cameras){
 
     vector<ReprojectionErrorData> rpSet;
     cout << "point set" << endl;
@@ -257,7 +257,7 @@ void doingBundle(vector<ImageFeatures> features,vector<MatchesInfo> pairs,vector
     }
 
 }
-void doingBundle(vector<Point2f> src,vector<Point2f> dst,vector<CameraParams> &cameras){
+void minimizeRotation(vector<Point2f> src,vector<Point2f> dst,vector<CameraParams> &cameras){
 
     vector<ReprojectionErrorData> rpSet;
     cout << "point set" << endl;

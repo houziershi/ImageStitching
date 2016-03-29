@@ -76,13 +76,9 @@ public class ImageStitchingNative {
         Factory.getFactory(null).getGlRenderer().captureScreen();
 //        mGLRenderer.captureScreen();
     }
-    public static ImageStitchingNative getNativeInstance(){
-        if(instance == null){
-            instance = new ImageStitchingNative();
-        }
-        return instance;
-    }
+
     public void tracking(Mat input,float[] glRot,float[] glProj){
+        long cStart = System.nanoTime();
         Mat glRotMat = new Mat(4,4,CvType.CV_32F);
         glRotMat.put(0, 0, glRot);
         Mat glProjMat = new Mat(4,4,CvType.CV_32F);
@@ -92,8 +88,10 @@ public class ImageStitchingNative {
             Log.d("inputRot", String.format("[%f %f %f %f]", glRot[i * 4], glRot[i * 4 + 1], glRot[i * 4 + 2], glRot[i*4 +3]));
         }
         Mat ret = new Mat(4,4,CvType.CV_32F);
+        long cBeforeNative = System.nanoTime();
         nativeHomography(input.getNativeObjAddr(), glRotMat.getNativeObjAddr(), glProjMat.getNativeObjAddr(), ret.getNativeObjAddr());
-        Log.d("Tracking Mat", "Ret Homography" + ret.toString());
+        long cEnd = System.nanoTime();
+        Log.d("Timer", "Time Used: "+((cEnd-cBeforeNative)*Util.NS2S)+","+(cBeforeNative-cStart)*Util.NS2S+" Return Mat" + ret.toString());
         //using return as homo
         float[] data;
         if(false) {
@@ -129,6 +127,12 @@ public class ImageStitchingNative {
         this.context = context;
     }
 
+    public static ImageStitchingNative getNativeInstance(){
+        if(instance == null){
+            instance = new ImageStitchingNative();
+        }
+        return instance;
+    }
     static {
         System.loadLibrary("nonfree_stitching");
     }

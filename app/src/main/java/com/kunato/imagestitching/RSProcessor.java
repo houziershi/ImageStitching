@@ -142,7 +142,8 @@ public class RSProcessor {
             mOutputAllocation.ioSend();
             if(homoRequest){
 
-                homoAction();
+//                homoAction();
+
             }
 
 

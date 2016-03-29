@@ -10,6 +10,7 @@
 #include <string>
 #include <math.h>
 #include <float.h>
+#include <ctime>
 #include "opencv2/opencv_modules.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/stitching/detail/autocalib.hpp"
@@ -24,6 +25,7 @@
 #include "opencv2/stitching/warpers.hpp"
 #include "opencv2/nonfree/features2d.hpp"
 #include "BundleCeres.h"
+#include "composer.h"
 #define M_PI 3.14159265358979323846
 
 double work_scale = 0.4, seam_scale = 0.2, compose_scale = 1.0;
