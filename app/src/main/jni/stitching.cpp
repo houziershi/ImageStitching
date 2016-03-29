@@ -462,6 +462,7 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
 	}
 	Mat out,result_mask;
 	composer::process(result,result_mask);
+	debug << "distance_transform" <<result_mask;
 	//out as rgba
 
 //	blender->blend(out, result_mask);

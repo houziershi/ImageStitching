@@ -48,7 +48,7 @@ public class RSProcessor {
     public ProcessingTask mTask;
     private Size mSize;
     private MainController mController;
-    private boolean homoRequest = false;
+    private boolean alignRequest = false;
     public RSProcessor(RenderScript rs, Size dimensions, MainController controller) {
         mSize = dimensions;
         mController = controller;
@@ -79,8 +79,8 @@ public class RSProcessor {
         Log.d("RS","RS Processor init");
 
     }
-    public void requestHomography(){
-        homoRequest = true;
+    public void requestAligning(){
+        alignRequest = true;
     }
     public Surface getInputHdrSurface() {
         return mInputAllocation.getSurface();
@@ -140,9 +140,9 @@ public class RSProcessor {
             // Run processing pass
             mergeScript.forEach_mergeHdrFrames(mPrevAllocation, mOutputAllocation);
             mOutputAllocation.ioSend();
-            if(homoRequest){
+            if(alignRequest){
 
-//                homoAction();
+                alignAction();
 
             }
 
@@ -165,7 +165,7 @@ public class RSProcessor {
 //            }
         }
 
-        private void homoAction() {
+        private void alignAction() {
             Mat mat = new Mat(1080, 1920, CvType.CV_8UC4);
             byte[] frameByte = new byte[1080*1920*4];
             mOutputAllocation.copyTo(frameByte);
@@ -174,8 +174,8 @@ public class RSProcessor {
             float[] rotMat = new float[16];
 
             SensorManager.getRotationMatrixFromVector(rotMat, mController.mQuaternion);
-            ImageStitchingNative.getNativeInstance().tracking(mat,rotMat,mController.mGLRenderer.mProjectionMatrix);
-//            homoRequest = false;
+            ImageStitchingNative.getNativeInstance().aligning(mat, rotMat, mController.mGLRenderer.mProjectionMatrix);
+//            alignRequest = false;
         }
     }
 

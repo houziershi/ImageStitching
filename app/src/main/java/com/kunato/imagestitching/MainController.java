@@ -209,7 +209,7 @@ public class MainController extends GLSurfaceView {
         mat.put(0, 0, mFrameByte);
         Mat image = new Mat();
         Imgproc.cvtColor(mat, image, Imgproc.COLOR_RGBA2BGR);
-        //TODO create another thread for convert yuv, tracking
+        //TODO create another thread for convert yuv, aligning
         Log.i("Rot",Arrays.toString(mRotmat));
         imageStitchingTask.execute(image, rotationMat);
     }

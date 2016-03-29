@@ -18,7 +18,7 @@ namespace composer{
         dst_mask_.create(dst_roi.size(), CV_8U);
         dst_mask_.setTo(Scalar::all(0));
         dst_roi_ = dst_roi;
-        dst_dt_.create(dst_roi.size(),CV_32F);
+        dst_dt_.create(dst_roi.size(),CV_8U);
         __android_log_print(ANDROID_LOG_DEBUG,"Composer","Prepared");
     }
 
@@ -37,9 +37,10 @@ namespace composer{
 
             for (int x = 0; x < img.cols; ++x)
             {
-                if (mask_row[x])
+                if (mask_row[x]) {
                     dst_row[dx + x] = src_row[x];
-                dst_mask_row[dx + x] |= mask_row[x];
+                    dst_mask_row[dx + x] = 1;
+                }
 
             }
         }
@@ -53,20 +54,47 @@ namespace composer{
         dst_.setTo(Scalar::all(0), dst_mask_ == 0);
         int channels_setting[] = {2,0, 1,1, 0,2, 3,3};
         dst.create(dst_.size(),CV_8UC4);
-        Mat out[] = {dst_,dst_mask_};
-        __android_log_print(ANDROID_LOG_DEBUG,"Depth","%d %d %d",dst.depth(),dst_.depth(),dst_mask_.depth());
-        mixChannels(out,2,&dst,1,channels_setting,4);
 
+        int max_x = dst_roi_.size().height;
+        int max_y = dst_roi_.size().width;
         for(int x = 0 ; x < dst_roi_.size().height; x++){
-
             for(int y = 0 ; y < dst_roi_.size().width ; y++){
 //                calc distance transform (replace 0.1)
-                dst_dt_.at<float>(x,y) = 0.1;
+                //large = avoid seam small = avoid ghost
+                float window_size = 200.0;
+                float dist_x = 0;
+                float dist_y = 0;
+                if(x < max_x-x){
+                    dist_x = x/window_size;
+                }
+                else{
+                    dist_x = (max_x-x)/window_size;
+                }
+                if(y < max_y-y){
+                    dist_y = (y)/window_size;
+                }
+                else{
+                    dist_y = (max_y-y)/window_size;
+                }
+                if(dist_x > 1.0)
+                    dist_x = 1.0;
+                if(dist_y > 1.0)
+                    dist_y = 1.0;
+                if(dist_x > dist_y){
+                    dst_dt_.at<uchar>(x,y) = dist_y*255;
+                }
+                else{
+                    dst_dt_.at<uchar>(x,y) = dist_x*255;
+                }
             }
         }
+        Mat temp = dst_mask_.mul(dst_dt_);
+
+        Mat out[] = {dst_,temp};
+        mixChannels(out,2,&dst,1,channels_setting,4);
 //        dst = dst_;
 
-        dst_mask = dst_mask_;
+        dst_mask = temp;
         dst_dt_.release();
         dst_.release();
         dst_mask_.release();

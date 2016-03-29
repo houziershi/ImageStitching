@@ -35,6 +35,7 @@ int blend_type = Blender::NO;
 #define TAG "NATIVE_DEBUG"
 #define GL_HEIGHT 1731
 #define GL_WIDTH 1080
+cv::FileStorage debug("/sdcard/stitch/debug.yml", cv::FileStorage::WRITE);
 
 struct ImagePackage{
     String name;

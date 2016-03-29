@@ -1,22 +1,16 @@
 package com.kunato.imagestitching;
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.renderscript.RenderScript;
-import android.renderscript.ScriptC;
 import android.util.Log;
 
-import org.opencv.*;
-import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
 import org.opencv.core.*;
 import org.opencv.highgui.Highgui;
-import org.opencv.imgproc.Imgproc;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 
 /**
@@ -71,13 +65,13 @@ public class ImageStitchingNative {
 
         Factory.getFactory(null).getGlRenderer().getSphere().updateBitmap(bitmap,areaFloat);
 //        mGLRenderer.getSphere().updateBitmap(bitmap);
-        Factory.getFactory(null).getRSProcessor(null,null).requestHomography();;
-//        mProcessor.requestHomography();
+        Factory.getFactory(null).getRSProcessor(null,null).requestAligning();;
+//        mProcessor.requestAligning();
         Factory.getFactory(null).getGlRenderer().captureScreen();
 //        mGLRenderer.captureScreen();
     }
 
-    public void tracking(Mat input,float[] glRot,float[] glProj){
+    public void aligning(Mat input, float[] glRot, float[] glProj){
         long cStart = System.nanoTime();
         Mat glRotMat = new Mat(4,4,CvType.CV_32F);
         glRotMat.put(0, 0, glRot);
