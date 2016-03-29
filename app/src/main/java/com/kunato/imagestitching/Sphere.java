@@ -159,11 +159,11 @@ public class Sphere {
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR_MIPMAP_LINEAR);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
 
-//        texImage2D(bitmap);
+//        mockTexImage2D(bitmap);
     }
 
 
-    public void texImage2D(Bitmap bitmap){
+    public void mockTexImage2D(Bitmap bitmap){
         mArea[0] = mArea[1] = 0;
         mArea[2] = 9242;
         mArea[3] = 4620;
