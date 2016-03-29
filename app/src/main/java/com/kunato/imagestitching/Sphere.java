@@ -56,32 +56,26 @@ public class Sphere {
             "uniform sampler2D sTexture;"+
             "varying vec2 v_TexCoordinate;"+
             "varying vec4 fragmentColor;" +
-                    "vec2 coord;" +
-                    "float width_ratio = 1.0/9242.0;" +
-                    "float height_ratio = 1.0/4620.0;" +
+                    "float width_ratio = 9242.0;" +
+                    "float height_ratio = 4620.0;" +
                     "uniform float img_x;" +
                     "uniform float img_y;" +
                     "uniform float img_width;" +
                     "uniform float img_height;" +
                     "void main() {" +
                     "if(img_x == 0.0 && img_y == 0.0 && img_width == 0.0 && img_height == 0.0){" +
-                    "gl_FragColor = vec4(0,0,0,0);" +
-                    "return;" +
+                    "   gl_FragColor = vec4(0,0,0,0);" +
+                    "   return;" +
                     "}" +
-                    "vec4 color;" +
-                    "if(v_TexCoordinate.x <= img_x*width_ratio || v_TexCoordinate.x >= (img_x+img_width)*width_ratio || " +
-                    "v_TexCoordinate.y <= img_y*height_ratio || v_TexCoordinate.y >= (img_y+img_height)*height_ratio){" +
-                    "color = vec4(0,0,0,0);"+
+                    "if(v_TexCoordinate.x*width_ratio <= img_x || v_TexCoordinate.x*width_ratio >= (img_x+img_width) || " +
+                    "   v_TexCoordinate.y*height_ratio <= img_y || v_TexCoordinate.y*height_ratio >= (img_y+img_height)){" +
+                    "   gl_FragColor = vec4(0,0,0,0);"+
                     "}" +
                     "else{" +
-                    "float diff_x = (v_TexCoordinate.x - (img_x*width_ratio))/(img_width*width_ratio);" +
-                    "float diff_y = (v_TexCoordinate.y - (img_y*height_ratio))/(img_height*height_ratio);" +
-                    "coord = vec2(diff_x,diff_y);" +
-                    "color = texture2D(sTexture,coord);" +
+                    "   float diff_x = (((v_TexCoordinate.x*width_ratio) - (img_x))/(img_width));" +
+                    "   float diff_y = (((v_TexCoordinate.y*height_ratio) - (img_y))/(img_height));" +
+                    "   gl_FragColor = texture2D(sTexture,vec2(diff_x,diff_y));" +
                     "}" +
-                    ""+
-                    "gl_FragColor = color;" +
-                    "" +
             "}";
 
     private final FloatBuffer mVertexBuffer;
@@ -114,7 +108,7 @@ public class Sphere {
     public Sphere(GLRenderer renderer) {
         glRenderer = renderer;
         Context context = renderer.mView.getActivity();
-        sphereObject = new SphereObject(50,210,1);
+        sphereObject = new SphereObject(20,210,1);
         mSphereBuffer = sphereObject.getVertices();
 
         mSphereBuffer.position(0);
