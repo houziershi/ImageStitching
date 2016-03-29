@@ -24,7 +24,7 @@ public class ImageStitchingNative {
     private ImageStitchingNative(){
 
     }
-    public native void nativeHomography(long imgAddr,long glRotAddr,long glProjAddr,long retMatAddr);
+    public native void nativeAligning(long imgAddr,long glRotAddr,long glProjAddr,long retMatAddr);
     public native void nativeStitch(long retAddr,long areaAddr);
     public native void nativeAddStitch(long imgAddr,long rotAddr);
     public void addToPano(Mat imageMat, Mat rotMat){
@@ -83,7 +83,7 @@ public class ImageStitchingNative {
         }
         Mat ret = new Mat(4,4,CvType.CV_32F);
         long cBeforeNative = System.nanoTime();
-        nativeHomography(input.getNativeObjAddr(), glRotMat.getNativeObjAddr(), glProjMat.getNativeObjAddr(), ret.getNativeObjAddr());
+        nativeAligning(input.getNativeObjAddr(), glRotMat.getNativeObjAddr(), glProjMat.getNativeObjAddr(), ret.getNativeObjAddr());
         long cEnd = System.nanoTime();
         Log.d("Timer", "Time Used: "+((cEnd-cBeforeNative)*Util.NS2S)+","+(cBeforeNative-cStart)*Util.NS2S+" Return Mat" + ret.toString());
         //using return as homo

@@ -68,7 +68,7 @@ Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce");
 int detector_setup = 1;
 extern "C" {
 
-JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeHomography(JNIEnv*, jobject, jlong imgaddr,jlong glRotAddr,jlong glProjAddr,jlong retaddr);
+JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeAligning(JNIEnv*, jobject, jlong imgaddr,jlong glRotAddr,jlong glProjAddr,jlong retaddr);
 JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeAddStitch(JNIEnv*, jobject, jlong imgaddr,jlong rotaddr);
 JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeStitch(JNIEnv*, jobject,jlong retAddr,jlong areaAddr);
 
