@@ -58,6 +58,7 @@ void findDescriptor(Mat img,std::vector<KeyPoint> &keypoints ,Mat &descriptor){
 	(*detector)(grayImg , Mat(), keypoints, descriptor, false);
 	descriptor = descriptor.reshape(1, (int)keypoints.size());
 }
+
 inline float calcDistance(float x1,float y1,float z1,float x2,float y2, float z2){
 	return ((x1-x2)*(x1-x2))+((y1-y2)*(y1-y2))+((z1-z2)*(z1-z2));
 }
@@ -460,19 +461,11 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
 //		blender->feed(p_img[i].compose_image_warped, mask_warped, p_img[i].compose_corner);
 
 	}
-	Mat out,result_mask;
+	Mat result_mask;
+	//opencv doing thing as bgr
 	composer::process(result,result_mask);
 	debug << "distance_transform" <<result_mask;
 	//out as rgba
-
-//	blender->blend(out, result_mask);
-//	Mat rgb[3];
-//	Mat result_mask_temp;
-//	result_mask.convertTo(result_mask_temp,CV_16S);
-//	split(out,rgb);
-//	__android_log_print(ANDROID_LOG_DEBUG,"resultmasktype","%d %d %d %d %d %d %d %d",rgb[0].cols,rgb[0].rows,result_mask_temp.cols,result_mask_temp.rows,rgb[0].depth(),result_mask_temp.depth(),rgb[0].type(),result_mask_temp.type());
-//	Mat rgba[4] = {rgb[2],rgb[1],rgb[0],result_mask_temp};
-//	merge(rgba,4,result);
 
 
 
