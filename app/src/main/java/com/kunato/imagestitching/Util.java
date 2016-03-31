@@ -97,7 +97,7 @@ public class Util {
 //        qz = (m10 - m01)/( 4 *qw)
         quad[0] = (matrix[9]-matrix[6])/(4*quad[3]);
         quad[1] = (matrix[2]-matrix[8])/(4*quad[3]);
-        quad[2] = (matrix[4]-matrix[1])/(4*quad[3]);
+        quad[2] = -((matrix[4]-matrix[1])/(4*quad[3]));
         return quad;
     }
     public static float[] naivMatrixMultiply(float[] B, float[] A) {
