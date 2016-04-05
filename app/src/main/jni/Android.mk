@@ -37,7 +37,9 @@ LOCAL_SRC_FILES :=				\
 	composer.h					\
 	composer.cpp				\
 	util.h						\
-	util.cpp
+	util.cpp					\
+	matcher.h					\
+	matcher.cpp
 
 LOCAL_MODULE := nonfree_stitching
 LOCAL_SHARED_LIBRARIES += nonfree

@@ -52,6 +52,7 @@ void findDescriptor(Mat img,std::vector<KeyPoint> &keypoints ,Mat &descriptor){
 //		detector->set("nOctaves", 3);
 //		detector->set("nOctaveLayers", 4);
 		detector_setup = 0;
+		detector->set("nFeatures",100);
 	}
 	Mat grayImg;
 	cvtColor(img,grayImg,CV_BGR2GRAY);
@@ -121,7 +122,7 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	tracking_feature[0] = images[nearest_index].feature;
 	tracking_feature[1] = input_feature;
 	clock_t c_before_matcher = std::clock();
-	BestOf2NearestMatcher matcher(false, 0.3f);
+	BestOf2NearestMatcher matcher(false, 0.3f,6,6);
 	matcher(tracking_feature,tracking_matches);
 	matcher.collectGarbage();
 	clock_t c_after_matcher = std::clock();
@@ -519,13 +520,16 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
 
 	//do matcher
 	vector<MatchesInfo> pairwise_matches;
-	BestOf2NearestMatcher matcher(false, 0.3f);
+//	BestOf2NearestMatcher matcher(false, 0.3f,200,200);
+	matcher::create(0.3f,6,6);
 	vector<ImageFeatures> features(num_images);
 	for(int i = 0; i < num_images; i++){
 		features[i] = images[i].feature;
 	}
-	matcher(features, pairwise_matches);
-	matcher.collectGarbage();
+	matcher::match(features, pairwise_matches);
+
+//	matcher(features, pairwise_matches);
+//	matcher.collectGarbage();
 
 
 	vector<CameraParams> cameras;

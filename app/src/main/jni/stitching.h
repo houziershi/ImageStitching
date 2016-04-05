@@ -26,6 +26,7 @@
 #include "opencv2/nonfree/features2d.hpp"
 #include "BundleCeres.h"
 #include "composer.h"
+#include "matcher.h"
 #define M_PI 3.14159265358979323846
 
 double work_scale = 0.4, seam_scale = 0.2, compose_scale = 1.0;
@@ -64,7 +65,6 @@ vector<vector<Point2f>> p2d;
 vector<vector<Point3f>> p3d;
 //No need to re-done
 Ptr<Feature2D> detector = Algorithm::create<Feature2D>("Feature2D.ORB");
-Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce");
 int detector_setup = 1;
 extern "C" {
 

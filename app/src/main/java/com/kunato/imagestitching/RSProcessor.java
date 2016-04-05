@@ -141,9 +141,8 @@ public class RSProcessor {
             mergeScript.forEach_mergeHdrFrames(mPrevAllocation, mOutputAllocation);
             mOutputAllocation.ioSend();
             if(alignRequest){
-
                 alignAction();
-
+                alignRequest = false;
             }
 
 
