@@ -1,7 +1,3 @@
-//
-// Created by Kunat Pipatanakul on 4/5/16.
-//
-
 #include "matcher.h"
 
 namespace matcher {

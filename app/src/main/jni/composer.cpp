@@ -1,6 +1,3 @@
-//
-// Created by Kunat Pipatanakul on 3/24/16.
-//
 
 #include "composer.h"
 using namespace std;
