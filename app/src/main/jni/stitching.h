@@ -28,7 +28,7 @@
 #include "composer.h"
 #include "matcher.h"
 #define M_PI 3.14159265358979323846
-
+#define HQ_COMPOSE
 double work_scale = 0.4, seam_scale = 0.2, compose_scale = 1.0;
 double tracking_scale = 0.2;
 string result_name = "/mnt/sdcard/result.png";
@@ -52,7 +52,7 @@ struct ImagePackage{
     Mat compose_mask_warped;
     Mat image_warped;
     Mat compose_image_warped;
-    bool done = false;
+    int done;
     ImageFeatures feature;
 };
 float focal_divider = 3.45;
@@ -74,7 +74,7 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
 
 
 void tracking(jlong imgaddr,jlong glrotaddr,jlong glprojaddr,jlong retaddr);
-
+int findNearest(int from,int to,std::vector<ImagePackage> images,Mat &inputR);
 void findDescriptor(Mat img,std::vector<KeyPoint> &keypoints ,Mat &descriptor);
 inline Point3f calc3DPosition(Point2f keyPoint,float multiply_aspect);
 inline int glhProjectf(float objx, float objy, float objz, float *modelview, float *projection, int *viewport, float *windowCoordinate);

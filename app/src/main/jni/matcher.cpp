@@ -440,7 +440,6 @@ namespace matcher {
     typedef set <pair<int, int>> MatchesSet;
     void cpuMatch(const ImageFeatures &features1, const ImageFeatures &features2,
                   MatchesInfo &matches_info, float match_conf_) {
-        __android_log_print(ANDROID_LOG_DEBUG,"Feature type","%d %d",features1.descriptors.type(),features2.descriptors.type());
         CV_Assert(features1.descriptors.type() == features2.descriptors.type());
         CV_Assert(
                 features2.descriptors.depth() == CV_8U || features2.descriptors.depth() == CV_32F);
@@ -565,7 +564,7 @@ namespace matcher {
         }
 
         // Find pair-wise motion
-        matches_info.H = matcher::findHomography(src_points, dst_points, CV_RANSAC, 1.0, matches_info.inliers_mask);
+        matches_info.H = matcher::findHomography(src_points, dst_points, CV_RANSAC, 5.0, matches_info.inliers_mask);
         if (std::abs(determinant(matches_info.H)) < numeric_limits<double>::epsilon())
             return;
 
@@ -609,7 +608,7 @@ namespace matcher {
 
             inlier_idx++;
         }
-        __android_log_print(ANDROID_LOG_DEBUG,"RANSAC inliner","%d : %d",matches_info.matches.size(),matches_info.num_inliers);
+        __android_log_print(ANDROID_LOG_VERBOSE,"C++ Matcher","RANSAC inliner A:I [%d : %d]",matches_info.matches.size(),matches_info.num_inliers);
         // Rerun motion estimation on inliers only
         matches_info.H = matcher::findHomography(src_points, dst_points, 0);
     }
@@ -652,7 +651,7 @@ namespace matcher {
                       CvMat* mask )
     {
         const double confidence = 0.995;
-        const int maxIters = 20000;
+        const int maxIters = 2000;
         const double defaultRANSACReprojThreshold = 3;
         bool result = false;
         Ptr<CvMat> m, M, tempMask;

@@ -23,6 +23,7 @@ namespace composer{
     }
 
     void feed(Mat img,Mat mask,Point tl){
+        clock_t c_before = std::clock();
         CV_Assert(img.type() == CV_8UC3);
         CV_Assert(mask.type() == CV_8U);
         int dx = tl.x - dst_roi_.x;
@@ -44,8 +45,8 @@ namespace composer{
 
             }
         }
-
-        __android_log_print(ANDROID_LOG_DEBUG,"Composer","Feed");
+        clock_t c_after = std::clock();
+        __android_log_print(ANDROID_LOG_DEBUG,"C++ Composer","Feed %lf",(double)(c_after-c_before)/CLOCKS_PER_SEC );
     }
 
     void process(Mat &dst,Mat &dst_mask){

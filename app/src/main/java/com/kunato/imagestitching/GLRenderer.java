@@ -82,7 +82,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     public void onDrawFrame ( GL10 unused ) {
         mFrame++;
         if(System.nanoTime() - mStartTime >= 1000000000){
-            Log.i("FPS","fps : "+mFrame);
+            Log.v("FPS","fps : "+mFrame);
             mFrame = 0;
             mStartTime = System.nanoTime();
         }
@@ -127,7 +127,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         mHeight = height;
 
         GLES20.glViewport(0, 0, mWidth, mHeight);
-        Log.d("GLScreen", String.format("(Width:Height)[%d,%d]", mWidth,mHeight));
+        Log.v("GL", "Screen" + String.format("(Width:Height)[%d,%d]", mWidth,mHeight));
 //        float ratio =( float ) width / height;
         float ratio = 9f/16f; //always because camera input as 3/4
         //48=zoom1.5//72=zoom1
@@ -142,7 +142,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     }
     public void setHomography(float[] input){
         mHomography = input;
-        Log.d("SetHomography",Arrays.toString(input));
+        Log.v("GL","SetHomography" + Arrays.toString(input));
     }
     public synchronized void onFrameAvailable ( SurfaceTexture st ) {
         mUpdateST = true;

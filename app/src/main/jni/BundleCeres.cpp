@@ -257,6 +257,7 @@ void minimizeRotation(vector<ImageFeatures> features,vector<MatchesInfo> pairs,v
     }
 
 }
+
 void minimizeRotation(vector<Point2f> src,vector<Point2f> dst,vector<CameraParams> &cameras){
 
     vector<ReprojectionErrorData> rpSet;

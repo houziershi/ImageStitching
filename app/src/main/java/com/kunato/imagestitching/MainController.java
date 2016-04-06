@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.Color;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.Sensor;
@@ -90,6 +91,7 @@ public class MainController extends GLSurfaceView {
     private boolean mFirstRun = true;
     public float[] mQuaternion = new float[4];
     public int mNumPicture = 1;
+    private float[] lastQuaternion = new float[4];
     private final ImageReader.OnImageAvailableListener mOnImageAvailableListener = new ImageReader.OnImageAvailableListener() {
 
         @Override
@@ -414,6 +416,11 @@ public class MainController extends GLSurfaceView {
                     1);
         }
     }
+    public void updateQuaternion(float[] quaternion){
+        lastQuaternion = mQuaternion.clone();
+//        mQuaternion = Util.multiplyByQuat(mQuaternion,quaternion);
+        mQuaternion = quaternion;
+    }
 
     public Activity getActivity(){
         return mActivity;
@@ -457,8 +464,10 @@ public class MainController extends GLSurfaceView {
             mat.put(0, 0, mFrameByte);
             Mat imageMat = new Mat();
             Imgproc.cvtColor(mat, imageMat, Imgproc.COLOR_RGBA2BGR);
-            ImageStitchingNative.getNativeInstance().addToPano(imageMat, (Mat) objects[1]);
-            mNumPicture++;
+            int rtCode = ImageStitchingNative.getNativeInstance().addToPano(imageMat, (Mat) objects[1] ,mNumPicture);
+            if(rtCode == 1){
+                mNumPicture++;
+            }
             return true;
         }
 
@@ -467,6 +476,8 @@ public class MainController extends GLSurfaceView {
         }
 
         protected void onPostExecute(Boolean bool) {
+            ((MainActivity)getActivity()).getButton().setBackgroundColor(Color.GRAY);
+            ((MainActivity)getActivity()).getButton().setText("Capture : " + mNumPicture);
             mAsyncRunning = false;
             Log.i("mNumPicture",mNumPicture+"");
 

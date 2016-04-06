@@ -1,5 +1,6 @@
 package com.kunato.imagestitching;
 import android.app.ActionBar;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
@@ -13,10 +14,11 @@ import android.widget.SeekBar;
 public class MainActivity extends FragmentActivity {
     boolean mFirstTime = true;
     MainController mView;
+    Button b;
 
     private void initComponent(){
+        b = new Button(this);
         LinearLayout linearLayout = new LinearLayout(this);
-        final Button b = new Button(this);
         SeekBar isoSeek = new SeekBar(this);
         SeekBar fSeek = new SeekBar(this);
         b.setText("AE LOCK");
@@ -67,10 +69,12 @@ public class MainActivity extends FragmentActivity {
                 if(mFirstTime){
                     b.setText("Capture : 0");
                     mFirstTime = false;
+//                    b.setBackgroundColor(Color.RED);
                 }
                 else{
                     Log.d("Activity","Click");
-                    b.setText("Capture : " + mView.mNumPicture);
+//                    b.setText("Capture : " + mView.mNumPicture);
+                    b.setBackgroundColor(Color.RED);
                 }
 
             }
@@ -79,6 +83,9 @@ public class MainActivity extends FragmentActivity {
         this.addContentView(linearLayout,
                 new ViewGroup.LayoutParams(ViewGroup.LayoutParams.FILL_PARENT, ViewGroup.LayoutParams.FILL_PARENT));
 
+    }
+    public Button getButton(){
+        return b;
     }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -105,4 +112,5 @@ public class MainActivity extends FragmentActivity {
         mView.onResume();
         //mView.Resume();
     }
+
 }
