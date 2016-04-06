@@ -491,13 +491,15 @@ namespace matcher {
     }
 
 
-    void match(const vector<ImageFeatures> &features, vector<MatchesInfo> &pairwise_matches)
+    void match(const vector<ImageFeatures> &features, vector<MatchesInfo> &pairwise_matches,int newIndex)
     {
         const int num_images = static_cast<int>(features.size());
 
         Mat_<uchar> mask_;
-        mask_ = Mat::ones(num_images, num_images, CV_8U);
-
+        mask_ = Mat::zeros(num_images, num_images, CV_8U);
+        for(int i = 0; i < num_images ;i++){
+            mask_.at<uchar>(i,newIndex) = 1;
+        }
         vector<pair<int,int> > near_pairs;
         for (int i = 0; i < num_images - 1; ++i)
             for (int j = i + 1; j < num_images; ++j)
@@ -538,6 +540,57 @@ namespace matcher {
 //        body(Range(0, static_cast<int>(near_pairs.size())));
 
     }
+
+    void match(const vector<ImageFeatures> &features, vector<MatchesInfo> &pairwise_matches)
+    {
+        const int num_images = static_cast<int>(features.size());
+
+        Mat_<uchar> mask_;
+        mask_ = Mat::ones(num_images, num_images, CV_8U);
+
+        vector<pair<int,int> > near_pairs;
+        for (int i = 0; i < num_images - 1; ++i)
+            for (int j = i + 1; j < num_images; ++j)
+                if (features[i].keypoints.size() > 0 && features[j].keypoints.size() > 0 && mask_(i, j))
+                    near_pairs.push_back(make_pair(i, j));
+
+        pairwise_matches.resize(num_images * num_images);
+
+        for (int i = 0; i < near_pairs.size(); ++i)
+        {
+            int from = near_pairs[i].first;
+            int to = near_pairs[i].second;
+            int pair_idx = from*num_images + to;
+
+            match(features[from], features[to], pairwise_matches[pair_idx]);
+            pairwise_matches[pair_idx].src_img_idx = from;
+            pairwise_matches[pair_idx].dst_img_idx = to;
+
+            size_t dual_pair_idx = to*num_images + from;
+
+            pairwise_matches[dual_pair_idx] = pairwise_matches[pair_idx];
+            pairwise_matches[dual_pair_idx].src_img_idx = to;
+            pairwise_matches[dual_pair_idx].dst_img_idx = from;
+
+            if (!pairwise_matches[pair_idx].H.empty())
+                pairwise_matches[dual_pair_idx].H = pairwise_matches[pair_idx].H.inv();
+
+            for (size_t j = 0; j < pairwise_matches[dual_pair_idx].matches.size(); ++j)
+                std::swap(pairwise_matches[dual_pair_idx].matches[j].queryIdx,
+                          pairwise_matches[dual_pair_idx].matches[j].trainIdx);
+        }
+        for(int i = 0 ; i < pairwise_matches.size(); i++){
+            if(pairwise_matches[i].matches.size()!= 0 && pairwise_matches[i].src_img_idx < pairwise_matches[i].dst_img_idx)
+                __android_log_print(ANDROID_LOG_DEBUG,"RANSAC","%d:%d (%d,%d)",pairwise_matches[i].src_img_idx,pairwise_matches[i].dst_img_idx,pairwise_matches[i].matches.size(),pairwise_matches[i].num_inliers);
+        }
+
+//        MatchPairsBody body(*this, features, pairwise_matches, near_pairs);
+//        body(Range(0, static_cast<int>(near_pairs.size())));
+
+    }
+
+
+
 
     void match(const ImageFeatures &features1, const ImageFeatures &features2,
                MatchesInfo &matches_info) {

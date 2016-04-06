@@ -36,6 +36,7 @@ namespace matcher {
 
     void create(float match_conf, int num_matches_thresh1, int num_matches_thresh2);
     void match(const vector<ImageFeatures> &features, vector<MatchesInfo> &pairwise_matches);
+    void match(const vector<ImageFeatures> &features, vector<MatchesInfo> &pairwise_matches,int newIndex);
     void match(const ImageFeatures &features1, const ImageFeatures &features2,
                MatchesInfo &matches_info);
     void collectGarbage();

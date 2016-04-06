@@ -63,6 +63,7 @@ Mat stitching_descriptor;
 std::vector<KeyPoint> stitiching_keypoint;
 vector<vector<Point2f>> p2d;
 vector<vector<Point3f>> p3d;
+vector<MatchesInfo> pairwise_matches;
 //No need to re-done
 Ptr<Feature2D> detector = Algorithm::create<Feature2D>("Feature2D.ORB");
 int detector_setup = 1;
