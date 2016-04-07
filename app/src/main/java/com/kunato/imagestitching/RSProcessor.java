@@ -171,7 +171,6 @@ public class RSProcessor {
             mat.put(0, 0, frameByte);
             Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGBA2BGR);
             float[] rotMat = new float[16];
-
             SensorManager.getRotationMatrixFromVector(rotMat, mController.mQuaternion);
             ImageStitchingNative.getNativeInstance().aligning(mat, rotMat, mController.mGLRenderer.mProjectionMatrix);
 //            alignRequest = false;

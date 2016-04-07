@@ -90,6 +90,8 @@ public class MainController extends GLSurfaceView {
     public boolean mRunning = false;
     private boolean mFirstRun = true;
     public float[] mQuaternion = new float[4];
+    public float[] mDeltaQuaternion = new float[4];
+    private boolean mRecordQuaternion = false;
     public int mNumPicture = 1;
     private float[] lastQuaternion = new float[4];
     private final ImageReader.OnImageAvailableListener mOnImageAvailableListener = new ImageReader.OnImageAvailableListener() {
@@ -416,10 +418,17 @@ public class MainController extends GLSurfaceView {
                     1);
         }
     }
-    public void updateQuaternion(float[] quaternion){
+    public void startRecordQuaternion(){
+        mDeltaQuaternion[0] = 0f;
+        mDeltaQuaternion[1] = 0f;
+        mDeltaQuaternion[2] = 0f;
+        mDeltaQuaternion[3] = 1f;
+        mRecordQuaternion = true;
+    }
+
+    public void updateQuaternion(float[] mainQuaternion ,float[] deltaQuaternion){
         lastQuaternion = mQuaternion.clone();
-//        mQuaternion = Util.multiplyByQuat(mQuaternion,quaternion);
-        mQuaternion = quaternion;
+        mQuaternion = Util.multiplyByQuat(deltaQuaternion, mainQuaternion);
     }
 
     public Activity getActivity(){
@@ -436,6 +445,9 @@ public class MainController extends GLSurfaceView {
         public void onSensorChanged(SensorEvent event) {
             if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
                 mQuaternion = Util.getQuadFromGyro(event.values,lastTimeStamp,event.timestamp, mQuaternion,false,true,false,true);
+                if(mRecordQuaternion){
+                    mDeltaQuaternion = Util.getQuadFromGyro(event.values,lastTimeStamp,event.timestamp,mDeltaQuaternion,false,true,false,true);
+                }
                 lastTimeStamp = event.timestamp;
                 float[] swapMat = new float[16];
                 SensorManager.getRotationMatrixFromVector(swapMat,mQuaternion);
