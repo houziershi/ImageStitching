@@ -158,19 +158,17 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	clock_t c_before_bundle = clock();
 	minimizeRotation(src_points,dst_points,tracking_cameras);
 	clock_t c_after_bundle = clock();
-//	tracking_cameras[1].R = input_R.inv() * tracking_cameras[1].R ;
-
-	Mat& H = *(Mat*)retaddr;
+	Mat& R = *(Mat*)retaddr;
 	for(int i = 0; i < 4 ; i++){
 		for(int j = 0; j < 4 ;j++){
 			if(i == 3 && j == 3){
-				H.at<float>(i,j) = 1;
+				R.at<float>(i,j) = 1;
 			}
 			else if(i == 3 || j == 3){
-				H.at<float>(i,j) = 0;
+				R.at<float>(i,j) = 0;
 			}
 			else{
-				H.at<float>(i,j) = tracking_cameras[1].R.at<float>(i,j);
+				R.at<float>(i,j) = tracking_cameras[1].R.at<float>(i,j);
 			}
 
 		}
@@ -493,10 +491,10 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 }
 
 
-JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeStitch(JNIEnv*, jobject,jlong retAddr,jlong areaAddr){
+JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeStitch(JNIEnv*, jobject,jlong retAddr,jlong areaAddr,jlong rotAddr){
 	__android_log_print(ANDROID_LOG_INFO,"C++ Stitching","Start");
 	Mat& result = *(Mat*)retAddr;
-
+	Mat& retRot = *(Mat*)rotAddr;
 	clock_t c_m1 = clock();
 	int num_images = static_cast<int>(images.size());
 	if(num_images < 2){

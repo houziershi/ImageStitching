@@ -100,6 +100,8 @@ public class Util {
         quad[2] = -((matrix[4]-matrix[1])/(4*quad[3]));
         return quad;
     }
+
+
     public static float[] naivMatrixMultiply(float[] B, float[] A) {
         int mA, nA, mB, nB;
         mA = nA = (int) Math.sqrt(A.length);
