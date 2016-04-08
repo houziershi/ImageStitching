@@ -31,11 +31,16 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
             ,0,1f,0,0
             ,0,0,1f,0
             ,0,0,0,1f};
-    private float[] initMatrix = {1f,0,0,0
+    private float[] mSpericalModelMatrix = {1f,0,0,0
             ,0,1f,0,0
             ,0,0,1f,0
             ,0,0,0,1f};
-    public float[] sphereMat = new float[16];
+    private float[] mWorldModelMatrix = {1f,0,0,0
+            ,0,1f,0,0
+            ,0,0,1f,0
+            ,0,0,0,1f};
+
+    private float[] mModelViewMatrix = new float[16];
     private Canvas mCanvas;
     private Sphere mSphere;
     private Canvas mCanvasProcessed;
@@ -72,11 +77,6 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         //(x (vertical),(horizontal)y,z)
         GLES20.glEnable(GLES20.GL_BLEND);
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
-
-//        Matrix.setLookAtM(mViewCanvasMatrix, 0,
-//                0.0f, 0.0f, 0.0f,
-//                0.0f, 0.0f, 0.2f,
-//                0.0f, 1.0f, 0.0f);
     }
     //Core function
     public void onDrawFrame ( GL10 unused ) {
@@ -86,10 +86,13 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
             mFrame = 0;
             mStartTime = System.nanoTime();
         }
-
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
         GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT);
-        Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix, 0, mRotationMatrix, 0);
+
+        Matrix.multiplyMM(mModelViewMatrix,0, mRotationMatrix,0, mSpericalModelMatrix,0);
+        Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix,0, mModelViewMatrix,0);
+
+
 //        float[] out = new float[3];
 //        int[] viewport = {0,0,mWidth,mHeight};
 //        GLU.gluProject(123.4349f, 0, -169.89357f, mRotationMatrix, 0, mProjectionMatrix, 0, viewport,0,out,0);
@@ -116,8 +119,6 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         }
 
         mCanvasProcessed.draw(mViewCanvasMatrix,mHomography);
-
-//        Matrix.multiplyMM(sphereMat, 0, mMVPMatrix, 0, mRotationMatrix, 0);
         mSphere.draw(mMVPMatrix);
         GLES20.glFlush();
     }

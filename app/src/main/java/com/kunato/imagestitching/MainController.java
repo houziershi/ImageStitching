@@ -21,6 +21,7 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.location.Location;
 import android.media.ImageReader;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
@@ -148,7 +149,7 @@ public class MainController extends GLSurfaceView {
     private float TARGET_ASPECT = 3.f / 4.f;
     private float ASPECT_TOLERANCE = 0.1f;
     private Factory mFactory;
-
+    LocationServices mLocationServices;
 
     public MainController(Context context) {
         super(context);
@@ -192,6 +193,12 @@ public class MainController extends GLSurfaceView {
 
     public void doStitching(){
 
+            Object[] locationAndRotation = mLocationServices.getLocation();
+            Location location = (Location) locationAndRotation[0];
+            float[] cameraRotation = (float[]) locationAndRotation[1];
+            Log.i("MainController","LocationServices");
+            Log.i("MainController","Received Location : "+ location.getLatitude() + "," + location.getLongitude());
+            Log.i("MainController","Received Rotation : "+Arrays.toString(cameraRotation));
         SensorManager.getRotationMatrixFromVector(mRotmat,mQuaternion);
         AsyncTask<Object, Integer, Boolean> imageStitchingTask = new ImageStitchingTask();
         if (mFirstRun) {
@@ -201,26 +208,29 @@ public class MainController extends GLSurfaceView {
             mQuaternion[2] = 0f;
             mQuaternion[3] = 1f;
             mSensorManager.registerListener(mSensorListener, mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_GAME);
+//            mSensorManager.registerListener(mSensorListener, mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR),SensorManager.SENSOR_DELAY_GAME);
         }
-        Mat rotationMat = new Mat();
-        rotationMat.create(3, 3, CvType.CV_32F);
+        Mat rotationCVMat = new Mat();
+        rotationCVMat.create(3, 3, CvType.CV_32F);
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 3; j++)
-                rotationMat.put(i, j, mRotmat[i * 4 + j]);
+                rotationCVMat.put(i, j, mRotmat[i * 4 + j]);
         }
 
         Mat mat = new Mat(1080, 1920, CvType.CV_8UC4);
         mat.put(0, 0, mFrameByte);
         Mat image = new Mat();
         Imgproc.cvtColor(mat, image, Imgproc.COLOR_RGBA2BGR);
-        //TODO create another thread for convert yuv, aligning
-        Log.i("Rot",Arrays.toString(mRotmat));
-        imageStitchingTask.execute(image, rotationMat);
+        imageStitchingTask.execute(image, rotationCVMat);
     }
 
     public void runProcess(boolean firstTime){
         if(firstTime){
-            Log.d("Surface","Setup");
+            if(mLocationServices == null) {
+                mLocationServices = new LocationServices(this);
+                mLocationServices.start();
+            }
+            Log.d("MainController","Button Press, AE Lock");
             mPreviewRequestBuilder.set(CONTROL_AF_TRIGGER,CONTROL_AF_TRIGGER_START);
             mPreviewRequestBuilder.set(CONTROL_AWB_LOCK, Boolean.TRUE);
             mPreviewRequestBuilder.set(CONTROL_AE_LOCK, Boolean.TRUE);
@@ -228,7 +238,7 @@ public class MainController extends GLSurfaceView {
         }
         else {
 
-            Log.d("Surface","Running=true");
+            Log.d("MainController","Button Press, Still Running");
             if(!mAsyncRunning)
                 mRunning = true;
         }
@@ -248,13 +258,16 @@ public class MainController extends GLSurfaceView {
 
     public void Pause() {
         Log.e(TAG, "onPause");
-        mSensorManager.unregisterListener(mSensorListener);
+        if(mLocationServices!= null)
+            mLocationServices.stop();
+        if(mSensorManager != null)
+            mSensorManager.unregisterListener(mSensorListener);
         closeCamera();
         stopBackgroundThread();
     }
 
     private void openCamera() {
-        Log.d("Debug", "openCamera");
+        Log.d("MainController", "openCamera");
         CameraManager manager = (CameraManager) getActivity().getSystemService(Context.CAMERA_SERVICE);
         try {
             for (String cameraId : manager.getCameraIdList()) {
@@ -265,11 +278,9 @@ public class MainController extends GLSurfaceView {
                 assert map != null;
                 List<Size> outputSizes = Arrays.asList(map.getOutputSizes(ImageFormat.JPEG));
                 Size largest = Collections.max(outputSizes, new Util.CompareSizesByArea());
-//                Log.i("Size","Valid Size :"+outputSizes.toString());
 
                 mImageReader = ImageReader.newInstance(1080, 1920, ImageFormat.YUV_420_888, 5);
-                Log.d("CameraCharacteristic","Create Camera With Size ("+largest.getWidth()+","+largest.getHeight()+")");
-                Log.d("CameraCharacteristic","LENS_INTRINSIC_CALIBRATION : "+Arrays.toString(characteristics.get(LENS_INTRINSIC_CALIBRATION)));
+                Log.d("MainController","CameraCharacteristic, Largest Camera Size ("+largest.getWidth()+","+largest.getHeight()+")");
                 mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
                 mCharacteristics = characteristics;
                 mCameraId = cameraId;
@@ -293,7 +304,7 @@ public class MainController extends GLSurfaceView {
 
         } catch (Exception e) {
             e.printStackTrace();
-            Log.e("Error",e.getLocalizedMessage());
+            Log.e("CameraCharacteristic",e.getLocalizedMessage());
         }
     }
 
@@ -340,13 +351,13 @@ public class MainController extends GLSurfaceView {
 
     private void createCameraPreviewSession() {
         try {
-            Log.d("Debug", "createCameraPreviewSession");
+            Log.d("CameraCharacteristic", "createCameraPreviewSession");
 
             SurfaceTexture glProcessTexture = mGLRenderer.getProcessSurfaceTexture();
             if (glProcessTexture == null){
                 try {
                     Thread.sleep(1000);
-                    Log.i("GLSurface Connector","Texture not ready yet try again in 1 sec");
+                    Log.w("CameraCharacteristic","GLSurface Connector, Texture not ready yet try again in 1 sec");
                     createCameraPreviewSession();
                     return;
                 } catch (InterruptedException e) {
@@ -406,15 +417,18 @@ public class MainController extends GLSurfaceView {
             mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), mCaptureCallback, mBackgroundHandler);
         } catch (Exception e) {
             e.printStackTrace();
-            Log.i("updatePreview", "ExceptionExceptionException");
+            Log.i("GLSurface Connector", "UpdatePreview, ExceptionExceptionException");
         }
     }
 
     public void permissionRequest() {
-        if (getActivity().checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
+        if (getActivity().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
+                getActivity().checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
+                getActivity().checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
                 getActivity().checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
                 getActivity().checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            getActivity().requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.CAMERA},
+            getActivity().requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                            Manifest.permission.CAMERA, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
                     1);
         }
     }
@@ -450,7 +464,7 @@ public class MainController extends GLSurfaceView {
                 }
                 lastTimeStamp = event.timestamp;
                 float[] swapMat = new float[16];
-                SensorManager.getRotationMatrixFromVector(swapMat,mQuaternion);
+                SensorManager.getRotationMatrixFromVector(swapMat, mQuaternion);
                 float[] rotMat = new float[16];
                 float[] correctedQuat = {mQuaternion[0],-mQuaternion[1], mQuaternion[2], mQuaternion[3]};
                 float[] temp = new float[16];
@@ -459,6 +473,9 @@ public class MainController extends GLSurfaceView {
 //                Matrix.multiplyMM(temp, 0, Util.SWAP_X, 0, rotMat, 0);
 //                Matrix.multiplyMM(rotMat, 0, Util.SWAP_Z, 0, temp, 0);
                 mGLRenderer.setRotationMatrix(rotMat);
+            }
+            if (event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR){
+                Log.i("SensorListener","RotationVector"+Arrays.toString(event.values));
             }
         }
 
@@ -491,7 +508,7 @@ public class MainController extends GLSurfaceView {
             ((MainActivity)getActivity()).getButton().setBackgroundColor(Color.GRAY);
             ((MainActivity)getActivity()).getButton().setText("Capture : " + mNumPicture);
             mAsyncRunning = false;
-            Log.i("mNumPicture",mNumPicture+"");
+            Log.i("GLSurface Connector","Stitch Complete, "+mNumPicture+"");
 
         }
     }
