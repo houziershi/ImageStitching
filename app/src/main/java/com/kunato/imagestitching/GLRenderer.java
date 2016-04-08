@@ -129,15 +129,12 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
 
         GLES20.glViewport(0, 0, mWidth, mHeight);
         Log.v("GL", "Screen" + String.format("(Width:Height)[%d,%d]", mWidth,mHeight));
-//        float ratio =( float ) width / height;
         float ratio = 9f/16f; //always because camera input as 3/4
+
         //48=zoom1.5//72=zoom1
-//        Log.d("Ratio", ratio + "");
         //52 for height
         //65 default
         Matrix.perspectiveM(mProjectionMatrix, 0, 67 / ZOOM_RATIO, ratio, 0.1f, 1000f);//48 for 4/3 64 for 1920/1080
-//        Log.d("PerspectiveM",Arrays.toString(mProjectionMatrix));
-//        Matrix.orthoM(mProjectionMatrix,0,-100,100,-100,100,-0.1f,100f);
 
 
     }

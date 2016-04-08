@@ -78,20 +78,11 @@ public class Sphere {
                     "}" +
             "}";
 
-    private final FloatBuffer mVertexBuffer;
-    private final FloatBuffer mTextureBuffer;
     private final int mProgram;
     private int mPositionHandle;
     private int mTextureHandle;
     private int mMVPMatrixHandle;
     private SphereObject sphereObject;
-    // number of coordinates per vertex in this array
-    private float mVertexCoords[];
-    private float mTextureCoords[];
-    private final int VERTEX_COUNT;
-    private final int VERTEX_STRIDE = ObjReader.COORD_PER_VERTEX * 4; // 4 bytes per float
-    private final int textureCount;
-    private final int TEXTURE_STRIDE = ObjReader.COORD_PER_TEXTURE * 4;
     private FloatBuffer mSphereBuffer;
     private ShortBuffer mIndexBuffer;
     float color[] = { 0.63671875f, 0.76953125f, 0.22265625f, 0.0f };
@@ -100,7 +91,6 @@ public class Sphere {
     private int mTextureCoordinateHandle;
     private boolean mTexRequireUpdate = false;
     private Bitmap mQueueBitmap;
-    private int[] ibo = new int[1];
     public boolean readPixel = false;
     private ByteBuffer mScreenBuffer;
     private GLRenderer glRenderer;
@@ -110,39 +100,10 @@ public class Sphere {
         Context context = renderer.mView.getActivity();
         sphereObject = new SphereObject(20,210,1);
         mSphereBuffer = sphereObject.getVertices();
-
         mSphereBuffer.position(0);
         mIndexBuffer = sphereObject.getIndices()[0];
         mIndexBuffer.position(0);
-        ObjReader.readAll(context);
-        mVertexCoords = new float[ObjReader.mVertices.size()* ObjReader.COORD_PER_VERTEX];
-        mTextureCoords = new float[ObjReader.mTextures.size()* ObjReader.COORD_PER_TEXTURE];
-        for(int i = 0 ; i < ObjReader.mVertices.size() ;i++){
-            for(int j = 0; j < ObjReader.COORD_PER_VERTEX;j++){
-                mVertexCoords[i* ObjReader.COORD_PER_VERTEX+j] = ObjReader.mVertices.get(i)[j];
 
-            }
-            for(int j = 0 ; j < ObjReader.COORD_PER_TEXTURE ;j++){
-                mTextureCoords[i* ObjReader.COORD_PER_TEXTURE+j] = ObjReader.mTextures.get(i)[j];
-            }
-        }
-
-        VERTEX_COUNT = mVertexCoords.length / ObjReader.COORD_PER_VERTEX;
-        textureCount = mTextureCoords.length / ObjReader.COORD_PER_TEXTURE;
-        //End of DataLoading
-
-        // initialize vertex byte buffer for shape coordinates
-        ByteBuffer bb = ByteBuffer.allocateDirect(mVertexCoords.length * 4);
-        bb.order(ByteOrder.nativeOrder());
-        mVertexBuffer = bb.asFloatBuffer();
-        mVertexBuffer.put(mVertexCoords);
-        mVertexBuffer.position(0);
-
-        ByteBuffer tbb = ByteBuffer.allocateDirect(mTextureCoords.length * 4);
-        tbb.order(ByteOrder.nativeOrder());
-        mTextureBuffer = tbb.asFloatBuffer();
-        mTextureBuffer.put(mTextureCoords);
-        mTextureBuffer.position(0);
         mProgram = Util.loadShader(vertexShaderCode, fragmentShaderCode);
 
         loadGLTexture(context, R.drawable.pano);
