@@ -10,15 +10,20 @@
 #include <fstream>
 #include <string>
 #include <iterator>
+#include <android/log.h>
 #include "opencv2/calib3d/calib3d.hpp"
-
+#include "ceres/ceres.h"
+#include "ceres/rotation.h"
+#include "Eigen/Dense"
+#include "Eigen/Geometry"
+#include "cmath"
 #include "opencv2/stitching/detail/matchers.hpp"
 #include "opencv2/stitching/detail/motion_estimators.hpp"
 using namespace std;
 using namespace cv;
 using namespace cv::detail;
-void minimizeRotation(std::vector<ImageFeatures> features,vector<MatchesInfo> pairs,vector<CameraParams> &cameras);
-void minimizeRotation(vector<Point2f> src,vector<Point2f> dst,vector<CameraParams> &cameras);
+int minimizeRotation(std::vector<ImageFeatures> features,vector<MatchesInfo> pairs,vector<CameraParams> &cameras);
+int minimizeRotation(vector<Point2f> src,vector<Point2f> dst,vector<CameraParams> &cameras);
 
 void test();
 

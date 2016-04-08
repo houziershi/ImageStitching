@@ -5,11 +5,7 @@
  *      Author: kunato
  */
 #include "BundleCeres.h"
-#include "ceres/ceres.h"
-#include "ceres/rotation.h"
-#include "Eigen/Dense"
-#include "Eigen/Geometry"
-#include "cmath"
+
 
 using namespace cv;
 using namespace std;
@@ -167,8 +163,7 @@ struct ReprojectionErrorOneVector {
 };
 
 
-//Need to re-done
-void minimizeRotation(vector<ImageFeatures> features,vector<MatchesInfo> pairs,vector<CameraParams> &cameras){
+int minimizeRotation(vector<ImageFeatures> features,vector<MatchesInfo> pairs,vector<CameraParams> &cameras){
 
     vector<ReprojectionErrorData> rpSet;
     cout << "point set" << endl;
@@ -241,6 +236,9 @@ void minimizeRotation(vector<ImageFeatures> features,vector<MatchesInfo> pairs,v
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
     std::cout << summary.FullReport() << "\n";
+
+    int iterationCount = summary.iterations.size();
+    __android_log_print(ANDROID_LOG_DEBUG,"Ceres","Iteration %d",iterationCount);
     for(int i = 0 ; i < cameras.size() ; i ++){
         Mat R;
         Mat rvec = Mat::zeros(3,1,CV_64F);
@@ -249,16 +247,16 @@ void minimizeRotation(vector<ImageFeatures> features,vector<MatchesInfo> pairs,v
         }
         Rodrigues(rvec,R);
         R.convertTo(cameras[i].R,CV_32F);
-//		cameras[i].focal = focal_array[i];
     }
     Mat R_inv = cameras[0].R.inv();
     for(int i = 0 ; i < cameras.size() ;i++){
         cameras[i].R = R_inv * cameras[i].R;
     }
+    return iterationCount;
 
 }
 
-void minimizeRotation(vector<Point2f> src,vector<Point2f> dst,vector<CameraParams> &cameras){
+int minimizeRotation(vector<Point2f> src,vector<Point2f> dst,vector<CameraParams> &cameras){
 
     vector<ReprojectionErrorData> rpSet;
     cout << "point set" << endl;
@@ -326,6 +324,8 @@ void minimizeRotation(vector<Point2f> src,vector<Point2f> dst,vector<CameraParam
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
     std::cout << summary.FullReport() << "\n";
+    int iterationCount = summary.iterations.size();
+    __android_log_print(ANDROID_LOG_DEBUG,"Ceres","Iteration %d",iterationCount);
     for(int i = 0 ; i < cameras.size() ; i ++){
         Mat R;
         Mat rvec = Mat::zeros(3,1,CV_64F);
@@ -334,10 +334,6 @@ void minimizeRotation(vector<Point2f> src,vector<Point2f> dst,vector<CameraParam
         }
         Rodrigues(rvec,R);
         R.convertTo(cameras[i].R,CV_32F);
-//		cameras[i].focal = focal_array[i];
     }
-//    Mat R_inv = cameras[0].R.inv();
-//    for(int i = 0 ; i < cameras.size() ;i++){
-//        cameras[i].R = R_inv * cameras[i].R;
-//    }
+    return iterationCount;
 }

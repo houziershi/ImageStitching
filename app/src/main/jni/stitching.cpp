@@ -89,6 +89,7 @@ int findNearest(int from, int to, std::vector<ImagePackage> images,Mat &inputR){
 
 JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeAligning(JNIEnv*, jobject, jlong imgaddr,jlong glrotaddr,jlong glprojaddr,jlong retaddr){
 	__android_log_print(ANDROID_LOG_DEBUG,"C++ aligning","Start");
+
 	clock_t c_start = std::clock();
 	Mat& full_img  = *(Mat*)imgaddr;
 	Mat img;
@@ -568,11 +569,10 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	vector<CameraParams> cameraSet(2);
 	cameraSet[0] = cameras[nearestImage];
 	cameraSet[1] = cameras[images.size()-1];
-	minimizeRotation(src,dst,cameraSet);
-	int checkingNearest = findNearest(0,images.size()-1,images,cameraSet[1].R);
+	int iterationCount = minimizeRotation(src,dst,cameraSet);
 
-	//Todo Add rotation check > 30 = return
-	if(checkingNearest != nearestImage){
+	//Check with ceres minimizer should be best solution
+	if(iterationCount > 4){
 		return 0;
 	}
 	cameras[images.size()-1].R = cameraSet[1].R;
