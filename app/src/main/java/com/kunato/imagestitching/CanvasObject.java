@@ -13,7 +13,7 @@ import java.util.Arrays;
 /**
  * Created by kunato on 1/6/16 AD.
  */
-public class Canvas {
+public class CanvasObject {
     private final String vss =
             "uniform mat4 uMVPMatrix;\n" +
                     "attribute vec3 vPosition;\n" +
@@ -79,7 +79,7 @@ public class Canvas {
     private int mProgram;
     public static final int COORD_PER_VERTEX = 3;
     public static final int COORD_PER_TEXTURE = 2;
-    public Canvas(float[] vertices,float[] textures,Context context) {
+    public CanvasObject(float[] vertices, float[] textures, Context context) {
         this.mTexture = new int[1];
         mVertexCoord = ByteBuffer.allocateDirect(4 * vertices.length).order(ByteOrder.nativeOrder()).asFloatBuffer();
         mVertexCoord.put(vertices);

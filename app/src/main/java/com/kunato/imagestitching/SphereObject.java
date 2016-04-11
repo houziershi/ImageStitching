@@ -14,147 +14,190 @@
  * limitations under the License.
  */
 package com.kunato.imagestitching;
+
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.opengl.GLES20;
+import android.opengl.GLUtils;
 import android.util.Log;
 
-import java.lang.Math;
+import org.opencv.core.Core;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.highgui.Highgui;
+import org.opencv.imgproc.Imgproc;
+
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
-/*
- * Class for generating a sphere model for given input params
- * The generated class will have vertices and indices
- * Vertices data is composed of vertex coordinates in x, y, z followed by
- *  texture coordinates s, t for each vertex
- * Indices store vertex indices for the whole sphere.
- * Formula for generating sphere is originally coming from source code of
- * OpenGL ES2.0 Programming guide
- * which is available from http://code.google.com/p/opengles-book-samples/,
- * but some changes were made to make texture look right.
- */
+
 public class SphereObject {
-    public static final int FLOAT_SIZE = 4;
-    public static final int SHORT_SIZE = 2;
-    private FloatBuffer mVertices;
-    private ShortBuffer[] mIndices;
-    private int[] mNumIndices;
-    private int mTotalIndices;
-    /*
-     * @param nSlices how many slice in horizontal direction.
-     *                The same slice for vertical direction is applied.
-     *                nSlices should be > 1 and should be <= 180
-     * @param x,y,z the origin of the sphere
-     * @param r the radius of the sphere
-     */
-    public SphereObject(int nSlices, float r, int numIndexBuffers) {
 
-        int nVertices = (nSlices+1) * (nSlices+1);
-        if (nVertices > Short.MAX_VALUE) {
-            // this cannot be handled in one vertices / indices pair
-            throw new RuntimeException("nSlices " + nSlices + " too big for vertex");
-        }
-        mTotalIndices = nSlices * nSlices * 6;
-        // 3 vertex coords + 2 texture coords
-        mVertices = ByteBuffer.allocateDirect(nVertices * 5 * FLOAT_SIZE)
-                .order(ByteOrder.nativeOrder()).asFloatBuffer();
-        mIndices = new ShortBuffer[numIndexBuffers];
-        mNumIndices = new int[numIndexBuffers];
-        // first evenly distribute to n-1 buffers, then put remaining ones to the last one.
-        int noIndicesPerBuffer = (mTotalIndices / numIndexBuffers / 6) * 6;
-        for (int i = 0; i < numIndexBuffers - 1; i++) {
-            mNumIndices[i] = noIndicesPerBuffer;
-        }
-        mNumIndices[numIndexBuffers - 1] = mTotalIndices - noIndicesPerBuffer *
-                (numIndexBuffers - 1);
-        for (int i = 0; i < numIndexBuffers; i++) {
-            mIndices[i] = ByteBuffer.allocateDirect(mNumIndices[i] * SHORT_SIZE)
-                    .order(ByteOrder.nativeOrder()).asShortBuffer();
-        }
-        // calling put for each float took too much CPU time, so put by line instead
-        float[] vLineBuffer = new float[(nSlices+1) * 5];
+    private final String vertexShaderCode =
+            "uniform mat4 uMVPMatrix;" +
+                    "attribute vec4 vPosition;" +
+                    "attribute vec4 vColor;"+
+                    "attribute vec2 a_TexCoordinate;"+
+                    "varying vec4 vPosition2;" +
+                    "varying vec4 fragmentColor;"+
+                    "varying vec2 v_TexCoordinate;"+
+                    "void main() {" +
+                    "  vPosition2 = vec4 ( vPosition.x, vPosition.y, vPosition.z, 1 );"+
+                    "  gl_Position = uMVPMatrix * vPosition2;" +
+                    "  fragmentColor = vColor;"+
+                    "  v_TexCoordinate = a_TexCoordinate;"+
+                    "}";
 
-        for (int i = 0; i <= nSlices; i++) {
-            for (int j = 0; j <= nSlices; j++) {
+    private final String fragmentShaderCode =
+            "precision highp float;" +
+            "uniform sampler2D sTexture;"+
+            "varying vec2 v_TexCoordinate;"+
+            "varying vec4 fragmentColor;" +
+                    "float width_ratio = 9242.0;" +
+                    "float height_ratio = 4620.0;" +
+                    "uniform float img_x;" +
+                    "uniform float img_y;" +
+                    "uniform float img_width;" +
+                    "uniform float img_height;" +
+                    "void main() {" +
+                    "if(img_x == 0.0 && img_y == 0.0 && img_width == 0.0 && img_height == 0.0){" +
+                    "   gl_FragColor = vec4(0,0,0,0);" +
+                    "   return;" +
+                    "}" +
+                    "if(v_TexCoordinate.x*width_ratio <= img_x || v_TexCoordinate.x*width_ratio >= (img_x+img_width) || " +
+                    "   v_TexCoordinate.y*height_ratio <= img_y || v_TexCoordinate.y*height_ratio >= (img_y+img_height)){" +
+                    "   gl_FragColor = vec4(0,0,0,0);"+
+                    "}" +
+                    "else{" +
+                    "   float diff_x = (((v_TexCoordinate.x*width_ratio) - (img_x))/(img_width));" +
+                    "   float diff_y = (((v_TexCoordinate.y*height_ratio) - (img_y))/(img_height));" +
+                    "   gl_FragColor = texture2D(sTexture,vec2(diff_x,diff_y));" +
+                    "}" +
+            "}";
 
-                int vertexBase = j * 5;
-                //mathPi / 1/(nslide * i)
-                //1 * ratio // 1 / ratio
-                float sini = (float) Math.sin((Math.PI * i/(float)nSlices));
-                //mathpi + mathpi+ (2*mathpi)/1/(ratio j)
-                float cosi = (float) Math.cos((Math.PI * i/(float)nSlices));
-                float sinj = (float) Math.sin(Math.PI + (2 * Math.PI) * (j / (float) nSlices));
-                float cosj = (float) Math.cos(Math.PI + (2 * Math.PI) * (j/(float)nSlices));
-                // vertex x,y,z
-                //x
-                vLineBuffer[vertexBase + 0] = r * sini * sinj;
-                //y
-                vLineBuffer[vertexBase + 1] = r * cosi;
-                //z(swap opencv texture and opengl)
-                vLineBuffer[vertexBase + 2] = -r * sini * cosj;
+    private final int mProgram;
+    private int mPositionHandle;
+    private int mTextureHandle;
+    private int mMVPMatrixHandle;
+    private SphereShape mSphereShape;
+    private FloatBuffer mSphereBuffer;
+    private ShortBuffer mIndexBuffer;
+    float color[] = { 0.63671875f, 0.76953125f, 0.22265625f, 0.0f };
+    //Only one texture
+    private int[] mTextures = new int[1];
+    private int mTextureCoordinateHandle;
+    private boolean mTexRequireUpdate = false;
+    private Bitmap mQueueBitmap;
+    public boolean readPixel = false;
+    private ByteBuffer mScreenBuffer;
+    private GLRenderer glRenderer;
+    public float[] mArea = {0,0,0,0};
+    public SphereObject(GLRenderer renderer) {
+        glRenderer = renderer;
+        Context context = renderer.mView.getActivity();
+        mSphereShape = new SphereShape(20,210,1);
+        mSphereBuffer = mSphereShape.getVertices();
+        mSphereBuffer.position(0);
+        mIndexBuffer = mSphereShape.getIndices()[0];
+        mIndexBuffer.position(0);
 
-//                Log.i("Vertex","("+(x + r * sini * sinj)+","+(y + r * sini * cosj)+","+(z + r * cosi)+")");
+        mProgram = Util.loadShader(vertexShaderCode, fragmentShaderCode);
 
-                //change u (s)
-                // texture u,v
-                vLineBuffer[vertexBase + 3] = (float) j/ (float) nSlices;
-                vLineBuffer[vertexBase + 4] = (float) i / (float)nSlices;
-//                Log.i("Texture","("+((float) j / (float) nSlices)+","+-((1.0f - i) / (float)nSlices)+")");
-            }
-            mVertices.put(vLineBuffer, 0, vLineBuffer.length);
-//            for(int ik = 0 ; ik < vLineBuffer.length; ik+=5){
-//                Log.i("SphereCoord,",""+vLineBuffer[ik]+","+vLineBuffer[ik+1]+","+vLineBuffer[ik+2]+","+vLineBuffer[ik+3]+","+vLineBuffer[ik+4]);
-//            }
-        }
+        loadGLTexture(context, R.drawable.pano);
 
-        short[] indexBuffer = new short[max(mNumIndices)];
-        int index = 0;
-        int iMax = nSlices+1;
-        int bufferNum = 0;
-        for (int i = 0; i < nSlices; i++) {
-            for (int j = 0; j < nSlices; j++) {
-                int i1 = i + 1;
-                int j1 = j + 1;
-                if (index >= mNumIndices[bufferNum]) {
-                    // buffer ready for moving to target
-                    mIndices[bufferNum].put(indexBuffer, 0, mNumIndices[bufferNum]);
-                    // move to the next one
-                    index = 0;
-                    bufferNum++;
-                }
-                indexBuffer[index++] = (short) (i * iMax + j);
-                indexBuffer[index++] = (short) (i1 * iMax + j);
-                indexBuffer[index++] = (short) (i1 * iMax + j1);
-                indexBuffer[index++] = (short) (i * iMax + j);
-                indexBuffer[index++] = (short) (i1 * iMax + j1);
-                indexBuffer[index++] = (short) (i * iMax + j1);
-            }
+
+    }
+
+    public void loadGLTexture(final Context context, final int texture) {
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inSampleSize = 4;
+        final Bitmap bitmap = BitmapFactory.decodeResource(context.getResources(), texture, options);
+        GLES20.glGenTextures(1, this.mTextures, 0);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, this.mTextures[0]);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR_MIPMAP_LINEAR);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
+
+//        mockTexImage2D(bitmap);
+    }
+
+
+    public void mockTexImage2D(Bitmap bitmap){
+        mArea[0] = mArea[1] = 0;
+        mArea[2] = 9242;
+        mArea[3] = 4620;
+        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
+        GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D);
+        bitmap.recycle();
+    }
+
+    public void updateBitmap(Bitmap bitmap,float[] area){
+        this.mArea = area;
+        mTexRequireUpdate = true;
+        mQueueBitmap = bitmap;
+        Log.i("GLSphere", "Bitmap waiting for updated");
+    }
+
+    public void draw(float[] mvpMatrix) {
+        int xh = GLES20.glGetUniformLocation(mProgram,"img_x");
+        int yh = GLES20.glGetUniformLocation(mProgram,"img_y");
+        int widthh = GLES20.glGetUniformLocation(mProgram,"img_width");
+        int heighth = GLES20.glGetUniformLocation(mProgram,"img_height");
+
+        if(mTexRequireUpdate){
+            Log.i("GLSphere", "Bitmap updated,Return to normal activity.");
+            GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, mQueueBitmap, 0);
+            GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D);
+            mQueueBitmap.recycle();
+            mTexRequireUpdate = false;
         }
-        mIndices[bufferNum].put(indexBuffer, 0, mNumIndices[bufferNum]);
-        mVertices.position(0);
-        for (int i = 0; i < numIndexBuffers; i++) {
-            mIndices[i].position(0);
+        GLES20.glUseProgram(mProgram);
+        //Attrib
+        mPositionHandle = GLES20.glGetAttribLocation(mProgram, "vPosition");
+        mTextureCoordinateHandle = GLES20.glGetAttribLocation(mProgram, "a_TexCoordinate");
+        mSphereBuffer.position(0);
+        GLES20.glEnableVertexAttribArray(mPositionHandle);
+        GLES20.glVertexAttribPointer(mPositionHandle, 3, GLES20.GL_FLOAT, false, mSphereShape.getVeticesStride(), mSphereBuffer);
+
+        mSphereBuffer.position(3);
+        GLES20.glEnableVertexAttribArray(mTextureCoordinateHandle);
+        GLES20.glVertexAttribPointer(mTextureCoordinateHandle, 2, GLES20.GL_FLOAT, false, mSphereShape.getVeticesStride(), mSphereBuffer);
+        //Uniform
+        mTextureHandle = GLES20.glGetUniformLocation(mProgram, "sTexture");
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        GLES20.glUniform1i(mTextureHandle, 0);
+        //Area
+        GLES20.glUniform1f(xh,mArea[0]);
+        GLES20.glUniform1f(yh,mArea[1]);
+        GLES20.glUniform1f(widthh,mArea[2]);
+        GLES20.glUniform1f(heighth,mArea[3]);
+
+        mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");
+        GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mvpMatrix, 0);
+        GLES20.glDrawElements(GLES20.GL_TRIANGLES, mSphereShape.getNumIndices()[0], GLES20.GL_UNSIGNED_SHORT, mIndexBuffer);
+        GLES20.glDisableVertexAttribArray(mPositionHandle);
+        GLES20.glDisableVertexAttribArray(mTextureCoordinateHandle);
+
+
+        if(readPixel) {
+            Log.d("GL","ReadPixel");
+            mScreenBuffer = ByteBuffer.allocateDirect(glRenderer.mHeight * glRenderer.mWidth * 4);
+            mScreenBuffer.order(ByteOrder.nativeOrder());
+            GLES20.glReadPixels(0, 0, glRenderer.mWidth, glRenderer.mHeight, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, mScreenBuffer);
+            Log.d("mScreenBuffer", "Remaining " + mScreenBuffer.remaining());
+            mScreenBuffer.rewind();
+            byte pixelsBuffer[] = new byte[4*glRenderer.mHeight*glRenderer.mWidth];
+            mScreenBuffer.get(pixelsBuffer);
+            Mat mat = new Mat(glRenderer.mHeight,glRenderer.mWidth, CvType.CV_8UC4);
+            mat.put(0, 0, pixelsBuffer);
+            Mat m = new Mat();
+            Imgproc.cvtColor(mat, m, Imgproc.COLOR_RGBA2BGR);
+            Core.flip(m, mat, 0);
+            Highgui.imwrite("/sdcard/stitch/readpixel.jpg",mat);
+
         }
     }
-    public FloatBuffer getVertices() {
-        return mVertices;
-    }
-    public int getVeticesStride() {
-        return 5*FLOAT_SIZE;
-    }
-    public ShortBuffer[] getIndices() {
-        return mIndices;
-    }
-    public int[] getNumIndices() {
-        return mNumIndices;
-    }
-    public int getTotalIndices() {
-        return mTotalIndices;
-    }
-    private int max(int[] array) {
-        int max = array[0];
-        for (int i = 1; i < array.length; i++) {
-            if (array[i] > max) max = array[i];
-        }
-        return max;
-    }
+
+
 }

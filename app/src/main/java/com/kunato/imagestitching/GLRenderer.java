@@ -3,7 +3,6 @@ package com.kunato.imagestitching;
 import android.graphics.SurfaceTexture;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
-import android.opengl.GLU;
 import android.opengl.Matrix;
 import android.util.Log;
 
@@ -41,9 +40,9 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
             ,0,0,0,1f};
 
     private float[] mModelViewMatrix = new float[16];
-    private Canvas mCanvas;
-    private Sphere mSphere;
-    private Canvas mCanvasProcessed;
+    private CanvasObject mCanvasObject;
+    private SphereObject mSphere;
+    private CanvasObject mCanvasObjectProcessed;
     public int mWidth;
     public int mHeight;
     public float[] mHomography = {1,0,0,0,1,0,0,0,1};
@@ -66,11 +65,11 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
                 0.0f, 1.0f,
                 1.0f, 0.0f,
                 1.0f, 1.0f};
-        mCanvas = new Canvas(vertices,textures, mView.getActivity());
-        mCanvasProcessed = new Canvas(vertices,textures,mView.getActivity());
-        mSphere = new Sphere(this);
-        mTextureNormal = new SurfaceTexture (mCanvas.getTexturePos()[0]);
-        mTextureProcessed = new SurfaceTexture(mCanvasProcessed.getTexturePos()[0]);
+        mCanvasObject = new CanvasObject(vertices,textures, mView.getActivity());
+        mCanvasObjectProcessed = new CanvasObject(vertices,textures,mView.getActivity());
+        mSphere = new SphereObject(this);
+        mTextureNormal = new SurfaceTexture (mCanvasObject.getTexturePos()[0]);
+        mTextureProcessed = new SurfaceTexture(mCanvasObjectProcessed.getTexturePos()[0]);
         mTextureNormal.setOnFrameAvailableListener(this);
         mTextureProcessed.setOnFrameAvailableListener(this);
         GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -108,7 +107,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         }
 
         //multiply MM(retMat, retMatOffset, mat1 * mat2 (includeOffset))
-//        mCanvas.draw(mMVPMatrix);
+//        mCanvasObject.draw(mMVPMatrix);
         if(readInProgress){
             GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
             mSphere.draw(mMVPMatrix);
@@ -118,7 +117,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
             readInProgress = false;
         }
 
-        mCanvasProcessed.draw(mViewCanvasMatrix,mHomography);
+        mCanvasObjectProcessed.draw(mViewCanvasMatrix,mHomography);
         mSphere.draw(mMVPMatrix);
         GLES20.glFlush();
     }
@@ -150,17 +149,17 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     public void close() {
         mUpdateST = false;
         mTextureNormal.release();
-        mCanvas.deleteTex();
+        mCanvasObject.deleteTex();
     }
     //TODO change to quat?
     public void setRotationMatrix(float[] rot){
 //        Log.i("RotationMat", Arrays.toString(rot));
         mRotationMatrix = rot;
     }
-    public Sphere getSphere(){
+    public SphereObject getSphere(){
         return mSphere;
     }
-    public Canvas getCanvas() { return mCanvas; }
+    public CanvasObject getCanvas() { return mCanvasObject; }
     public SurfaceTexture getSurfaceTexture(){
         return mTextureNormal;
     }
