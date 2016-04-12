@@ -36,7 +36,8 @@ import java.nio.ShortBuffer;
 public class SphereObject {
 
     private final String vertexShaderCode =
-            "uniform mat4 uMVPMatrix;" +
+            "uniform mat4 uViewMatrix;" +
+                    "uniform mat4 uProjectionMatrix;" +
                     "attribute vec4 vPosition;" +
                     "attribute vec4 vColor;"+
                     "attribute vec2 a_TexCoordinate;"+
@@ -45,7 +46,7 @@ public class SphereObject {
                     "varying vec2 v_TexCoordinate;"+
                     "void main() {" +
                     "  vPosition2 = vec4 ( vPosition.x, vPosition.y, vPosition.z, 1 );"+
-                    "  gl_Position = uMVPMatrix * vPosition2;" +
+                    "  gl_Position = uProjectionMatrix * uViewMatrix * vPosition2;" +
                     "  fragmentColor = vColor;"+
                     "  v_TexCoordinate = a_TexCoordinate;"+
                     "}";
@@ -80,7 +81,8 @@ public class SphereObject {
     private final int mProgram;
     private int mPositionHandle;
     private int mTextureHandle;
-    private int mMVPMatrixHandle;
+    private int mViewMatrixHandle;
+    private int mProjectionMatrixHandle;
     private SphereShape mSphereShape;
     private FloatBuffer mSphereBuffer;
     private ShortBuffer mIndexBuffer;
@@ -139,7 +141,7 @@ public class SphereObject {
         Log.i("GLSphere", "Bitmap waiting for updated");
     }
 
-    public void draw(float[] mvpMatrix) {
+    public void draw(float[] viewMatrix,float[] projectionMatrix) {
         int xh = GLES20.glGetUniformLocation(mProgram,"img_x");
         int yh = GLES20.glGetUniformLocation(mProgram,"img_y");
         int widthh = GLES20.glGetUniformLocation(mProgram,"img_width");
@@ -173,8 +175,10 @@ public class SphereObject {
         GLES20.glUniform1f(widthh,mArea[2]);
         GLES20.glUniform1f(heighth,mArea[3]);
 
-        mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");
-        GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mvpMatrix, 0);
+        mViewMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uViewMatrix");
+        mProjectionMatrixHandle = GLES20.glGetUniformLocation(mProgram,"uProjectionMatrix");
+        GLES20.glUniformMatrix4fv(mViewMatrixHandle, 1, false, viewMatrix, 0);
+        GLES20.glUniformMatrix4fv(mProjectionMatrixHandle, 1, false, projectionMatrix, 0);
         GLES20.glDrawElements(GLES20.GL_TRIANGLES, mSphereShape.getNumIndices()[0], GLES20.GL_UNSIGNED_SHORT, mIndexBuffer);
         GLES20.glDisableVertexAttribArray(mPositionHandle);
         GLES20.glDisableVertexAttribArray(mTextureCoordinateHandle);
@@ -189,7 +193,7 @@ public class SphereObject {
             mScreenBuffer.rewind();
             byte pixelsBuffer[] = new byte[4*glRenderer.mHeight*glRenderer.mWidth];
             mScreenBuffer.get(pixelsBuffer);
-            Mat mat = new Mat(glRenderer.mHeight,glRenderer.mWidth, CvType.CV_8UC4);
+            Mat mat = new Mat(glRenderer.mHeight, glRenderer.mWidth, CvType.CV_8UC4);
             mat.put(0, 0, pixelsBuffer);
             Mat m = new Mat();
             Imgproc.cvtColor(mat, m, Imgproc.COLOR_RGBA2BGR);

@@ -26,6 +26,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     private final float ZOOM_RATIO = 1f;
     private final float CANVAS_SIZE = 1f * ZOOM_RATIO;
     private final float HEIGHT_WIDTH_RATIO = 1f;
+    private ARObject mARObject;
     public float[] mRotationMatrix = {1f,0,0,0
             ,0,1f,0,0
             ,0,0,1f,0
@@ -67,6 +68,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
                 1.0f, 1.0f};
         mCanvasObject = new CanvasObject(vertices,textures, mView.getActivity());
         mCanvasObjectProcessed = new CanvasObject(vertices,textures,mView.getActivity());
+        mARObject = new ARObject(this);
         mSphere = new SphereObject(this);
         mTextureNormal = new SurfaceTexture (mCanvasObject.getTexturePos()[0]);
         mTextureProcessed = new SurfaceTexture(mCanvasObjectProcessed.getTexturePos()[0]);
@@ -85,11 +87,12 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
             mFrame = 0;
             mStartTime = System.nanoTime();
         }
+
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
         GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT);
 
-        Matrix.multiplyMM(mModelViewMatrix,0, mRotationMatrix,0, mSpericalModelMatrix,0);
-        Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix,0, mModelViewMatrix,0);
+//        Matrix.multiplyMM(mModelViewMatrix,0, mRotationMatrix,0, mSpericalModelMatrix,0);
+//        Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix,0, mModelViewMatrix,0);
 
 
 //        float[] out = new float[3];
@@ -110,15 +113,18 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
 //        mCanvasObject.draw(mMVPMatrix);
         if(readInProgress){
             GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-            mSphere.draw(mMVPMatrix);
+            mSphere.draw(mRotationMatrix,mProjectionMatrix);
             GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
             GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT);
             mSphere.readPixel = false;
             readInProgress = false;
         }
 
+
+
         mCanvasObjectProcessed.draw(mViewCanvasMatrix,mHomography);
-        mSphere.draw(mMVPMatrix);
+        mSphere.draw(mRotationMatrix,mProjectionMatrix);
+        mARObject.draw(mRotationMatrix,mProjectionMatrix);
         GLES20.glFlush();
     }
 
@@ -151,10 +157,9 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         mTextureNormal.release();
         mCanvasObject.deleteTex();
     }
-    //TODO change to quat?
-    public void setRotationMatrix(float[] rot){
-//        Log.i("RotationMat", Arrays.toString(rot));
-        mRotationMatrix = rot;
+
+    public void setRotationMatrix(float[] rotationMatrix){
+        mRotationMatrix = rotationMatrix;
     }
     public SphereObject getSphere(){
         return mSphere;

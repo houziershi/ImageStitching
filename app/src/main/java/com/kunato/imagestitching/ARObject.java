@@ -20,17 +20,18 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.opengl.GLES20;
 import android.opengl.GLUtils;
-import android.util.Log;
+import android.opengl.Matrix;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
-import java.nio.ShortBuffer;
 
 public class ARObject {
 
     private final String vertexShaderCode =
-            "uniform mat4 uMVPMatrix;" +
+            "uniform mat4 uViewMatrix;" +
+                    "uniform mat4 uProjectionMatrix;" +
+                    "uniform mat4 uModelMatrix;" +
                     "attribute vec4 vPosition;" +
                     "attribute vec4 vColor;"+
                     "attribute vec2 a_TexCoordinate;"+
@@ -38,9 +39,11 @@ public class ARObject {
                     "varying vec4 fragmentColor;"+
                     "varying vec2 v_TexCoordinate;"+
                     "void main() {" +
-                    "  vPosition2 = vec4 ( vPosition.x, vPosition.y, vPosition.z, 1 );"+
-                    "  gl_Position = uMVPMatrix * vPosition2;" +
-                    "  v_TexCoordinate = a_TexCoordinate;"+
+                    "   vPosition2 = vec4 ( vPosition.x, vPosition.y, vPosition.z, 1 );"+
+                    "   gl_Position =   uProjectionMatrix * uViewMatrix * uModelMatrix * vPosition2;" +
+                    "   v_TexCoordinate = a_TexCoordinate;" +
+                    "   fragmentColor = vec4(1,0,1,1);" +
+                    "   return;"+
                     "}";
 
     private final String fragmentShaderCode =
@@ -49,30 +52,48 @@ public class ARObject {
                     "varying vec2 v_TexCoordinate;"+
                     "varying vec4 fragmentColor;" +
                     "void main() {"+
-                    "gl_FragColor = texture2D(sTexture,v_TexCoordinate);" +
+                    "" +
+                    "   gl_FragColor = texture2D(sTexture,v_TexCoordinate);" +
+                    "   " +
+                    "   return;" +
                     "}";
+    //OpenGL = cols wise???
+    //If transpose is GL_FALSE, each matrix is assumed to be supplied in column major order.
+    //If transpose is GL_TRUE, each matrix is assumed to be supplied in row major order.
+    //in glUniformMatrix4fv
+    //[0 4 8 12]
+    //[1 5 9 13]
+    //[2 6 10 14]
+    //[3 7 11 15]
+    private float[] mModelRotation = {1f,0,0,0
+            ,0,1f,0,0f
+            ,0,0,1f,-3f
+            ,0,0,0,1f};
 
     private final FloatBuffer mVertexBuffer;
     private final FloatBuffer mTextureBuffer;
     private final int mProgram;
     private int mPositionHandle;
     private int mTextureHandle;
-    private int mMVPMatrixHandle;
+    private int mViewMatrixHandle;
+    private int mModelMatrixHandle;
     // number of coordinates per vertex in this array
     private float mVertexCoords[];
     private float mTextureCoords[];
-    private final int VERTEX_COUNT;
+    private final int vertexCount;
     private final int VERTEX_STRIDE = ObjReader.COORD_PER_VERTEX * 4; // 4 bytes per float
     private final int textureCount;
     private final int TEXTURE_STRIDE = ObjReader.COORD_PER_TEXTURE * 4;
     //Only one texture
     private int[] mTextures = new int[1];
     private int mTextureCoordinateHandle;
+    private int mProjectionMatrixHandle;
     private GLRenderer glRenderer;
+
     public ARObject(GLRenderer renderer) {
         glRenderer = renderer;
         Context context = renderer.mView.getActivity();
-        ObjReader.readAll(context);
+        ObjReader.readAll(context,"sign");
         mVertexCoords = new float[ObjReader.mVertices.size()* ObjReader.COORD_PER_VERTEX];
         mTextureCoords = new float[ObjReader.mTextures.size()* ObjReader.COORD_PER_TEXTURE];
         for(int i = 0 ; i < ObjReader.mVertices.size() ;i++){
@@ -85,7 +106,7 @@ public class ARObject {
             }
         }
 
-        VERTEX_COUNT = mVertexCoords.length / ObjReader.COORD_PER_VERTEX;
+        vertexCount = mVertexCoords.length / ObjReader.COORD_PER_VERTEX;
         textureCount = mTextureCoords.length / ObjReader.COORD_PER_TEXTURE;
         //End of DataLoading
 
@@ -112,7 +133,7 @@ public class ARObject {
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inSampleSize = 4;
         final Bitmap bitmap = BitmapFactory.decodeResource(context.getResources(), texture, options);
-        GLES20.glGenTextures(1, this.mTextures, 0);
+        GLES20.glGenTextures(2, this.mTextures, 0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, this.mTextures[0]);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR_MIPMAP_LINEAR);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
@@ -121,30 +142,50 @@ public class ARObject {
 
 
     public void mockTexImage2D(Bitmap bitmap){
-        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
+        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 1, bitmap, 0);
         GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D);
         bitmap.recycle();
     }
 
     //TODO IMPLEMENTS THIS
-    public void draw(float[] mvpMatrix) {
+    public void draw(float[] viewMatrix,float[] projectionMatrix) {
         GLES20.glUseProgram(mProgram);
-        //Attrib
+
         mPositionHandle = GLES20.glGetAttribLocation(mProgram, "vPosition");
+
         mTextureCoordinateHandle = GLES20.glGetAttribLocation(mProgram, "a_TexCoordinate");
+
         GLES20.glEnableVertexAttribArray(mPositionHandle);
-        //Uniform
+        GLES20.glVertexAttribPointer(mPositionHandle, ObjReader.COORD_PER_VERTEX, GLES20.GL_FLOAT, false, VERTEX_STRIDE, mVertexBuffer);
+        GLES20.glEnableVertexAttribArray(mTextureCoordinateHandle);
+        GLES20.glVertexAttribPointer(mTextureCoordinateHandle, ObjReader.COORD_PER_TEXTURE, GLES20.GL_FLOAT, false, TEXTURE_STRIDE, mTextureBuffer);
+
+        // Set the active texture unit to texture unit 0.
         mTextureHandle = GLES20.glGetUniformLocation(mProgram, "sTexture");
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+
+        // Bind the texture to this unit.
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mTextures[0]);
         GLES20.glUniform1i(mTextureHandle, 0);
-        mMVPMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uMVPMatrix");
-        GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, mvpMatrix, 0);
+        // get handle to shape's transformation matrix
+        mViewMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uViewMatrix");
+        mProjectionMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uProjectionMatrix");
+        mModelMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uModelMatrix");
+        // Apply the projection and view transformation
+        GLES20.glUniformMatrix4fv(mViewMatrixHandle, 1, false, viewMatrix, 0);
+        GLES20.glUniformMatrix4fv(mProjectionMatrixHandle, 1 ,false, projectionMatrix,0);
+        GLES20.glUniformMatrix4fv(mModelMatrixHandle, 1, true, mModelRotation , 0);
 
+        // Draw the triangle
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, vertexCount);
 
+        // Disable vertex array
         GLES20.glDisableVertexAttribArray(mPositionHandle);
-        GLES20.glDisableVertexAttribArray(mTextureCoordinateHandle);
-
     }
 
 
+    public void setModelRotation(float[] modelRotation) {
+        mModelRotation = modelRotation;
+
+    }
 }

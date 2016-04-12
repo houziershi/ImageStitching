@@ -19,9 +19,9 @@ public class ObjReader {
     public static final int COORD_PER_TEXTURE = 2;
     public static List<float[]> mVertices = new ArrayList<float[]>();
     public static List<float[]> mTextures = new ArrayList<float[]>();
-    public static void readAll(Context context){
-        readVertices(context, "iso_sphere_vertices.txt");
-        readTextures(context, "iso_sphere_texture.txt");
+    public static void readAll(Context context,String filename){
+        readVertices(context, filename+"_vertices.txt");
+        readTextures(context, filename+"_texture.txt");
     }
 
     public static void readVertices(Context context, String filename){
