@@ -156,8 +156,9 @@ public class ARObject {
         SensorManager.getOrientation(cameraRotation, mOrientation);
         Log.d("ARObject","Object : "+mNumber +" , Bearing degree ; "+bearing + " , Plus devices degree ; "+ mOrientation[0] * 180.0 / Math.PI);
         bearing *= Math.PI / 180.0;
-        mTranslationRotation[3] = -mOrientation[0] + (float) Math.sin(bearing) * 3;
-        mTranslationRotation[11] = -mOrientation[0] + (float) Math.cos(bearing) * -3;
+        mTranslationRotation[3] = (float) Math.sin(-mOrientation[0]+ bearing) * 3;
+        mTranslationRotation[11] =(float) Math.cos(-mOrientation[0]+ bearing) * -3;
+        Log.d("ARObject","Real Heading "+(-mOrientation[0]+ bearing)*180.0/Math.PI);
         mCameraPositionSet = true;
     }
     public void loadGLTexture(final Context context, final int texture) {
