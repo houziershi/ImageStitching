@@ -192,16 +192,21 @@ public class MainController extends GLSurfaceView {
     public float[] mRotmat = new float[16];
 
     public void doStitching(){
-
-            Object[] locationAndRotation = mLocationServices.getLocation();
-            Location location = (Location) locationAndRotation[0];
-            float[] cameraRotation = (float[]) locationAndRotation[1];
-            Log.i("MainController","LocationServices");
-            Log.i("MainController","Received Location : "+ location.getLatitude() + "," + location.getLongitude());
-            Log.i("MainController","Received Rotation : "+Arrays.toString(cameraRotation));
         SensorManager.getRotationMatrixFromVector(mRotmat,mQuaternion);
         AsyncTask<Object, Integer, Boolean> imageStitchingTask = new ImageStitchingTask();
         if (mFirstRun) {
+            Object[] locationAndRotation = mLocationServices.getLocation();
+            Location deviceLocation = (Location) locationAndRotation[0];
+            float[] cameraRotation = (float[]) locationAndRotation[1];
+//            Location mockLocation = new Location("");
+//            mockLocation.setLatitude(34.732285);
+//            mockLocation.setLongitude(135.735202);
+
+            Log.i("MainController","LocationServices");
+            Log.i("MainController","Received Location : "+ deviceLocation.getLatitude() + "," + deviceLocation.getLongitude());
+            Log.i("MainController","Received Rotation : "+Arrays.toString(cameraRotation));
+
+            mGLRenderer.addARObject(cameraRotation, deviceLocation);
             mFirstRun = false;
             mQuaternion[0] = 0f;
             mQuaternion[1] = 0f;

@@ -1,6 +1,7 @@
 package com.kunato.imagestitching;
 
 import android.graphics.SurfaceTexture;
+import android.location.Location;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
@@ -39,7 +40,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
             ,0,1f,0,0
             ,0,0,1f,0
             ,0,0,0,1f};
-
+    private int[] mTexturePool = new int[2];
     private float[] mModelViewMatrix = new float[16];
     private CanvasObject mCanvasObject;
     private SphereObject mSphere;
@@ -68,7 +69,8 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
                 1.0f, 1.0f};
         mCanvasObject = new CanvasObject(vertices,textures, mView.getActivity());
         mCanvasObjectProcessed = new CanvasObject(vertices,textures,mView.getActivity());
-        mARObject = new ARObject(this);
+
+        mARObject = new ARObject(this,1);
         mSphere = new SphereObject(this);
         mTextureNormal = new SurfaceTexture (mCanvasObject.getTexturePos()[0]);
         mTextureProcessed = new SurfaceTexture(mCanvasObjectProcessed.getTexturePos()[0]);
@@ -78,6 +80,11 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         //(x (vertical),(horizontal)y,z)
         GLES20.glEnable(GLES20.GL_BLEND);
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+    }
+    public void addARObject(float[] cameraRotation, Location location){
+        Log.d("GLRenderer","AddARObject");
+        mARObject.setCameraRotation(cameraRotation, location);
+
     }
     //Core function
     public void onDrawFrame ( GL10 unused ) {
@@ -124,7 +131,8 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
 
         mCanvasObjectProcessed.draw(mViewCanvasMatrix,mHomography);
         mSphere.draw(mRotationMatrix,mProjectionMatrix);
-        mARObject.draw(mRotationMatrix,mProjectionMatrix);
+        if(mARObject!= null)
+            mARObject.draw(mRotationMatrix,mProjectionMatrix);
         GLES20.glFlush();
     }
 

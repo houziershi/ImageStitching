@@ -138,6 +138,7 @@ public class LocationServices {
             mLastLocation = com.google.android.gms.location.LocationServices.FusedLocationApi.getLastLocation(
                     mGoogleApiClient);
             Object[] returnObject = {mLastLocation,mCameraRotation};
+            mSensorManager.unregisterListener(mCompassListener);
             return returnObject;
         }
         return null;

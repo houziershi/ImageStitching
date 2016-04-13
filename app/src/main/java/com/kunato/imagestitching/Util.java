@@ -83,6 +83,19 @@ public class Util {
         }
 
     }
+    //[ 0  1  2 {0}]
+    //[ 3  4  5 {0}]
+    //[ 6  7  8 {0}]
+    //[{0}{0}{0}{1} ]
+    public static float[] matrix9to16(float[] matrix){
+        float[] out = {matrix[0],matrix[1],matrix[2],0,matrix[3],matrix[4],matrix[5],0,matrix[6],matrix[7],matrix[8],0,0,0,0,1};
+        Log.d("Util","Input  : "+Arrays.toString(matrix));
+        Log.d("Util","Output :"+Arrays.toString(out));
+        return out;
+    }
+
+
+
     public static float[] matrixToQuad(float[] matrix){
         float[] quad = new float[4];
 

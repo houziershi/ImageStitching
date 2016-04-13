@@ -116,7 +116,9 @@ public class SphereObject {
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inSampleSize = 4;
         final Bitmap bitmap = BitmapFactory.decodeResource(context.getResources(), texture, options);
+
         GLES20.glGenTextures(1, this.mTextures, 0);
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, this.mTextures[0]);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR_MIPMAP_LINEAR);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
@@ -129,7 +131,6 @@ public class SphereObject {
         mArea[0] = mArea[1] = 0;
         mArea[2] = 9242;
         mArea[3] = 4620;
-        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
         GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D);
         bitmap.recycle();
     }
@@ -149,6 +150,8 @@ public class SphereObject {
 
         if(mTexRequireUpdate){
             Log.i("GLSphere", "Bitmap updated,Return to normal activity.");
+            GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, this.mTextures[0]);
             GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, mQueueBitmap, 0);
             GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D);
             mQueueBitmap.recycle();
@@ -167,7 +170,6 @@ public class SphereObject {
         GLES20.glVertexAttribPointer(mTextureCoordinateHandle, 2, GLES20.GL_FLOAT, false, mSphereShape.getVeticesStride(), mSphereBuffer);
         //Uniform
         mTextureHandle = GLES20.glGetUniformLocation(mProgram, "sTexture");
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glUniform1i(mTextureHandle, 0);
         //Area
         GLES20.glUniform1f(xh,mArea[0]);
