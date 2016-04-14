@@ -13,6 +13,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
 import android.util.Log;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -26,7 +27,9 @@ import com.google.android.gms.location.LocationSettingsResult;
 import com.google.android.gms.location.LocationSettingsStates;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
 
+import java.text.DateFormat;
 import java.util.Arrays;
+import java.util.Date;
 
 /**
  * Created by kunato on 4/7/16.
@@ -34,21 +37,22 @@ import java.util.Arrays;
 public class LocationServices {
     float[] mCameraRotation = null;
     private SensorEventListener mCompassListener = new SensorEventListener() {
-        static final float RAD_2_DEGREE = (float)(180.0f/Math.PI);
+        static final float RAD_2_DEGREE = (float) (180.0f / Math.PI);
         float[] mGravity;
         float[] mGeomagnetic;
+
         @Override
         public void onSensorChanged(SensorEvent event) {
-            if(event.sensor.getType() == Sensor.TYPE_ACCELEROMETER){
+            if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
                 mGravity = event.values;
             }
-            if(event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD){
+            if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
                 mGeomagnetic = event.values;
             }
-            if(mGravity == null || mGeomagnetic == null)
+            if (mGravity == null || mGeomagnetic == null)
                 return;
             float[] I = new float[16];
-            if(mCameraRotation == null){
+            if (mCameraRotation == null) {
                 mCameraRotation = new float[16];
             }
             SensorManager.getRotationMatrix(mCameraRotation, I, mGravity, mGeomagnetic);
@@ -62,14 +66,18 @@ public class LocationServices {
 
         }
     };
+    private LocationCallback mLocationCallback;
     private SensorManager mSensorManager;
     private GoogleApiClient mGoogleApiClient;
     private MainController mMainController;
     private Location mLastLocation = null;
     PendingResult<LocationSettingsResult> result;
+    LocationRequest mLocationRequest;
     boolean mConnected = false;
+    private String mLastUpdateTime;
+
     protected void createLocationRequest() {
-        LocationRequest mLocationRequest = new LocationRequest();
+        mLocationRequest = new LocationRequest();
         mLocationRequest.setInterval(10000);
         mLocationRequest.setFastestInterval(5000);
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
@@ -84,13 +92,13 @@ public class LocationServices {
                 final LocationSettingsStates locationSetting = locationSettingsResult.getLocationSettingsStates();
                 switch (status.getStatusCode()) {
                     case LocationSettingsStatusCodes.SUCCESS:
-                        Log.d("LocationServices","SUCCESS");
+                        Log.d("LocationServices", "SUCCESS");
                         break;
                     case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
-                        Log.d("LocationServices","RESOLUTION_REQUIRED");
+                        Log.d("LocationServices", "RESOLUTION_REQUIRED");
                         break;
                     case LocationSettingsStatusCodes.SETTINGS_CHANGE_UNAVAILABLE:
-                        Log.d("LocationServices","SETTINGS_CHANGE_UNAVAILABLE");
+                        Log.d("LocationServices", "SETTINGS_CHANGE_UNAVAILABLE");
                         break;
                 }
 
@@ -100,22 +108,26 @@ public class LocationServices {
 
     protected void buildGoogleApiClient() {
         mGoogleApiClient = new GoogleApiClient.Builder(mMainController.getActivity())
-                .addConnectionCallbacks(new LocationCallback())
-                .addOnConnectionFailedListener(new LocationCallback())
+                .addConnectionCallbacks(mLocationCallback)
+                .addOnConnectionFailedListener(mLocationCallback)
                 .addApi(com.google.android.gms.location.LocationServices.API)
                 .build();
     }
-    protected void initSensor(){
+
+    protected void initSensor() {
         mSensorManager = (SensorManager) mMainController.getActivity().getSystemService(Context.SENSOR_SERVICE);
-        mSensorManager.registerListener(mCompassListener,mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),SensorManager.SENSOR_DELAY_GAME);
-        mSensorManager.registerListener(mCompassListener,mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD),SensorManager.SENSOR_DELAY_GAME);
+        mSensorManager.registerListener(mCompassListener, mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_GAME);
+        mSensorManager.registerListener(mCompassListener, mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD), SensorManager.SENSOR_DELAY_GAME);
 //        mSensorManager.registerListener(mCompassListener,mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR),SensorManager.SENSOR_DELAY_GAME);
     }
+
     public LocationServices(MainController controller) {
         mMainController = controller;
+        mLocationCallback = new LocationCallback();
         buildGoogleApiClient();
         createLocationRequest();
         initSensor();
+        Log.d("LocationServices","LocationServices Started");
 
     }
 
@@ -123,8 +135,14 @@ public class LocationServices {
         mGoogleApiClient.connect();
     }
 
+    public void stopLocationUpdate() {
+        com.google.android.gms.location.LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, mLocationCallback);
+        Log.d("LocationServices","Location Update Stopped");
+    }
+
     public void stop() {
         mSensorManager.unregisterListener(mCompassListener);
+        stopLocationUpdate();
         if (mGoogleApiClient.isConnected()) {
             mGoogleApiClient.disconnect();
         }
@@ -134,22 +152,28 @@ public class LocationServices {
         if (mMainController.getActivity().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && mMainController.getActivity().checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             mMainController.permissionRequest();
         }
-        if(mConnected && mCameraRotation != null) {
-            mLastLocation = com.google.android.gms.location.LocationServices.FusedLocationApi.getLastLocation(
-                    mGoogleApiClient);
-            Object[] returnObject = {mLastLocation,mCameraRotation};
+        if (mConnected && mCameraRotation != null) {
+//            mLastLocation = com.google.android.gms.location.LocationServices.FusedLocationApi.getLastLocation(
+//                    mGoogleApiClient);
+            stopLocationUpdate();
+            Object[] returnObject = {mLastLocation, mCameraRotation};
             mSensorManager.unregisterListener(mCompassListener);
             return returnObject;
         }
         return null;
     }
 
-    class LocationCallback implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
+    class LocationCallback implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, com.google.android.gms.location.LocationListener {
 
         @Override
         public void onConnected(Bundle bundle) {
-            Log.i("LocationServices","Connected");
+            Log.i("LocationServices", "Connected");
             mConnected = true;
+            if (mMainController.getActivity().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && mMainController.getActivity().checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                mMainController.permissionRequest();
+            }
+            com.google.android.gms.location.LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, mLocationCallback);
+
         }
 
         @Override
@@ -161,6 +185,14 @@ public class LocationServices {
         @Override
         public void onConnectionFailed(ConnectionResult connectionResult) {
             Log.i("LocationServices", "Connection failed: ConnectionResult.getErrorCode() = " + connectionResult.getErrorCode());
+        }
+
+        @Override
+        public void onLocationChanged(Location location) {
+            mLastLocation = location;
+            mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
+            Log.d("LocationServices","LocationUpdate : ("+ location.getLatitude()+","+location.getLongitude()+") On : "+mLastUpdateTime);
+
         }
     }
 

@@ -70,7 +70,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         mCanvasObject = new CanvasObject(vertices,textures, mView.getActivity());
         mCanvasObjectProcessed = new CanvasObject(vertices,textures,mView.getActivity());
 
-        mARObject = new ARObject(this,1);
+        mARObject = new ARObject(this,1,"Sentan");
         mSphere = new SphereObject(this);
         mTextureNormal = new SurfaceTexture (mCanvasObject.getTexturePos()[0]);
         mTextureProcessed = new SurfaceTexture(mCanvasObjectProcessed.getTexturePos()[0]);

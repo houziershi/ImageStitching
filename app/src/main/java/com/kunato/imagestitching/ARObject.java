@@ -18,12 +18,17 @@ package com.kunato.imagestitching;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.drawable.Drawable;
 import android.hardware.SensorManager;
 import android.location.Location;
 import android.opengl.GLES20;
 import android.opengl.GLUtils;
 import android.util.Log;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -105,7 +110,9 @@ public class ARObject {
     private GLRenderer glRenderer;
     private boolean mCameraPositionSet = false;
     private int mNumber;
-    public ARObject(GLRenderer renderer,int number) {
+    private String mName;
+    public ARObject(GLRenderer renderer,int number, String name) {
+        mName = name;
         mLocalLocation = new Location("");
         //mock data
         mLocalLocation.setLatitude(34.732708);
@@ -154,6 +161,7 @@ public class ARObject {
         double bearing = deviceLocation.bearingTo(mLocalLocation);
         float[] mOrientation = new float[3];
         SensorManager.getOrientation(cameraRotation, mOrientation);
+        Log.d("ARObject","Location : ("+deviceLocation.getLatitude()+","+deviceLocation.getLongitude()+")");
         Log.d("ARObject","Object : "+mNumber +" , Bearing degree ; "+bearing + " , Plus devices degree ; "+ mOrientation[0] * 180.0 / Math.PI);
         bearing *= Math.PI / 180.0;
         mTranslationRotation[3] = (float) Math.sin(-mOrientation[0]+ bearing) * 3;
@@ -162,19 +170,42 @@ public class ARObject {
         mCameraPositionSet = true;
     }
     public void loadGLTexture(final Context context, final int texture) {
-        BitmapFactory.Options options = new BitmapFactory.Options();
-        options.inSampleSize = 4;
-        final Bitmap bitmap = BitmapFactory.decodeResource(context.getResources(), texture, options);
         GLES20.glGenTextures(1, this.mTextures, 0);
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE+mNumber);
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0+mNumber);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, this.mTextures[0]);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR_MIPMAP_LINEAR);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
-        mockTexImage2D(bitmap);
+//        mockTexImage2D(context,texture);
+        genTextureFromText(mName);
+    }
+    public void genTextureFromText(String text){
+        Log.d("ARObject","Create Text");
+        // Create an empty, mutable bitmap
+        Bitmap bitmap = Bitmap.createBitmap(256, 256, Bitmap.Config.ARGB_4444);
+        // get a canvas to paint over the bitmap
+        Canvas canvas = new Canvas(bitmap);
+//        bitmap.eraseColor(0);
+//        Drawable background = glRenderer.mView.getActivity().getResources().getDrawable(R.drawable.white_bg);
+//        background.setBounds(0, 0, 256, 256);
+//        background.draw(canvas); // draw the background to our bitmap
+        canvas.drawARGB(0xff ,0xff ,0xff ,0xff);
+        // Draw the text
+        Paint textPaint = new Paint();
+        textPaint.setTextSize(32);
+        textPaint.setAntiAlias(true);
+        textPaint.setARGB(0xff, 0x00, 0x00, 0x00);
+        // draw the text centered
+        canvas.drawText(text, 16,112, textPaint);
+        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D,0,bitmap,0);
+        GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D);
+        bitmap.recycle();
     }
 
 
-    public void mockTexImage2D(Bitmap bitmap){
+    public void mockTexImage2D(Context context,int texture){
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inSampleSize = 4;
+        final Bitmap bitmap = BitmapFactory.decodeResource(context.getResources(), texture, options);
         GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
         GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D);
         bitmap.recycle();
