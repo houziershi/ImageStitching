@@ -20,6 +20,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.hardware.SensorManager;
 import android.location.Location;
@@ -176,26 +177,23 @@ public class ARObject {
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR_MIPMAP_LINEAR);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
 //        mockTexImage2D(context,texture);
-        genTextureFromText(mName);
+        genTextureFromText(context,mName);
     }
-    public void genTextureFromText(String text){
-        Log.d("ARObject","Create Text");
+    public void genTextureFromText(Context context,String text){
         // Create an empty, mutable bitmap
         Bitmap bitmap = Bitmap.createBitmap(256, 256, Bitmap.Config.ARGB_4444);
         // get a canvas to paint over the bitmap
         Canvas canvas = new Canvas(bitmap);
-//        bitmap.eraseColor(0);
-//        Drawable background = glRenderer.mView.getActivity().getResources().getDrawable(R.drawable.white_bg);
-//        background.setBounds(0, 0, 256, 256);
-//        background.draw(canvas); // draw the background to our bitmap
         canvas.drawARGB(0xff ,0xff ,0xff ,0xff);
         // Draw the text
+        Typeface tf = Typeface.createFromAsset(context.getAssets(),"fonts/comicsanms.ttf");
         Paint textPaint = new Paint();
         textPaint.setTextSize(32);
+        textPaint.setTypeface(tf);
         textPaint.setAntiAlias(true);
         textPaint.setARGB(0xff, 0x00, 0x00, 0x00);
         // draw the text centered
-        canvas.drawText(text, 16,112, textPaint);
+        canvas.drawText(text, 80,140, textPaint);
         GLUtils.texImage2D(GLES20.GL_TEXTURE_2D,0,bitmap,0);
         GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D);
         bitmap.recycle();
