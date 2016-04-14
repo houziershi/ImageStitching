@@ -63,7 +63,18 @@ public class LocationServices {
 
         @Override
         public void onAccuracyChanged(Sensor sensor, int accuracy) {
+            if(accuracy == SensorManager.SENSOR_STATUS_ACCURACY_LOW){
+                Log.i("LocationServices",sensor.getName()+" : Low Accuracy");
 
+            }
+            else if(accuracy == SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM){
+
+                Log.i("LocationServices",sensor.getName()+" : Medium Accuracy");
+            }
+            else{
+
+                Log.i("LocationServices",sensor.getName()+" : High Accuracy");
+            }
         }
     };
     private LocationCallback mLocationCallback;
