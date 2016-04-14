@@ -21,6 +21,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.hardware.SensorManager;
 import android.location.Location;
 import android.opengl.GLES20;
@@ -181,7 +182,10 @@ public class ARObject {
         Bitmap bitmap = Bitmap.createBitmap(256, 256, Bitmap.Config.ARGB_4444);
         // get a canvas to paint over the bitmap
         Canvas canvas = new Canvas(bitmap);
-        canvas.drawARGB(0xff ,0xff ,0xff ,0xff);
+        Drawable bg = context.getResources().getDrawable(R.drawable.ic_tab_black_48dp);
+        bg.setBounds(0,0,256,256);
+//        canvas.drawARGB(0xff ,0xff ,0xff ,0xff);
+        bg.draw(canvas);
         // Draw the text
         Typeface tf = Typeface.createFromAsset(context.getAssets(),"fonts/comicsanms.ttf");
         Paint textPaint = new Paint();
