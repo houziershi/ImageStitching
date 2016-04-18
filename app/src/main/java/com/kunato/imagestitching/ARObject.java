@@ -110,12 +110,13 @@ public class ARObject {
     private boolean mCameraPositionSet = false;
     private int mNumber;
     private String mName;
-    public ARObject(GLRenderer renderer,int number, String name) {
+    public ARObject(GLRenderer renderer,int number, String name,double latitude, double longitude) {
         mName = name;
-        mLocalLocation = new Location("");
+
         //mock data
-        mLocalLocation.setLatitude(34.732708);
-        mLocalLocation.setLongitude(135.734754);
+        mLocalLocation = new Location("");
+        mLocalLocation.setLatitude(latitude);
+        mLocalLocation.setLongitude(longitude);
         glRenderer = renderer;
         mNumber = number;
         Context context = renderer.mView.getActivity();
@@ -200,15 +201,6 @@ public class ARObject {
         bitmap.recycle();
     }
 
-
-    public void mockTexImage2D(Context context,int texture){
-        BitmapFactory.Options options = new BitmapFactory.Options();
-        options.inSampleSize = 4;
-        final Bitmap bitmap = BitmapFactory.decodeResource(context.getResources(), texture, options);
-        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
-        GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D);
-        bitmap.recycle();
-    }
 
     //TODO IMPLEMENTS THIS
     public void draw(float[] viewMatrix,float[] projectionMatrix) {

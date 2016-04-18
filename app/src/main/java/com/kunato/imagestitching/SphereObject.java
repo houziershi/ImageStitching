@@ -98,7 +98,7 @@ public class SphereObject {
     public float[] mArea = {0,0,0,0};
     public SphereObject(GLRenderer renderer) {
         glRenderer = renderer;
-        Context context = renderer.mView.getActivity();
+                Context context = renderer.mView.getActivity();
         mSphereShape = new SphereShape(20,210,1);
         mSphereBuffer = mSphereShape.getVertices();
         mSphereBuffer.position(0);

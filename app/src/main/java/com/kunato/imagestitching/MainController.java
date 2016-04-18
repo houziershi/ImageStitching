@@ -4,7 +4,6 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
@@ -36,14 +35,9 @@ import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.widget.Toast;
 
-import org.opencv.android.Utils;
 import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -208,7 +202,7 @@ public class MainController extends GLSurfaceView {
             Log.i("MainController","Received Location : "+ deviceLocation.getLatitude() + "," + deviceLocation.getLongitude());
             Log.i("MainController","Received Rotation : "+Arrays.toString(cameraRotation));
 
-            mGLRenderer.addARObject(cameraRotation, deviceLocation);
+            mGLRenderer.initARObject(cameraRotation, deviceLocation);
             mFirstRun = false;
             mQuaternion[0] = 0f;
             mQuaternion[1] = 0f;

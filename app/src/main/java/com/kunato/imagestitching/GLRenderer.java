@@ -7,7 +7,9 @@ import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.util.Log;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -27,7 +29,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     private final float ZOOM_RATIO = 1f;
     private final float CANVAS_SIZE = 1f * ZOOM_RATIO;
     private final float HEIGHT_WIDTH_RATIO = 1f;
-    private ARObject mARObject;
+    private List<ARObject> mARObject = new ArrayList<>();
     public float[] mRotationMatrix = {1f,0,0,0
             ,0,1f,0,0
             ,0,0,1f,0
@@ -70,7 +72,8 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         mCanvasObject = new CanvasObject(vertices,textures, mView.getActivity());
         mCanvasObjectProcessed = new CanvasObject(vertices,textures,mView.getActivity());
 
-        mARObject = new ARObject(this,1,"Sentan");
+
+
         mSphere = new SphereObject(this);
         mTextureNormal = new SurfaceTexture (mCanvasObject.getTexturePos()[0]);
         mTextureProcessed = new SurfaceTexture(mCanvasObjectProcessed.getTexturePos()[0]);
@@ -80,10 +83,17 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         //(x (vertical),(horizontal)y,z)
         GLES20.glEnable(GLES20.GL_BLEND);
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
+        prepareARObject();
     }
-    public void addARObject(float[] cameraRotation, Location location){
+    public void prepareARObject(){
+        mARObject.add(new ARObject(this,1,"Sentan",34.732708,135.734754));
+        mARObject.add(new ARObject(this,2,"IS Building",34.731918, 135.734522));
+    }
+    public void initARObject(float[] cameraRotation, Location location){
         Log.d("GLRenderer","AddARObject");
-        mARObject.setCameraRotation(cameraRotation, location);
+        for(int i =  0 ; i < mARObject.size() ;i++){
+            mARObject.get(i).setCameraRotation(cameraRotation, location);
+        }
 
     }
     //Core function
@@ -131,8 +141,8 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
 
         mCanvasObjectProcessed.draw(mViewCanvasMatrix,mHomography);
         mSphere.draw(mRotationMatrix,mProjectionMatrix);
-        if(mARObject!= null)
-            mARObject.draw(mRotationMatrix,mProjectionMatrix);
+        for(int i = 0 ; i < mARObject.size() ; i++)
+            mARObject.get(i).draw(mRotationMatrix,mProjectionMatrix);
         GLES20.glFlush();
     }
 
