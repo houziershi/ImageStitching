@@ -17,9 +17,10 @@ package com.kunato.imagestitching;
 
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Rect;
+import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.hardware.SensorManager;
@@ -35,11 +36,12 @@ import java.nio.FloatBuffer;
 public class ARObject {
 
     private final String vertexShaderCode =
-            "uniform mat4 uViewMatrix;" +
+                    "uniform mat4 uViewMatrix;" +
                     "uniform mat4 uScaleMatrix;" +
                     "uniform mat4 uRotationMatrix;" +
                     "uniform mat4 uProjectionMatrix;" +
-                    "uniform mat4 uTranslationMatrix;" +
+                    "uniform vec4 uTranslationVec;" +
+                    "uniform mat4 uAdjustMatrix;" +
                     "attribute vec4 vPosition;" +
                     "attribute vec4 vColor;"+
                     "attribute vec2 a_TexCoordinate;"+
@@ -47,9 +49,9 @@ public class ARObject {
                     "varying vec4 fragmentColor;"+
                     "varying vec2 v_TexCoordinate;"+
                     "void main() {" +
-                    "   vPosition2 = vec4 ( vPosition.x, vPosition.y, vPosition.z, 1 );"+
-                    "   gl_Position = uProjectionMatrix * uViewMatrix * uTranslationMatrix * uRotationMatrix * uScaleMatrix * vPosition2;" +
-                    "   v_TexCoordinate = a_TexCoordinate;" +
+                    "   vPosition2 = (uAdjustMatrix  * uScaleMatrix * vec4 ( vPosition.x , vPosition.z , vPosition.y , 1 )) + uTranslationVec;"+
+                    "   gl_Position = uProjectionMatrix * uViewMatrix * vPosition2;" +
+                    "   v_TexCoordinate = vec2(1,a_TexCoordinate.y) - vec2(a_TexCoordinate.x,0);" +
                     "   fragmentColor = vec4(1,0,1,1);" +
                     "   return;"+
                     "}";
@@ -60,9 +62,7 @@ public class ARObject {
                     "varying vec2 v_TexCoordinate;"+
                     "varying vec4 fragmentColor;" +
                     "void main() {"+
-                    "" +
                     "   gl_FragColor = texture2D(sTexture,v_TexCoordinate);" +
-                    "   " +
                     "   return;" +
                     "}";
     //OpenGL = cols wise???
@@ -73,10 +73,7 @@ public class ARObject {
     //[1 5 9 13]
     //[2 6 10 14]
     //[3 7 11 15]
-    private float[] mTranslationRotation = {1f,0,0,0
-            ,0,1f,0,0f
-            ,0,0,1f,0f
-            ,0,0,0,1f};
+    private float[] mTranslationVector = {0,0,0,0};
     private float[] mScaleRotation = {1f,0,0,0
             ,0,1f,0,0f
             ,0,0,1f,0f
@@ -85,6 +82,12 @@ public class ARObject {
             0.8552484f, 0.10867332f, -0.50669557f, 0.0f,
             -0.046616063f, 0.9899339f, 0.1336327f, 0.0f,
             0.0f, 0.0f, 0.0f, 1.0f};
+    private float[] mAdjustRotation = {1f,0,0,0
+            ,0,1f,0,0f
+            ,0,0,1f,0f
+            ,0,0,0,1f};
+    private final int TEXTSIZE_HEIGHT = 196;
+    private final int TEXTSIZE_WIDTH = 256;
     private Location mLocalLocation;
     private final FloatBuffer mVertexBuffer;
     private final FloatBuffer mTextureBuffer;
@@ -92,9 +95,11 @@ public class ARObject {
     private int mPositionHandle;
     private int mTextureHandle;
     private int mViewMatrixHandle;
-    private int mTranslationMatrixHandle;
+    private int mTranslationVectorHandle;
     private int mRotationMatrixHandle;
     private int mScaleMatrixHandle;
+
+    private int mAdjustMatrixHandle;
     // number of coordinates per vertex in this array
     private float mVertexCoords[];
     private float mTextureCoords[];
@@ -110,9 +115,10 @@ public class ARObject {
     private boolean mCameraPositionSet = false;
     private int mNumber;
     private String mName;
+
     public ARObject(GLRenderer renderer,int number, String name,double latitude, double longitude) {
         mName = name;
-
+    
         //mock data
         mLocalLocation = new Location("");
         mLocalLocation.setLatitude(latitude);
@@ -164,10 +170,15 @@ public class ARObject {
         Log.d("ARObject","Location : ("+deviceLocation.getLatitude()+","+deviceLocation.getLongitude()+")");
         Log.d("ARObject","Object : "+mNumber +" , Bearing degree ; "+bearing + " , Plus devices degree ; "+ mOrientation[0] * 180.0 / Math.PI);
         bearing *= Math.PI / 180.0;
-        mTranslationRotation[3] = (float) Math.sin(-mOrientation[0]+ bearing) * 3;
-        mTranslationRotation[11] =(float) Math.cos(-mOrientation[0]+ bearing) * -3;
+        mTranslationVector[0] = (float) Math.sin(-mOrientation[0]+ bearing) * 3;
+        mTranslationVector[2] = (float) Math.cos(-mOrientation[0]+ bearing) * -3;
         Log.d("ARObject","Real Heading "+(-mOrientation[0]+ bearing)*180.0/Math.PI);
         mCameraPositionSet = true;
+        double DiffAngle = (-mOrientation[0] + bearing) - Math.PI/2.0;
+        mAdjustRotation[0] = (float) Math.sin(DiffAngle);
+        mAdjustRotation[2] = (float) Math.cos(DiffAngle);
+        mAdjustRotation[8] = (float) -Math.cos(DiffAngle);
+        mAdjustRotation[10] = (float) Math.sin(DiffAngle);
     }
     public void loadGLTexture(final Context context, final int texture) {
         GLES20.glGenTextures(1, this.mTextures, 0);
@@ -180,11 +191,11 @@ public class ARObject {
     }
     public void genTextureFromText(Context context,String text){
         // Create an empty, mutable bitmap
-        Bitmap bitmap = Bitmap.createBitmap(256, 256, Bitmap.Config.ARGB_4444);
+        Bitmap bitmap = Bitmap.createBitmap(TEXTSIZE_WIDTH, TEXTSIZE_HEIGHT, Bitmap.Config.ARGB_4444);
         // get a canvas to paint over the bitmap
         Canvas canvas = new Canvas(bitmap);
         Drawable bg = context.getResources().getDrawable(R.drawable.ic_tab_black_48dp);
-        bg.setBounds(0,0,256,256);
+        bg.setBounds(0,0,TEXTSIZE_WIDTH,TEXTSIZE_HEIGHT);
 //        canvas.drawARGB(0xff ,0xff ,0xff ,0xff);
         bg.draw(canvas);
         // Draw the text
@@ -193,9 +204,16 @@ public class ARObject {
         textPaint.setTextSize(32);
         textPaint.setTypeface(tf);
         textPaint.setAntiAlias(true);
-        textPaint.setARGB(0xff, 0x00, 0x00, 0x00);
+        textPaint.setARGB(0xff, 0xff, 0xcd, 0x55);
         // draw the text centered
-        canvas.drawText(text, 80,140, textPaint);
+
+        Rect rect = new Rect(0,0,TEXTSIZE_WIDTH,TEXTSIZE_HEIGHT);
+        RectF bounds = new RectF();
+        bounds.right = textPaint.measureText(text, 0, text.length());
+        bounds.bottom = textPaint.descent() - textPaint.ascent();
+        bounds.left += (rect.width() - bounds.right) / 2.0f;
+        bounds.top += (rect.height() - bounds.bottom) / 2.0f;
+        canvas.drawText(text, bounds.left, bounds.top - textPaint.ascent(), textPaint);
         GLUtils.texImage2D(GLES20.GL_TEXTURE_2D,0,bitmap,0);
         GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D);
         bitmap.recycle();
@@ -223,15 +241,17 @@ public class ARObject {
         // get handle to shape's transformation matrix
         mViewMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uViewMatrix");
         mProjectionMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uProjectionMatrix");
-        mTranslationMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uTranslationMatrix");
+        mAdjustMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uAdjustMatrix");
+        mTranslationVectorHandle = GLES20.glGetUniformLocation(mProgram, "uTranslationVec");
         mRotationMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uRotationMatrix");
         mScaleMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uScaleMatrix");
         // Apply the projection and view transformation
         GLES20.glUniformMatrix4fv(mViewMatrixHandle, 1, false, viewMatrix, 0);
+        GLES20.glUniform4fv(mTranslationVectorHandle, 1 , mTranslationVector,0);
         GLES20.glUniformMatrix4fv(mProjectionMatrixHandle, 1 ,false, projectionMatrix,0);
-        GLES20.glUniformMatrix4fv(mTranslationMatrixHandle, 1, true, mTranslationRotation, 0);
         GLES20.glUniformMatrix4fv(mRotationMatrixHandle, 1, false, mCameraRotation , 0);
         GLES20.glUniformMatrix4fv(mScaleMatrixHandle, 1, true, mScaleRotation, 0);
+        GLES20.glUniformMatrix4fv(mAdjustMatrixHandle,1, true, mAdjustRotation,0);
 
         // Draw the triangle
         GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, vertexCount);
@@ -242,7 +262,7 @@ public class ARObject {
 
 
     public void setModelRotation(float[] modelRotation) {
-        mTranslationRotation = modelRotation;
+        mTranslationVector = modelRotation;
 
     }
 }

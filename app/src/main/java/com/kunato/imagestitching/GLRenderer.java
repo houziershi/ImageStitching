@@ -72,8 +72,6 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         mCanvasObject = new CanvasObject(vertices,textures, mView.getActivity());
         mCanvasObjectProcessed = new CanvasObject(vertices,textures,mView.getActivity());
 
-
-
         mSphere = new SphereObject(this);
         mTextureNormal = new SurfaceTexture (mCanvasObject.getTexturePos()[0]);
         mTextureProcessed = new SurfaceTexture(mCanvasObjectProcessed.getTexturePos()[0]);
@@ -86,8 +84,9 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         prepareARObject();
     }
     public void prepareARObject(){
-        mARObject.add(new ARObject(this,1,"Sentan",34.732708,135.734754));
-        mARObject.add(new ARObject(this,2,"IS Building",34.731918, 135.734522));
+        mARObject.add(new ARObject(this,1,"Sentan",34.732764, 135.734837));
+        mARObject.add(new ARObject(this,2,"IS",34.732118, 135.734693));
+        mARObject.add(new ARObject(this,3,"Dormitory",34.732259, 135.735176));
     }
     public void initARObject(float[] cameraRotation, Location location){
         Log.d("GLRenderer","AddARObject");

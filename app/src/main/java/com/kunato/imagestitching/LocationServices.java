@@ -49,6 +49,9 @@ public class LocationServices {
             if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
                 mGeomagnetic = event.values;
             }
+            if (event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR) {
+//                SensorManager.getRotationMatrixFromVector(mCameraRotation,event.values);
+            }
             if (mGravity == null || mGeomagnetic == null)
                 return;
             float[] I = new float[16];
@@ -58,7 +61,8 @@ public class LocationServices {
             SensorManager.getRotationMatrix(mCameraRotation, I, mGravity, mGeomagnetic);
             float[] mOrientation = new float[3];
             SensorManager.getOrientation(mCameraRotation, mOrientation);
-
+            if(mLastLocation!= null)
+                ((MainActivity)mMainController.getActivity()).getTextView().setText(Math.round(mOrientation[0] * 180.0 / Math.PI)+" ["+mLastLocation.getAccuracy()+"]");
         }
 
         @Override
@@ -129,7 +133,7 @@ public class LocationServices {
         mSensorManager = (SensorManager) mMainController.getActivity().getSystemService(Context.SENSOR_SERVICE);
         mSensorManager.registerListener(mCompassListener, mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER), SensorManager.SENSOR_DELAY_GAME);
         mSensorManager.registerListener(mCompassListener, mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD), SensorManager.SENSOR_DELAY_GAME);
-//        mSensorManager.registerListener(mCompassListener,mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR),SensorManager.SENSOR_DELAY_GAME);
+        mSensorManager.registerListener(mCompassListener,mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR),SensorManager.SENSOR_DELAY_GAME);
     }
 
     public LocationServices(MainController controller) {

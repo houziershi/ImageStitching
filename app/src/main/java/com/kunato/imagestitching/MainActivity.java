@@ -10,18 +10,25 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
+import android.widget.TextView;
+
+import org.w3c.dom.Text;
 
 public class MainActivity extends FragmentActivity {
     boolean mFirstTime = true;
     MainController mView;
     Button b;
+    TextView textView;
 
     private void initComponent(){
         b = new Button(this);
         LinearLayout linearLayout = new LinearLayout(this);
         SeekBar isoSeek = new SeekBar(this);
         SeekBar fSeek = new SeekBar(this);
+        textView = new TextView(this);
         b.setText("AE LOCK");
+        textView.setText("Test");
+        textView.setTextColor(Color.GREEN);
         isoSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -57,9 +64,10 @@ public class MainActivity extends FragmentActivity {
         isoSeek.setLayoutParams(new ActionBar.LayoutParams(400,100));
         fSeek.setLayoutParams(new ActionBar.LayoutParams(400,100));
 
-        linearLayout.addView(fSeek);
+        linearLayout.addView(textView);
+//        linearLayout.addView(fSeek);
         linearLayout.addView(b);
-        linearLayout.addView(isoSeek);
+//        linearLayout.addView(isoSeek);
 
         b.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -83,6 +91,9 @@ public class MainActivity extends FragmentActivity {
         this.addContentView(linearLayout,
                 new ViewGroup.LayoutParams(ViewGroup.LayoutParams.FILL_PARENT, ViewGroup.LayoutParams.FILL_PARENT));
 
+    }
+    public TextView getTextView() {
+        return textView;
     }
     public Button getButton(){
         return b;
