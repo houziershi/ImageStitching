@@ -631,7 +631,6 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	vector<Mat> masks_warped(num_images);
 	vector<Mat> images_warped(num_images);
 	vector<Point> corners(num_images);
-    Point currentImageCorner = images[images.size()-1];
 	for(int i = 0; i < images.size();i++){
 		corners[i] = images[i].corner;
 
