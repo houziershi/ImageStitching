@@ -40,6 +40,7 @@
 //
 //
 //M*/
+
 #include "stitching.h"
 
 using namespace std;
@@ -182,6 +183,7 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 
 
 	__android_log_print(ANDROID_LOG_DEBUG,"C++ aligning"," Timer [ All : %lf Desc : %lf Matcher : %lf  Bundle : %lf ]",a,d,c,b);
+
 //
 // 	Mat K;
 //	tracking_cameras[1].K().convertTo(K,CV_32F);
@@ -336,9 +338,11 @@ void findWarpForSeam(float warped_image_scale,float seam_scale,float work_scale,
 		}
 		Mat_<float> K;
 		Mat image_warped;
-		Mat mask;
+		Mat mask,mask2;
 		mask.create(p_img[i].image.size(), CV_8U);
 		mask.setTo(Scalar::all(255));
+        mask2.create(p_img[i].image.size(), CV_8U);
+        mask2.setTo(Scalar::all(255));
 
 		cameras[i].K().convertTo(K, CV_32F);
 		float swa = (float)seam_work_aspect;
@@ -347,6 +351,7 @@ void findWarpForSeam(float warped_image_scale,float seam_scale,float work_scale,
 		p_img[i].corner;
 		warper->warp(mask, K, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, p_img[i].mask_warped);
 		image_warped.convertTo(p_img[i].image_warped, CV_32F);
+		p_img[i].mask_warped = mask2;
 		mask.release();
 	}
 }
@@ -384,13 +389,14 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
 		p_img[i].compose_corner = roi.tl();
 		p_img[i].compose_size = roi.size();
 	}
-
+    double c_feed_total =0;
 	for (int i = 0; i < p_img.size(); i++)
 	{
+
 		if(p_img[i].done != 0){
 		}
 		else {
-			clock_t c_before = std::clock();
+			clock_t c_c0 = std::clock();
 			Mat img;
 			if (compose_scale - 1 < 0)
 				resize(p_img[i].full_image, img, Size(), compose_scale, compose_scale);
@@ -407,7 +413,19 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
 //			p_img[i].compose_mask_warped = seam_mask & mask_warped;
 			cameras[i].K().convertTo(K, CV_32F);
 			clock_t c_c1 = std::clock();
-			warper->warp(img, K, cameras[i].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
+			Mat xmap,ymap;
+			warper->buildMaps(img.size(),K,cameras[i].R,xmap,ymap);
+            clock_t c_c15 = std::clock();
+            //for(int q = 0; q < img.size();q++){
+            //    int x = xmap.at<float>(q);
+            //    int y = ymap.at<float>(q);
+            //    img_warped.at<float>(q) = img.at<float>(x,y);
+            //}
+            __android_log_print(ANDROID_LOG_DEBUG,"C++ Composition","Type : %d",xmap.type());
+            //Run 2 time ?
+            remap(img,img_warped,xmap,ymap);
+			//remap(img, img_warped, xmap, ymap, INTER_LINEAR, BORDER_REFLECT);
+			//warper->warp(img, K, cameras[i].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
 			clock_t c_c2 = std::clock();
 			img_warped.convertTo(p_img[i].compose_image_warped, CV_8U);
 			img.release();
@@ -418,13 +436,14 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
 
 			p_img[i].compose_mask_warped = seam_mask;
 			p_img[i].done = 1;
-			clock_t c_after = std::clock();
-			__android_log_print(ANDROID_LOG_DEBUG,"C++ Composition","Timer Before Feed %lf %lf %lf %d",
-								(double)(c_c1-c_before)/CLOCKS_PER_SEC,(double)(c_c2-c_c1)/CLOCKS_PER_SEC,(double)(c_after-c_c2)/CLOCKS_PER_SEC,p_img[i].done);
+			clock_t c_c3 = std::clock();
+			__android_log_print(ANDROID_LOG_DEBUG,"C++ Composition","Timer Image Preparing %lf %lf %lf %lf",
+								(double)(c_c1-c_c0)/CLOCKS_PER_SEC,(double)(c_c15-c_c1)/CLOCKS_PER_SEC,(double)(c_c2-c_c15)/CLOCKS_PER_SEC,(double)(c_c3-c_c2)/CLOCKS_PER_SEC);
 
 		}
 		if (!blender_created)
 		{
+		    clock_t c_c4 = std::clock();
 			blender_created = 1;
 			int width = work_width*compose_work_aspect;
 			int offset = work_height*compose_work_aspect/2;//??1.18 at 1.73 aspect???
@@ -444,14 +463,23 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
 			area.at<float>(0,3) = dst.height;
 			__android_log_print(ANDROID_LOG_INFO,"C++ Composition","Rect full size (%d,%d) (%d,%d)",full.x,full.y,full.width,full.height);
 			__android_log_print(ANDROID_LOG_INFO,"C++ Composition","Rect area (%f,%f) (%f,%f)",area.at<float>(0,0),area.at<float>(0,1),area.at<float>(0,2),area.at<float>(0,3));
-
+            clock_t c_c5 = std::clock();
+            __android_log_print(ANDROID_LOG_DEBUG,"C++ Composition","Timer Blender Create %lf",(double)(c_c5-c_c4)/CLOCKS_PER_SEC);
 		}
+		clock_t c_c6 = std::clock();
 		composer::feed(p_img[i].compose_image_warped, p_img[i].compose_mask_warped, p_img[i].compose_corner);
+		clock_t c_c7 = std::clock();
 
+        c_feed_total+=(double)(c_c7-c_c6);
 	}
+	__android_log_print(ANDROID_LOG_DEBUG,"C++ Composition","Timer Feed %lf",c_feed_total/CLOCKS_PER_SEC);
+
+	clock_t c_c8 = std::clock();
 	Mat result_mask;
 	//opencv doing thing as bgr
 	composer::process(result,result_mask);
+	clock_t c_c9 = std::clock();
+	__android_log_print(ANDROID_LOG_DEBUG,"C++ Composition","Timer Merged %lf",(double)(c_c9-c_c8)/CLOCKS_PER_SEC);
 	//out as rgba
 
 }
@@ -487,6 +515,7 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	imagePackage.size = img.size();
 	imagePackage.feature = feature;
 	imagePackage.done = 0;
+
 	images.push_back(imagePackage);
 
 }
@@ -550,6 +579,7 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 					,pairwise_matches[i].dst_img_idx,pairwise_matches[i].matches.size());
 			if(pairwise_matches[i].matches.size() < 15){
 				//return
+				__android_log_print(ANDROID_LOG_WARN,"C++ Stitching","Stitch Rejected < 15 matches point.");
 				images.pop_back();
 				return 0;
 			}
@@ -573,6 +603,9 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 
 	//Check with ceres minimizer should be best solution
 	if(iterationCount > 4){
+
+				__android_log_print(ANDROID_LOG_WARN,"C++ Stitching","Stitch Rejected > 4 ceres minimizer.");
+	    images.pop_back();
 		return 0;
 	}
 	cameras[images.size()-1].R = cameraSet[1].R;
@@ -599,17 +632,31 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	clock_t c_m4 = clock();
 	warpFeature(warped_image_scale,cameras,features,p3d);
 	//Create vector of var because need to call seam_finder
-	vector<Mat> masks_warped(num_images);
-	vector<Mat> images_warped(num_images);
-	vector<Point> corners(num_images);
-	for(int i = 0; i < images.size();i++){
-		corners[i] = images[i].corner;
-		images_warped[i] = images[i].image_warped;
-		masks_warped[i] = images[i].mask_warped;
+	vector<Mat> masks_warped;
+	vector<Mat> images_warped;
+	vector<Point> corners;
+    vector<int> index;
+    Point currentImageCorner = images[images.size()-1].corner;
+    Size currentImageSize = images[images.size()-1].image_warped.size();
+	for(int i = 0; i < images.size(); i++){
+	    Rect r;
+		if(overlapRoi(currentImageCorner, images[i].corner, currentImageSize, images[i].image_warped.size(),r) == true ){
+		__android_log_print(ANDROID_LOG_INFO,"C++ SeamFinder","Overlap %d",i);
+        corners.push_back(images[i].corner);
+        images_warped.push_back(images[i].image_warped);
+        masks_warped.push_back(images[i].mask_warped);
+        index.push_back(i);
+		}
+
+
 	}
 	clock_t c_m5 = clock();
 	Ptr<SeamFinder> seam_finder =  new detail::GraphCutSeamFinder(GraphCutSeamFinderBase::COST_COLOR);
 	seam_finder->find(images_warped, corners, masks_warped);
+	for(int i = 0 ; i < index.size(); i++){
+        images[index[i]].mask_warped = images[index[i]].mask_warped & masks_warped[i];
+	}
+
 	clock_t c_m6 = clock();
 //	Mat out;
 	Mat& area = *(Mat*)areaAddr;

@@ -45,9 +45,8 @@ namespace composer{
         clock_t c_after = std::clock();
         __android_log_print(ANDROID_LOG_DEBUG,"C++ Composer","Feed %lf",(double)(c_after-c_before)/CLOCKS_PER_SEC );
     }
-
+    //TODO Improved
     void process(Mat &dst,Mat &dst_mask){
-
         __android_log_print(ANDROID_LOG_DEBUG,"Composer","Process");
         dst_.setTo(Scalar::all(0), dst_mask_ == 0);
         int channels_setting[] = {2,0, 1,1, 0,2, 3,3};

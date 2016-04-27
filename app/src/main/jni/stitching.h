@@ -27,6 +27,7 @@
 #include "BundleCeres.h"
 #include "composer.h"
 #include "matcher.h"
+#include "util.h"
 #define M_PI 3.14159265358979323846
 #define HQ_COMPOSE
 double work_scale = 0.4, seam_scale = 0.2, compose_scale = 1.0;
