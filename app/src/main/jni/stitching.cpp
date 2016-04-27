@@ -338,9 +338,11 @@ void findWarpForSeam(float warped_image_scale,float seam_scale,float work_scale,
 		}
 		Mat_<float> K;
 		Mat image_warped;
-		Mat mask;
+		Mat mask,mask2;
 		mask.create(p_img[i].image.size(), CV_8U);
 		mask.setTo(Scalar::all(255));
+        mask2.create(p_img[i].image.size(), CV_8U);
+        mask2.setTo(Scalar::all(255));
 
 		cameras[i].K().convertTo(K, CV_32F);
 		float swa = (float)seam_work_aspect;
@@ -349,6 +351,7 @@ void findWarpForSeam(float warped_image_scale,float seam_scale,float work_scale,
 		p_img[i].corner;
 		warper->warp(mask, K, cameras[i].R, INTER_NEAREST, BORDER_CONSTANT, p_img[i].mask_warped);
 		image_warped.convertTo(p_img[i].image_warped, CV_32F);
+		p_img[i].mask_warped = mask2;
 		mask.release();
 	}
 }
@@ -512,6 +515,7 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	imagePackage.size = img.size();
 	imagePackage.feature = feature;
 	imagePackage.done = 0;
+
 	images.push_back(imagePackage);
 
 }
@@ -575,7 +579,7 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 					,pairwise_matches[i].dst_img_idx,pairwise_matches[i].matches.size());
 			if(pairwise_matches[i].matches.size() < 15){
 				//return
-				__android_log_print(ANDROID_LOG_WARN,"C++ Stitching","Stitch Rejected < 15 matches point..");
+				__android_log_print(ANDROID_LOG_WARN,"C++ Stitching","Stitch Rejected < 15 matches point");
 				images.pop_back();
 				return 0;
 			}
@@ -600,7 +604,7 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	//Check with ceres minimizer should be best solution
 	if(iterationCount > 4){
 
-	    __android_log_print(ANDROID_LOG_WARN,"C++ Stitching","Stitch Rejected > 4 iteration..");
+				__android_log_print(ANDROID_LOG_WARN,"C++ Stitching","Stitch Rejected > 4 ceres minimizer.");
 	    images.pop_back();
 		return 0;
 	}
@@ -628,20 +632,31 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	clock_t c_m4 = clock();
 	warpFeature(warped_image_scale,cameras,features,p3d);
 	//Create vector of var because need to call seam_finder
-	vector<Mat> masks_warped(num_images);
-	vector<Mat> images_warped(num_images);
-	vector<Point> corners(num_images);
-    Point currentImageCorner = images[images.size()-1];
-	for(int i = 0; i < images.size();i++){
-		corners[i] = images[i].corner;
+	vector<Mat> masks_warped;
+	vector<Mat> images_warped;
+	vector<Point> corners;
+    vector<int> index;
+    Point currentImageCorner = images[images.size()-1].corner;
+    Size currentImageSize = images[images.size()-1].image_warped.size();
+	for(int i = 0; i < images.size(); i++){
+	    Rect r;
+		if(overlapRoi(currentImageCorner, images[i].corner, currentImageSize, images[i].image_warped.size(),r) == true ){
+		__android_log_print(ANDROID_LOG_INFO,"C++ SeamFinder","Overlap %d",i);
+        corners.push_back(images[i].corner);
+        images_warped.push_back(images[i].image_warped);
+        masks_warped.push_back(images[i].mask_warped);
+        index.push_back(i);
+		}
 
-		images_warped[i] = images[i].image_warped;
-		masks_warped[i] = images[i].mask_warped;
 
 	}
 	clock_t c_m5 = clock();
 	Ptr<SeamFinder> seam_finder =  new detail::GraphCutSeamFinder(GraphCutSeamFinderBase::COST_COLOR);
 	seam_finder->find(images_warped, corners, masks_warped);
+	for(int i = 0 ; i < index.size(); i++){
+        images[index[i]].mask_warped = images[index[i]].mask_warped & masks_warped[i];
+	}
+
 	clock_t c_m6 = clock();
 //	Mat out;
 	Mat& area = *(Mat*)areaAddr;
