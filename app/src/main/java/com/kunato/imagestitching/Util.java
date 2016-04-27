@@ -94,7 +94,13 @@ public class Util {
         return out;
     }
 
-
+    public static float[] lowPass(float[] input, float[] output){
+        if(output == null) return input;
+        for(int i = 0 ; i < input.length ; i++){
+            output[i] = output[i] + 0.25f * (input[i] - output[i]);
+        }
+        return output;
+    }
 
     public static float[] matrixToQuad(float[] matrix){
         float[] quad = new float[4];

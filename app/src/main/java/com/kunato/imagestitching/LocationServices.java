@@ -35,7 +35,7 @@ import java.util.Date;
  * Created by kunato on 4/7/16.
  */
 public class LocationServices {
-    float[] mCameraRotation = null;
+    float[] mCameraRotation = new float[16];
     private SensorEventListener mCompassListener = new SensorEventListener() {
         static final float RAD_2_DEGREE = (float) (180.0f / Math.PI);
         float[] mGravity;
@@ -44,10 +44,10 @@ public class LocationServices {
         @Override
         public void onSensorChanged(SensorEvent event) {
             if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
-                mGravity = event.values;
+                mGravity = Util.lowPass(event.values,mGravity);
             }
             if (event.sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
-                mGeomagnetic = event.values;
+                mGeomagnetic = Util.lowPass(event.values,mGeomagnetic);
             }
             if (event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR) {
 //                SensorManager.getRotationMatrixFromVector(mCameraRotation,event.values);
@@ -55,9 +55,6 @@ public class LocationServices {
             if (mGravity == null || mGeomagnetic == null)
                 return;
             float[] I = new float[16];
-            if (mCameraRotation == null) {
-                mCameraRotation = new float[16];
-            }
             SensorManager.getRotationMatrix(mCameraRotation, I, mGravity, mGeomagnetic);
             float[] mOrientation = new float[3];
             SensorManager.getOrientation(mCameraRotation, mOrientation);
