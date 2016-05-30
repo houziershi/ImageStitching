@@ -208,7 +208,7 @@ public class MainController extends GLSurfaceView {
             mQuaternion[1] = 0f;
             mQuaternion[2] = 0f;
             mQuaternion[3] = 1f;
-            mSensorManager.registerListener(mSensorListener, mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_GAME);
+            mSensorManager.registerListener(mSensorListener, mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_FASTEST);
 //            mSensorManager.registerListener(mSensorListener, mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR),SensorManager.SENSOR_DELAY_GAME);
         }
         Mat rotationCVMat = new Mat();
