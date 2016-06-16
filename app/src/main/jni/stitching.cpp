@@ -698,4 +698,45 @@ inline int glhProjectf(float objx, float objy, float objz, float *modelview, flo
 	windowCoordinate[2]=(1.0+fTempo[6])*0.5;	//Between 0 and 1
 	return 1;
 }
+JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeKeyFrameSelection(JNIEnv *env,jobject obj,jfloatArray rot){
+    jfloat *arr = env->GetFloatArrayElements(rot,0);
+    Mat rotMat(3,3,CV_32F);
+    for(int i = 0; i < 3 ; i++){
+        for(int j = 0; j < 3 ;j++){
+        rotMat.at<float>(i,j) = arr[i*3+j];
+        }
+    }
+    env->ReleaseFloatArrayElements(rot, arr, JNI_ABORT);
+    //Algorithm for automatic captured.
+    double min_x = 3.0;
+    double min_y = 3.0;
+    double min_z = 3.0;
+    for(int i = 0 ; i < images.size() ; i++){
+        double x_input = atan2(rotMat.at<float>(2,1),rotMat.at<float>(2,2));
+        double y_input = atan2(-rotMat.at<float>(2,0),sqrt(rotMat.at<float>(2,1)*rotMat.at<float>(2,1)+rotMat.at<float>(2,2)*rotMat.at<float>(2,2)));
+        double z_input = atan2(rotMat.at<float>(1,0),rotMat.at<float>(0,0));
+
+        double x_i = atan2(images[i].rotation.at<float>(2,1),images[i].rotation.at<float>(2,2));
+        double y_i = atan2(-images[i].rotation.at<float>(2,0),sqrt(images[i].rotation.at<float>(2,1)*images[i].rotation.at<float>(2,1)+images[i].rotation.at<float>(2,2)*images[i].rotation.at<float>(2,2)));
+        double z_i = atan2(images[i].rotation.at<float>(1,0),images[i].rotation.at<float>(0,0));
+        double x = x_i - x_input;
+        double y = y_i - y_input;
+        double z = z_i - z_input;
+        __android_log_print(ANDROID_LOG_INFO,"NativeKeyFrameSelection","JNI %lf %lf %lf",x,y,z);
+        if(abs(y) < abs(min_y)){
+            min_y = abs(y);
+        }
+        if(abs(x) < abs(min_x)){
+            min_x = abs(x);
+        }
+        if(abs(z) < abs(min_z)){
+            min_z = abs(z);
+        }
+    }
+    if(min_y > 0.30 || min_y < -0.30){
+        return 1;
+    }
+    return 0;
+}
+
 

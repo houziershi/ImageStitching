@@ -238,11 +238,10 @@ public class MainController extends GLSurfaceView {
             updatePreview();
         }
         else {
-
-            Log.d("MainController","Button Press, Still Running");
             if(!mAsyncRunning)
                 mRunning = true;
-        }
+            Log.d("MainController","Button Press, Still Running");
+         }
     }
 
     public void Resume() {
@@ -466,14 +465,18 @@ public class MainController extends GLSurfaceView {
                 lastTimeStamp = event.timestamp;
                 float[] swapMat = new float[16];
                 SensorManager.getRotationMatrixFromVector(swapMat, mQuaternion);
-                float[] rotMat = new float[16];
+                float[] correctedRotMat = new float[16];
+                float[] rotMat = new float[9];
                 float[] correctedQuat = {mQuaternion[0],-mQuaternion[1], mQuaternion[2], mQuaternion[3]};
                 float[] temp = new float[16];
-                SensorManager.getRotationMatrixFromVector(rotMat, correctedQuat);
+                SensorManager.getRotationMatrixFromVector(correctedRotMat, correctedQuat);
+                SensorManager.getRotationMatrixFromVector(rotMat,mQuaternion);
                 Matrix.multiplyMM(temp,0,Util.ROTATE_Y_270,0,swapMat,0);
 //                Matrix.multiplyMM(temp, 0, Util.SWAP_X, 0, rotMat, 0);
 //                Matrix.multiplyMM(rotMat, 0, Util.SWAP_Z, 0, temp, 0);
-                mGLRenderer.setRotationMatrix(rotMat);
+                mGLRenderer.setRotationMatrix(correctedRotMat);
+                if(!mAsyncRunning && ImageStitchingNative.getNativeInstance().keyFrameSelection(rotMat) == 1)
+                    mRunning = true;
             }
             if (event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR){
                 Log.i("SensorListener","RotationVector"+Arrays.toString(event.values));
@@ -494,6 +497,21 @@ public class MainController extends GLSurfaceView {
             mat.put(0, 0, mFrameByte);
             Mat imageMat = new Mat();
             Imgproc.cvtColor(mat, imageMat, Imgproc.COLOR_RGBA2BGR);
+            Thread uiThread = new Thread() {
+
+                @Override
+                public void run() {
+                    getActivity().runOnUiThread(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            ((MainActivity)getActivity()).getButton().setBackgroundColor(Color.RED);
+                        }
+                    });
+                    super.run();
+                }
+            };
+            uiThread.start();
             int rtCode = ImageStitchingNative.getNativeInstance().addToPano(imageMat, (Mat) objects[1] ,mNumPicture);
             if(rtCode == 1){
                 mNumPicture++;
@@ -506,8 +524,22 @@ public class MainController extends GLSurfaceView {
         }
 
         protected void onPostExecute(Boolean bool) {
-            ((MainActivity)getActivity()).getButton().setBackgroundColor(Color.GRAY);
-            ((MainActivity)getActivity()).getButton().setText("Capture : " + mNumPicture);
+            Thread uiThread = new Thread() {
+
+                @Override
+                public void run() {
+                    getActivity().runOnUiThread(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            ((MainActivity)getActivity()).getButton().setBackgroundColor(Color.GRAY);
+                            ((MainActivity)getActivity()).getButton().setText("Capture : " + mNumPicture);
+                        }
+                    });
+                    super.run();
+                }
+            };
+            uiThread.start();
             mAsyncRunning = false;
             Log.i("GLSurface Connector","Stitch Complete, "+mNumPicture+"");
 

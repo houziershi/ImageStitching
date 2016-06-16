@@ -17,7 +17,7 @@ import org.w3c.dom.Text;
 public class MainActivity extends FragmentActivity {
     boolean mFirstTime = true;
     MainController mView;
-    Button b;
+    public Button b;
     TextView textView;
 
     private void initComponent(){

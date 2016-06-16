@@ -21,11 +21,15 @@ public class ImageStitchingNative {
     private Context context;
 
     private ImageStitchingNative(){
-
     }
+
+    public native int nativeKeyFrameSelection(float[] rotMat);
     public native void nativeAligning(long imgAddr,long glRotAddr,long glProjAddr,long retMatAddr);
     public native int nativeStitch(long retAddr,long areaAddr,long rotAddr);
     public native void nativeAddStitch(long imgAddr,long rotAddr);
+    public int keyFrameSelection(float[] rotMat) {
+        return nativeKeyFrameSelection(rotMat);
+    }
     public int addToPano(Mat imageMat, Mat rotMat,int mPictureSize){
         Log.d("JAVA Stitch", "Image Input Size : "+imageMat.size().width + "*" + imageMat.size().height);
         Mat ret = new Mat();
