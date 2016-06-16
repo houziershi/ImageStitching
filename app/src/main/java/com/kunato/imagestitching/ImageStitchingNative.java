@@ -31,7 +31,6 @@ public class ImageStitchingNative {
         return nativeKeyFrameSelection(rotMat);
     }
     public int addToPano(Mat imageMat, Mat rotMat,int mPictureSize){
-        Highgui.imwrite("/sdcard/stitch/input"+mPictureSize+".jpg",imageMat);
         Log.d("JAVA Stitch", "Image Input Size : "+imageMat.size().width + "*" + imageMat.size().height);
         Mat ret = new Mat();
         Mat area = new Mat(1,4,CvType.CV_32F);
@@ -43,7 +42,6 @@ public class ImageStitchingNative {
         float[] areaFloat = new float[4];
         area.get(0, 0, areaFloat);
         Log.d("JAVA Stitch", "Return Area [" + Arrays.toString(areaFloat)+"]");
-        Highgui.imwrite("/sdcard/stitch/resultjava" + mPictureSize + ".jpg", ret);
         if(rtCode != 1) {
             return rtCode;
         }
