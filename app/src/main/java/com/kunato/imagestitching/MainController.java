@@ -475,8 +475,10 @@ public class MainController extends GLSurfaceView {
 //                Matrix.multiplyMM(temp, 0, Util.SWAP_X, 0, rotMat, 0);
 //                Matrix.multiplyMM(rotMat, 0, Util.SWAP_Z, 0, temp, 0);
                 mGLRenderer.setRotationMatrix(correctedRotMat);
-                if(!mAsyncRunning && ImageStitchingNative.getNativeInstance().keyFrameSelection(rotMat) == 1)
-                    mRunning = true;
+                if(!mAsyncRunning)
+                    if(!mRunning)
+                        if(ImageStitchingNative.getNativeInstance().keyFrameSelection(rotMat) == 1)
+                            mRunning = true;
             }
             if (event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR){
                 Log.i("SensorListener","RotationVector"+Arrays.toString(event.values));
@@ -492,7 +494,6 @@ public class MainController extends GLSurfaceView {
     //Implement this in JNI
     private class ImageStitchingTask extends AsyncTask<Object, Integer, Boolean> {
         protected Boolean doInBackground(Object... objects) {
-            mAsyncRunning = true;
             Mat mat = new Mat(1080, 1920, CvType.CV_8UC4);
             mat.put(0, 0, mFrameByte);
             Mat imageMat = new Mat();

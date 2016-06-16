@@ -421,14 +421,18 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
             __android_log_print(ANDROID_LOG_DEBUG,"C++ Composition","Type : %d",xmap.type());
             //Run 2 time ?
             remap(img,img_warped,xmap,ymap);
+            __android_log_print(ANDROID_LOG_DEBUG,"C++ Composition","Step : %d",1);
 			//remap(img, img_warped, xmap, ymap, INTER_LINEAR, BORDER_REFLECT);
 			//warper->warp(img, K, cameras[i].R, INTER_LINEAR, BORDER_REFLECT, img_warped);
 			clock_t c_c2 = std::clock();
 			img_warped.convertTo(p_img[i].compose_image_warped, CV_8U);
 			img.release();
 			mask.release();
+			__android_log_print(ANDROID_LOG_DEBUG,"C++ Composition","Step : %d",2);
 			dilate(p_img[i].mask_warped, dilated_mask, Mat());
+			__android_log_print(ANDROID_LOG_DEBUG,"C++ Composition","Step : %d",3);
 			resize(dilated_mask, seam_mask, img_warped.size());
+			__android_log_print(ANDROID_LOG_DEBUG,"C++ Composition","Step : %d",4);
 			img_warped.release();
 
 			p_img[i].compose_mask_warped = seam_mask;
@@ -733,7 +737,7 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
             min_z = abs(z);
         }
     }
-    if(min_y > 0.30 || min_y < -0.30){
+    if(min_y > 0.30){
         return 1;
     }
     return 0;

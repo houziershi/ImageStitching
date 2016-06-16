@@ -147,6 +147,7 @@ public class RSProcessor {
 
 
             if(!mController.mAsyncRunning && mController.mRunning){
+                mController.mAsyncRunning = true;
                 mController.mRunning = false;
                 Log.d("RS", "Running");
                 mOutputAllocation.copyTo(mController.mFrameByte);

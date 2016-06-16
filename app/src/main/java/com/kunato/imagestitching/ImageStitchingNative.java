@@ -31,6 +31,7 @@ public class ImageStitchingNative {
         return nativeKeyFrameSelection(rotMat);
     }
     public int addToPano(Mat imageMat, Mat rotMat,int mPictureSize){
+        Highgui.imwrite("/sdcard/stitch/input"+mPictureSize+".jpg",imageMat);
         Log.d("JAVA Stitch", "Image Input Size : "+imageMat.size().width + "*" + imageMat.size().height);
         Mat ret = new Mat();
         Mat area = new Mat(1,4,CvType.CV_32F);
@@ -50,20 +51,6 @@ public class ImageStitchingNative {
 //        Mat test = new Mat(ret.height(),ret.width(),CvType.CV_8UC4);
 //        Imgproc.cvtColor(ret, test, Imgproc.COLOR_BGR2RGBA);
         Utils.matToBitmap(ret, bitmap);
-        //create a file to write bitmap data
-        File f = new File("/sdcard/stitch/", "test.jpg");
-        try {
-            f.createNewFile();
-            ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 0 /*ignored for PNG*/, bos);
-            byte[] bitmapdata = bos.toByteArray();
-            FileOutputStream fos = new FileOutputStream(f);
-            fos.write(bitmapdata);
-            fos.flush();
-            fos.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
         Log.d("JAVA Stitch", "Add Panorama Finished, Size :" + ret.size().width + "," + ret.size().height);
 
         Factory.getFactory(null).getGlRenderer().getSphere().updateBitmap(bitmap, areaFloat);
