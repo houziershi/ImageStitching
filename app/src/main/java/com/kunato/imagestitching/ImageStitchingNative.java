@@ -6,6 +6,7 @@ import android.util.Log;
 import org.opencv.android.Utils;
 import org.opencv.core.*;
 import org.opencv.highgui.Highgui;
+import org.opencv.imgproc.Imgproc;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -31,6 +32,7 @@ public class ImageStitchingNative {
         return nativeKeyFrameSelection(rotMat);
     }
     public int addToPano(Mat imageMat, Mat rotMat,int mPictureSize){
+        Highgui.imwrite("/sdcard/stitch/input"+mPictureSize+".jpg",imageMat);
         Log.d("JAVA Stitch", "Image Input Size : "+imageMat.size().width + "*" + imageMat.size().height);
         Mat ret = new Mat();
         Mat area = new Mat(1,4,CvType.CV_32F);
@@ -46,8 +48,10 @@ public class ImageStitchingNative {
             return rtCode;
         }
         Bitmap bitmap = Bitmap.createBitmap(ret.cols(), ret.rows(), Bitmap.Config.ARGB_8888);
-//        Mat test = new Mat(ret.height(),ret.width(),CvType.CV_8UC4);
-//        Imgproc.cvtColor(ret, test, Imgproc.COLOR_BGR2RGBA);
+        Mat test = new Mat(ret.height(),ret.width(),CvType.CV_8UC3);
+        Imgproc.cvtColor(ret, test, Imgproc.COLOR_BGRA2RGB);
+        Highgui.imwrite("/sdcard/stitch/pano"+mPictureSize+".jpg",test);
+
         Utils.matToBitmap(ret, bitmap);
         Log.d("JAVA Stitch", "Add Panorama Finished, Size :" + ret.size().width + "," + ret.size().height);
 

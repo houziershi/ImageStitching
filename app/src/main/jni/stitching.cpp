@@ -658,7 +658,10 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	clock_t c_m7 = clock();
 	__android_log_print(ANDROID_LOG_INFO,"C++ Stitching,Timer","%lf [%lf %lf %lf %lf %lf %lf]",((double)c_m7-c_m1)/CLOCKS_PER_SEC,
 						((double)c_m2-c_m1)/CLOCKS_PER_SEC,((double)c_m3-c_m2)/CLOCKS_PER_SEC,((double)c_m4-c_m3)/CLOCKS_PER_SEC,((double)c_m5-c_m4)/CLOCKS_PER_SEC,((double)c_m6-c_m5)/CLOCKS_PER_SEC,((double)c_m7-c_m6)/CLOCKS_PER_SEC);
-	Mat small;
+	cv::FileStorage fs("/sdcard/stitch/rotation.yml", cv::FileStorage::WRITE);
+    for(int i = 0 ; i < images.size() ; i++){
+        fs << "i" << images[i].rotation;
+    }
 	return 1;
 }
 void printMatrix(Mat tmp,string text){

@@ -86,7 +86,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     public void prepareARObject(){
         mARObject.add(new ARObject(this,1,"Sentan",34.732764, 135.734837));
         mARObject.add(new ARObject(this,2,"IS",34.732118, 135.734693));
-        mARObject.add(new ARObject(this,3,"Dormitory",34.732259, 135.735176));
+        mARObject.add(new ARObject(this,3,"Dormitory",34.732039, 135.735305));
     }
     public void initARObject(float[] cameraRotation, Location location){
         Log.d("GLRenderer","AddARObject");

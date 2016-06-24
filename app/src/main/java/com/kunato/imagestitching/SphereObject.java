@@ -107,12 +107,12 @@ public class SphereObject {
 
         mProgram = Util.loadShader(vertexShaderCode, fragmentShaderCode);
 
-        loadGLTexture(context, R.drawable.pano);
+        loadGLTexture(context, R.drawable.pano3, true);
 
 
     }
 
-    public void loadGLTexture(final Context context, final int texture) {
+    public void loadGLTexture(final Context context, final int texture, boolean show) {
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inSampleSize = 4;
         final Bitmap bitmap = BitmapFactory.decodeResource(context.getResources(), texture, options);
@@ -123,14 +123,20 @@ public class SphereObject {
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR_MIPMAP_LINEAR);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
 
-//        mockTexImage2D(bitmap);
+        if(show)
+        mockTexImage2D(bitmap);
     }
 
 
     public void mockTexImage2D(Bitmap bitmap){
-        mArea[0] = mArea[1] = 0;
-        mArea[2] = 9242;
-        mArea[3] = 4620;
+//        mArea[0] = mArea[1] = 0;
+//        mArea[2] = 9242;
+//        mArea[3] = 4620;
+        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
+        mArea[0] = 3257f;
+        mArea[1] = 1460f;
+        mArea[2] = 1881.0f;
+        mArea[3] = 1707.0f;
         GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D);
         bitmap.recycle();
     }

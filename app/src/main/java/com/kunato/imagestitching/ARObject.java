@@ -174,7 +174,7 @@ public class ARObject {
         mTranslationVector[2] = (float) Math.cos(-mOrientation[0]+ bearing) * -3;
         Log.d("ARObject","Real Heading "+(-mOrientation[0]+ bearing)*180.0/Math.PI);
         mCameraPositionSet = true;
-        double DiffAngle = (-mOrientation[0] + bearing) - Math.PI/2.0;
+        double DiffAngle = (bearing) - Math.PI/2.0;
         mAdjustRotation[0] = (float) Math.sin(DiffAngle);
         mAdjustRotation[2] = (float) Math.cos(DiffAngle);
         mAdjustRotation[8] = (float) -Math.cos(DiffAngle);
