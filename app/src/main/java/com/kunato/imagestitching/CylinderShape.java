@@ -32,7 +32,7 @@ import java.nio.ShortBuffer;
  * which is available from http://code.google.com/p/opengles-book-samples/,
  * but some changes were made to make texture look right.
  */
-public class SphereShape {
+public class CylinderShape {
     public static final int FLOAT_SIZE = 4;
     public static final int SHORT_SIZE = 2;
     private FloatBuffer mVertices;
@@ -46,7 +46,7 @@ public class SphereShape {
      * @param x,y,z the origin of the sphere
      * @param r the radius of the sphere
      */
-    public SphereShape(int nSlices, float r, int numIndexBuffers) {
+    public CylinderShape(int nSlices, float r, float z, int numIndexBuffers) {
 
         int nVertices = (nSlices+1) * (nSlices+1);
         if (nVertices > Short.MAX_VALUE) {
@@ -79,25 +79,27 @@ public class SphereShape {
                 int vertexBase = j * 5;
                 //mathPi / 1/(nslide * i)
                 //1 * ratio // 1 / ratio
-                float sini = (float) Math.sin((Math.PI * i/(float)nSlices));
+                float sini = (float) Math.sin((2*Math.PI * i/(float)nSlices));
                 //mathpi + mathpi+ (2*mathpi)/1/(ratio j)
-                float cosi = (float) Math.cos((Math.PI * i/(float)nSlices));
-                float sinj = (float) Math.sin(Math.PI + (2 * Math.PI) * (j / (float) nSlices));
-                float cosj = (float) Math.cos(Math.PI + (2 * Math.PI) * (j/(float)nSlices));
+                float cosi = (float) Math.cos((2*Math.PI * i/(float)nSlices));
+//                float sinj = (float) Math.sin(Math.PI + (2 * Math.PI) * (j / (float) nSlices));
+//                float cosj = (float) Math.cos(Math.PI + (2 * Math.PI) * (j/(float)nSlices));
+                float zRatio = j/(float)nSlices;
                 // vertex x,y,z
                 //x
-                vLineBuffer[vertexBase + 0] = r * sini * sinj;
+                vLineBuffer[vertexBase + 0] = r * sini;
                 //y
-                vLineBuffer[vertexBase + 1] = r * cosi;
+                vLineBuffer[vertexBase + 1] = (zRatio * z) - (z*0.5f);
+
                 //z(swap opencv texture and opengl)
-                vLineBuffer[vertexBase + 2] = -r * sini * cosj;
+                vLineBuffer[vertexBase + 2] = -r * cosi;
 
 //                Log.i("Vertex","("+(x + r * sini * sinj)+","+(y + r * sini * cosj)+","+(z + r * cosi)+")");
 
                 //change u (s)
                 // texture u,v
-                vLineBuffer[vertexBase + 3] = (float) j/ (float) nSlices;
-                vLineBuffer[vertexBase + 4] = (float) i / (float)nSlices;
+                vLineBuffer[vertexBase + 3] = (float) i / (float) nSlices;
+                vLineBuffer[vertexBase + 4] = 1.0f - (float) j / (float) nSlices;
 //                Log.i("Texture","("+((float) j / (float) nSlices)+","+-((1.0f - i) / (float)nSlices)+")");
             }
             mVertices.put(vLineBuffer, 0, vLineBuffer.length);

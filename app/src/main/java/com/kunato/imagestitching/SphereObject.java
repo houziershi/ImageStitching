@@ -83,7 +83,7 @@ public class SphereObject {
     private int mTextureHandle;
     private int mViewMatrixHandle;
     private int mProjectionMatrixHandle;
-    private SphereShape mSphereShape;
+    private CylinderShape mCylinderShape;
     private FloatBuffer mSphereBuffer;
     private ShortBuffer mIndexBuffer;
     float color[] = { 0.63671875f, 0.76953125f, 0.22265625f, 0.0f };
@@ -99,15 +99,15 @@ public class SphereObject {
     public SphereObject(GLRenderer renderer) {
         glRenderer = renderer;
                 Context context = renderer.mView.getActivity();
-        mSphereShape = new SphereShape(20,210,1);
-        mSphereBuffer = mSphereShape.getVertices();
+        mCylinderShape = new CylinderShape(20,50,210,1);
+        mSphereBuffer = mCylinderShape.getVertices();
         mSphereBuffer.position(0);
-        mIndexBuffer = mSphereShape.getIndices()[0];
+        mIndexBuffer = mCylinderShape.getIndices()[0];
         mIndexBuffer.position(0);
 
         mProgram = Util.loadShader(vertexShaderCode, fragmentShaderCode);
 
-        loadGLTexture(context, R.drawable.pano3, true);
+        loadGLTexture(context, R.drawable.pano, false);
 
 
     }
@@ -129,14 +129,14 @@ public class SphereObject {
 
 
     public void mockTexImage2D(Bitmap bitmap){
-//        mArea[0] = mArea[1] = 0;
-//        mArea[2] = 9242;
-//        mArea[3] = 4620;
+        mArea[0] = mArea[1] = 0;
+        mArea[2] = 9242;
+        mArea[3] = 4620;
         GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
-        mArea[0] = 3257f;
-        mArea[1] = 1460f;
-        mArea[2] = 1881.0f;
-        mArea[3] = 1707.0f;
+//        mArea[0] = 3257f;
+//        mArea[1] = 1460f;
+//        mArea[2] = 1881.0f;
+//        mArea[3] = 1707.0f;
         GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D);
         bitmap.recycle();
     }
@@ -169,11 +169,11 @@ public class SphereObject {
         mTextureCoordinateHandle = GLES20.glGetAttribLocation(mProgram, "a_TexCoordinate");
         mSphereBuffer.position(0);
         GLES20.glEnableVertexAttribArray(mPositionHandle);
-        GLES20.glVertexAttribPointer(mPositionHandle, 3, GLES20.GL_FLOAT, false, mSphereShape.getVeticesStride(), mSphereBuffer);
+        GLES20.glVertexAttribPointer(mPositionHandle, 3, GLES20.GL_FLOAT, false, mCylinderShape.getVeticesStride(), mSphereBuffer);
 
         mSphereBuffer.position(3);
         GLES20.glEnableVertexAttribArray(mTextureCoordinateHandle);
-        GLES20.glVertexAttribPointer(mTextureCoordinateHandle, 2, GLES20.GL_FLOAT, false, mSphereShape.getVeticesStride(), mSphereBuffer);
+        GLES20.glVertexAttribPointer(mTextureCoordinateHandle, 2, GLES20.GL_FLOAT, false, mCylinderShape.getVeticesStride(), mSphereBuffer);
         //Uniform
         mTextureHandle = GLES20.glGetUniformLocation(mProgram, "sTexture");
         GLES20.glUniform1i(mTextureHandle, 0);
@@ -187,7 +187,7 @@ public class SphereObject {
         mProjectionMatrixHandle = GLES20.glGetUniformLocation(mProgram,"uProjectionMatrix");
         GLES20.glUniformMatrix4fv(mViewMatrixHandle, 1, false, viewMatrix, 0);
         GLES20.glUniformMatrix4fv(mProjectionMatrixHandle, 1, false, projectionMatrix, 0);
-        GLES20.glDrawElements(GLES20.GL_TRIANGLES, mSphereShape.getNumIndices()[0], GLES20.GL_UNSIGNED_SHORT, mIndexBuffer);
+        GLES20.glDrawElements(GLES20.GL_TRIANGLES, mCylinderShape.getNumIndices()[0], GLES20.GL_UNSIGNED_SHORT, mIndexBuffer);
         GLES20.glDisableVertexAttribArray(mPositionHandle);
         GLES20.glDisableVertexAttribArray(mTextureCoordinateHandle);
 
