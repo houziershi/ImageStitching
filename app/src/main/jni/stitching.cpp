@@ -282,7 +282,7 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 //may won't work need check
 void warpFeature(float warped_image_scale ,vector<CameraParams> cameras,vector<ImageFeatures> features,vector<vector<Point3f>> &out3p){
 	float track_work_aspect = tracking_scale/ work_scale;
-	Ptr<WarperCreator> warper_creator = new cv::SphericalWarper();
+	Ptr<WarperCreator> warper_creator = new cv::CylindricalWarper();
 	Ptr<RotationWarper> warper = warper_creator->create(warped_image_scale * track_work_aspect);
 	p2d.clear();
 	for(int i = 0; i < cameras.size() ;i++){
@@ -329,8 +329,8 @@ inline Point3f calc3DPosition(Point2f keyPoint,float multiplier){
 void findWarpForSeam(float warped_image_scale,float seam_scale,float work_scale, vector<ImagePackage> &p_img,vector<CameraParams> cameras){
 
 	double seam_work_aspect = seam_scale/work_scale;
-	Ptr<WarperCreator> warper_creator = new cv::SphericalWarper();
-//    Ptr<WarperCreator> warper_creator = new cv::CylindricalWarper();
+//	Ptr<WarperCreator> warper_creator = new cv::SphericalWarper();
+    Ptr<WarperCreator> warper_creator = new cv::CylindricalWarper();
 	Ptr<RotationWarper> warper = warper_creator->create(warped_image_scale*seam_work_aspect);
 	for(int i = 0; i < p_img.size(); i++){
 		if(p_img[i].done != 0){
@@ -361,8 +361,8 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
 	Mat dilated_mask, seam_mask;
 	Mat mask, mask_warped;
 	unsigned char blender_created = 0;
-//  Ptr<WarperCreator> warper_creator = new cv::CylindricalWarper();
-	Ptr<WarperCreator> warper_creator = new cv::SphericalWarper();
+    Ptr<WarperCreator> warper_creator = new cv::CylindricalWarper();
+//	Ptr<WarperCreator> warper_creator = new cv::SphericalWarper();
 	Ptr<RotationWarper> warper = warper_creator->create(warped_image_scale * compose_work_aspect);
 	for (int i = 0; i < p_img.size(); ++i)
 	{
