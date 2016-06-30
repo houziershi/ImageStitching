@@ -729,7 +729,7 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
         double x = x_i - x_input;
         double y = y_i - y_input;
         double z = z_i - z_input;
-        __android_log_print(ANDROID_LOG_INFO,"NativeKeyFrameSelection","JNI %lf %lf %lf",x,y,z);
+        //__android_log_print(ANDROID_LOG_INFO,"NativeKeyFrameSelection","JNI %lf %lf %lf",x,y,z);
         if(abs(y) < abs(min_y)){
             min_y = abs(y);
         }

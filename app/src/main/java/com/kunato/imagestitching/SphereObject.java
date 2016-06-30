@@ -107,7 +107,7 @@ public class SphereObject {
 
         mProgram = Util.loadShader(vertexShaderCode, fragmentShaderCode);
 
-        loadGLTexture(context, R.drawable.pano3, true);
+        loadGLTexture(context, R.drawable.pano, false);
 
 
     }
@@ -129,14 +129,14 @@ public class SphereObject {
 
 
     public void mockTexImage2D(Bitmap bitmap){
-//        mArea[0] = mArea[1] = 0;
-//        mArea[2] = 9242;
-//        mArea[3] = 4620;
+        mArea[0] = mArea[1] = 0;
+        mArea[2] = 9242;
+        mArea[3] = 4620;
         GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, bitmap, 0);
-        mArea[0] = 3257f;
-        mArea[1] = 1460f;
-        mArea[2] = 1881.0f;
-        mArea[3] = 1707.0f;
+//        mArea[0] = 3257f;
+//        mArea[1] = 1460f;
+//        mArea[2] = 1881.0f;
+//        mArea[3] = 1707.0f;
         GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D);
         bitmap.recycle();
     }

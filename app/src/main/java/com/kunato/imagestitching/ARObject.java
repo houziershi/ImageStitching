@@ -115,6 +115,7 @@ public class ARObject {
     private boolean mCameraPositionSet = false;
     private int mNumber;
     private String mName;
+    private double mRawAngle = 0.0;
 
     public ARObject(GLRenderer renderer,int number, String name,double latitude, double longitude) {
         mName = name;
@@ -161,7 +162,7 @@ public class ARObject {
 
 
     }
-    public void setCameraRotation(float[] cameraRotation,Location deviceLocation){
+    public void setCameraRotation(float[] cameraRotation, Location deviceLocation, float adjustment){
         Log.d("ARObject","SetCameraRotation");
         mCameraRotation = cameraRotation.clone();
         double bearing = deviceLocation.bearingTo(mLocalLocation);
@@ -170,15 +171,28 @@ public class ARObject {
         Log.d("ARObject","Location : ("+deviceLocation.getLatitude()+","+deviceLocation.getLongitude()+")");
         Log.d("ARObject","Object : "+mNumber +" , Bearing degree ; "+bearing + " , Plus devices degree ; "+ mOrientation[0] * 180.0 / Math.PI);
         bearing *= Math.PI / 180.0;
-        mTranslationVector[0] = (float) Math.sin(-mOrientation[0]+ bearing) * 3;
-        mTranslationVector[2] = (float) Math.cos(-mOrientation[0]+ bearing) * -3;
-        Log.d("ARObject","Real Heading "+(-mOrientation[0]+ bearing)*180.0/Math.PI);
         mCameraPositionSet = true;
-        double DiffAngle = (bearing) - Math.PI/2.0;
-        mAdjustRotation[0] = (float) Math.sin(DiffAngle);
-        mAdjustRotation[2] = (float) Math.cos(DiffAngle);
-        mAdjustRotation[8] = (float) -Math.cos(DiffAngle);
-        mAdjustRotation[10] = (float) Math.sin(DiffAngle);
+        mRawAngle = (-mOrientation[0] + bearing);
+        double DiffAngle = mRawAngle + adjustment;
+        Log.d("ARObject","Set Angle "+(DiffAngle)*180.0/Math.PI);
+        mAdjustRotation[0] = (float) Math.sin(DiffAngle - Math.PI/2.0);
+        mAdjustRotation[2] = (float) Math.cos(DiffAngle - Math.PI/2.0);
+        mAdjustRotation[8] = (float) -Math.cos(DiffAngle - Math.PI/2.0);
+        mAdjustRotation[10] = (float) Math.sin(DiffAngle - Math.PI/2.0);
+
+        mTranslationVector[0] = (float) Math.sin(DiffAngle) * 3;
+        mTranslationVector[2] = (float) Math.cos(DiffAngle) * -3;
+
+    }
+    public void setAdjustment(float adjustment){
+        double DiffAngle = mRawAngle + adjustment;
+        Log.d("ARObject","Set Angle "+(DiffAngle)*180.0/Math.PI);
+        mAdjustRotation[0] = (float) Math.sin(DiffAngle - Math.PI/2.0);
+        mAdjustRotation[2] = (float) Math.cos(DiffAngle - Math.PI/2.0);
+        mAdjustRotation[8] = (float) -Math.cos(DiffAngle - Math.PI/2.0);
+        mAdjustRotation[10] = (float) Math.sin(DiffAngle - Math.PI/2.0);
+        mTranslationVector[0] = (float) Math.sin(DiffAngle) * 3;
+        mTranslationVector[2] = (float) Math.cos(DiffAngle) * -3;
     }
     public void loadGLTexture(final Context context, final int texture) {
         GLES20.glGenTextures(1, this.mTextures, 0);

@@ -28,11 +28,15 @@ import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.renderscript.RenderScript;
+import android.support.v4.view.VelocityTrackerCompat;
 import android.util.Log;
 import android.util.Range;
 import android.util.Size;
+import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.SurfaceHolder;
+import android.view.VelocityTracker;
+import android.view.View;
 import android.widget.Toast;
 
 import org.opencv.core.*;
@@ -96,6 +100,9 @@ public class MainController extends GLSurfaceView {
         }
 
     };
+    private VelocityTracker mVelocityTracker = null;
+
+
 
 
 
@@ -144,7 +151,7 @@ public class MainController extends GLSurfaceView {
     private float ASPECT_TOLERANCE = 0.1f;
     private Factory mFactory;
     LocationServices mLocationServices;
-
+    private float mAngleAdjustment = 0.0f;
     public MainController(Context context) {
         super(context);
         mFactory = Factory.getFactory(this);
@@ -156,6 +163,7 @@ public class MainController extends GLSurfaceView {
         setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
         mLocationServices = new LocationServices(this);
         mLocationServices.start();
+
 
     }
 
@@ -193,16 +201,13 @@ public class MainController extends GLSurfaceView {
         if (mFirstRun) {
             Object[] locationAndRotation = mLocationServices.getLocation();
             Location deviceLocation = (Location) locationAndRotation[0];
-            float[] cameraRotation = (float[]) locationAndRotation[1];
+            final float[] cameraRotation = (float[]) locationAndRotation[1];
 //            Location mockLocation = new Location("");
 //            mockLocation.setLatitude(34.732285);
 //            mockLocation.setLongitude(135.735202);
 
-            Log.i("MainController","LocationServices");
-            Log.i("MainController","Received Location : "+ deviceLocation.getLatitude() + "," + deviceLocation.getLongitude());
-            Log.i("MainController","Received Rotation : "+Arrays.toString(cameraRotation));
 
-            mGLRenderer.initARObject(cameraRotation, deviceLocation);
+            mGLRenderer.initARObject(cameraRotation, deviceLocation, mAngleAdjustment);
             mFirstRun = false;
             mQuaternion[0] = 0f;
             mQuaternion[1] = 0f;
@@ -210,6 +215,58 @@ public class MainController extends GLSurfaceView {
             mQuaternion[3] = 1f;
             mSensorManager.registerListener(mSensorListener, mSensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE), SensorManager.SENSOR_DELAY_FASTEST);
 //            mSensorManager.registerListener(mSensorListener, mSensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR),SensorManager.SENSOR_DELAY_GAME);
+            this.setOnTouchListener(new OnTouchListener() {
+                @Override
+                public boolean onTouch(View v,MotionEvent event) {
+                    int index = event.getActionIndex();
+                    int action = event.getActionMasked();
+                    int pointerId = event.getPointerId(index);
+
+                    switch(action) {
+                        case MotionEvent.ACTION_DOWN:
+                            if(mVelocityTracker == null) {
+                                // Retrieve a new VelocityTracker object to watch the velocity of a motion.
+                                mVelocityTracker = VelocityTracker.obtain();
+                            }
+                            else {
+                                // Reset the velocity tracker back to its initial state.
+                                mVelocityTracker.clear();
+                            }
+                            // Add a user's movement to the tracker.
+                            mVelocityTracker.addMovement(event);
+                            break;
+                        case MotionEvent.ACTION_MOVE:
+                            mVelocityTracker.addMovement(event);
+                            // When you want to determine the velocity, call
+                            // computeCurrentVelocity(). Then call getXVelocity()
+                            // and getYVelocity() to retrieve the velocity for each pointer ID.
+                            mVelocityTracker.computeCurrentVelocity(1000);
+                            // Log velocity of pixels per second
+                            // Best practice to use VelocityTrackerCompat where possible.
+
+                            if(VelocityTrackerCompat.getXVelocity(mVelocityTracker,pointerId) > VelocityTrackerCompat.getYVelocity(mVelocityTracker,pointerId) ){
+                                if(VelocityTrackerCompat.getXVelocity(mVelocityTracker,pointerId)>500){
+                                    mAngleAdjustment += 0.00002f * VelocityTrackerCompat.getXVelocity(mVelocityTracker, pointerId);
+                                    mGLRenderer.setAdjustment(mAngleAdjustment);
+                                }
+                            }
+                            else{
+                                if(VelocityTrackerCompat.getYVelocity(mVelocityTracker,pointerId)>500){
+
+                                }
+                            }
+                            break;
+                        case MotionEvent.ACTION_UP:
+                            // Return a VelocityTracker object back to be re-used by others.
+                        case MotionEvent.ACTION_CANCEL:
+                            mVelocityTracker.recycle();
+                            mVelocityTracker = null;
+                            break;
+                    }
+                    return true;
+                }
+            });
+
         }
         Mat rotationCVMat = new Mat();
         rotationCVMat.create(3, 3, CvType.CV_32F);
