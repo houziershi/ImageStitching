@@ -30,7 +30,7 @@
 #include "util.h"
 #define M_PI 3.14159265358979323846
 #define HQ_COMPOSE
-double work_scale = 0.4, seam_scale = 0.2, compose_scale = 1.0;
+double work_scale = 0.4, seam_scale = 0.2, compose_scale = 1.0, align_scale = 0.2;
 double tracking_scale = 0.2;
 string result_name = "/mnt/sdcard/result.png";
 int blend_type = Blender::NO;
@@ -64,7 +64,7 @@ Mat stitching_descriptor;
 std::vector<KeyPoint> stitiching_keypoint;
 vector<vector<Point2f>> p2d;
 vector<vector<Point3f>> p3d;
-vector<MatchesInfo> pairwise_matches;
+
 //No need to re-done
 Ptr<Feature2D> detector = Algorithm::create<Feature2D>("Feature2D.ORB");
 int detector_setup = 1;

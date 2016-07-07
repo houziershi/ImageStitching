@@ -138,7 +138,6 @@ struct ReprojectionErrorOneVector {
         out2 = eigen_H2*eigen_p2;
         out2/std::sqrt((out2[0]*out2[0] + out2[1]*out2[1] + out2[2]*out2[2]));
         out1-=out2;
-        cout << out1 << endl;
         residuals[0] = out1[0];
         residuals[1] = out1[1];
         residuals[2] = out1[2];

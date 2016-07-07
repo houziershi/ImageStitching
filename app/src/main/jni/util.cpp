@@ -19,6 +19,7 @@ Mat multiply(Mat a,Mat b){
     }
     return out;
 }
+
 //TODO Fix sigmentation fault
 void remap(Mat src,Mat &dst,Mat xmap,Mat ymap){
     dst = Mat(xmap.size(),CV_8UC3);
@@ -38,7 +39,6 @@ void remap(Mat src,Mat &dst,Mat xmap,Mat ymap){
         }
     }
     __android_log_print(ANDROID_LOG_INFO,"C++ Remap","First %f %f",ymap.at<float>(0,0),xmap.at<float>(0,0));
-
 }
 
 

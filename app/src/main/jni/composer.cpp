@@ -9,14 +9,14 @@ namespace composer{
     Mat dst_, dst_mask_,dst_dt_;
     Rect dst_roi_;
     void prepare(Rect dst_roi){
-        __android_log_print(ANDROID_LOG_DEBUG,"Composer","Prepare");
+        __android_log_print(ANDROID_LOG_DEBUG,"Composer","Prepare Normal");
         dst_.create(dst_roi.size(), CV_8UC3);
         dst_.setTo(Scalar::all(0));
         dst_mask_.create(dst_roi.size(), CV_8U);
         dst_mask_.setTo(Scalar::all(0));
         dst_roi_ = dst_roi;
         dst_dt_.create(dst_roi.size(),CV_8U);
-        __android_log_print(ANDROID_LOG_DEBUG,"Composer","Prepared");
+        __android_log_print(ANDROID_LOG_DEBUG,"Composer","Prepared Normal");
     }
 
     void feed(Mat img,Mat mask,Point tl){
