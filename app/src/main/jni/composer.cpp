@@ -1,4 +1,4 @@
-
+/*
 #include "composer.h"
 using namespace std;
 using namespace cv;
@@ -97,7 +97,7 @@ namespace composer{
         dst_mask_.release();
     }
 }
-
+*/
 //
 //  $$$$$$$         $$$   $$$           $$$$
 //  $$               $$$ $$$            $$ $$
@@ -114,7 +114,7 @@ namespace composer{
 
 
 // Pyramid Blending
-/*
+
 #include "composer.h"
 using namespace std;
 using namespace cv;
@@ -225,13 +225,8 @@ static const float WEIGHT_EPS = 1e-5f;
         }
         else// weight_type_ == CV_16S
         {
-            std::ostringstream oss,iss;
-            oss << "/sdcard/stitch/mask" << tl.x << ".jpg";
-            imwrite(oss.str(),mask);
             mask.convertTo(weight_map, CV_16S);
             add(weight_map, 1, weight_map, mask != 0);
-            iss << "/sdcard/stitch/weight_map" << tl.x << ".jpg";
-            imwrite(iss.str(),weight_map);
         }
 
         copyMakeBorder(weight_map, weight_pyr_gauss[0], top, bottom, left, right, BORDER_CONSTANT);
@@ -310,11 +305,11 @@ static const float WEIGHT_EPS = 1e-5f;
         dst_pyr_laplace_.clear();
         dst_band_weights_.clear();
 
-        __android_log_print(ANDROID_LOG_DEBUG,"Composer","Process");
+        __android_log_print(ANDROID_LOG_DEBUG,"C++ Composer","Process");
 
         dst_.setTo(Scalar::all(0), dst_mask_ == 0);
-        int channels_setting[] = {2,0, 1,1, 0,2, 3,3};
-        dst.create(dst_.size(),CV_16SC4);
+
+        dst.create(dst_.size(),CV_8UC4);
 
         int max_x = dst_roi_final_.size().height;
         int max_y = dst_roi_final_.size().width;
@@ -322,7 +317,7 @@ static const float WEIGHT_EPS = 1e-5f;
             for(int y = 0 ; y < dst_roi_.size().width ; y++){
 //                calc distance transform (replace 0.1)
                 //large = avoid seam small = avoid ghost
-                float window_size = 200.0;
+                float window_size = 50.0;
                 float dist_x = 0;
                 float dist_y = 0;
                 if(x < max_x-x){
@@ -341,31 +336,37 @@ static const float WEIGHT_EPS = 1e-5f;
                     dist_x = 1.0;
                 if(dist_y > 1.0)
                     dist_y = 1.0;
+                int weight = 0;
+                if(dst_mask_.at<uchar>(x,y) == 255)
+                    weight = 1;
                 if(dist_x > dist_y){
-                    dst_dt_.at<uchar>(x,y) = dist_y*255;
+                    dst_dt_.at<uchar>(x,y) = dist_y*255*weight;
                 }
                 else{
-                    dst_dt_.at<uchar>(x,y) = dist_x*255;
+                    dst_dt_.at<uchar>(x,y) = dist_x*255*weight;
                 }
             }
         }
+        imwrite("/sdcard/stitch/dt.jpg",dst_dt_);
+        imwrite("/sdcard/stitch/mask.jpg",dst_mask_);
+        Mat uchar_dst;
+        dst_.convertTo(uchar_dst,CV_8UC3);
+        //Mat temp = dst_mask_.mul(dst_dt_);
+        imwrite("/sdcard/stitch/temp.jpg",dst_dt_);
 
-        Mat temp = dst_mask_.mul(dst_dt_);
-        Mat temp_short;
-        temp.convertTo(temp_short,CV_16S);
-        Mat out[] = {dst_,temp_short};
-        Mat before_dst(dst_.size(),CV_16SC4);
+        Mat out[] = {uchar_dst,dst_dt_};
 
-        mixChannels(out,2,&before_dst,1,channels_setting,4);
-        before_dst.convertTo(dst,CV_8UC4);
+        int channels_setting[] = {2,0, 1,1, 0,2, 3,3};
+        __android_log_print(ANDROID_LOG_DEBUG,"C++ Composer","debug %d %d %d",dst_dt_.type(),uchar_dst.type(),dst_mask_.type());
+        mixChannels(out,2,&dst,1,channels_setting,4);
 //        dst = dst_;
 
-        dst_mask = temp;
         dst_dt_.release();
         dst_mask_.release();
         dst_.release();
+        uchar_dst.release();
     }
 }
-*/
+
 
 

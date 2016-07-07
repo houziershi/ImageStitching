@@ -290,6 +290,7 @@ public class MainController extends GLSurfaceView {
                 mLocationServices.start();
             }
             Log.d("MainController","Button Press, AE Lock");
+            mPreviewRequestBuilder.set(SENSOR_EXPOSURE_TIME, (25000000L));
             mPreviewRequestBuilder.set(CONTROL_AF_TRIGGER,CONTROL_AF_TRIGGER_START);
             mPreviewRequestBuilder.set(CONTROL_AWB_LOCK, Boolean.TRUE);
             mPreviewRequestBuilder.set(CONTROL_AE_LOCK, Boolean.TRUE);
@@ -331,16 +332,22 @@ public class MainController extends GLSurfaceView {
             for (String cameraId : manager.getCameraIdList()) {
                 CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
                 if (characteristics.get(LENS_FACING) == LENS_FACING_FRONT) continue;
-
+                mCharacteristics = characteristics;
                 StreamConfigurationMap map = characteristics.get(SCALER_STREAM_CONFIGURATION_MAP);
                 assert map != null;
                 List<Size> outputSizes = Arrays.asList(map.getOutputSizes(ImageFormat.JPEG));
                 Size largest = Collections.max(outputSizes, new Util.CompareSizesByArea());
 
                 mImageReader = ImageReader.newInstance(1080, 1920, ImageFormat.YUV_420_888, 5);
-                Log.d("MainController","CameraCharacteristic, Largest Camera Size ("+largest.getWidth()+","+largest.getHeight()+")");
+                Range<Long> range = mCharacteristics.get(SENSOR_INFO_EXPOSURE_TIME_RANGE);
+                assert range != null;
+                Long minExpT = range.getLower();
+                Long maxExpT = range.getUpper();
+                Log.i("MainController","CameraCharacteristic, Largest Camera Size ("+largest.getWidth()+","+largest.getHeight()+")");
+                Log.i("CameraCharacteristic","Min : "+minExpT+", Max : "+maxExpT);
+
                 mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
-                mCharacteristics = characteristics;
+
                 mCameraId = cameraId;
                 break;
             }
@@ -448,6 +455,7 @@ public class MainController extends GLSurfaceView {
                             Long minExpT = range.getLower();
                             Long maxExpT = range.getUpper();
                             mPreviewRequestBuilder.set(SENSOR_EXPOSURE_TIME, ((minExpT + maxExpT) / 128));
+                            Log.i("CameraCharacteristic","Min : "+minExpT+", Max : "+maxExpT);
                             mPreviewRequestBuilder.set(CONTROL_AF_MODE, CONTROL_AF_MODE_AUTO);
 //                            mPreviewRequestBuilder.set(CONTROL_AE_MODE, CONTROL_AE_MODE_OFF);
                             mPreviewRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION, Util.getJpegOrientation(mCharacteristics, getActivity().getWindowManager().getDefaultDisplay().getRotation()));
