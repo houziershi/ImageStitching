@@ -40,7 +40,7 @@
 //
 //
 //M*/
-
+#define EXPERIMENT 0
 #include "stitching.h"
 
 using namespace std;
@@ -364,8 +364,22 @@ unsigned int np2(unsigned int w){
             return w;
 
 }
-vector<int> overLapped(vector<Point2d> p,vector<Size> size){
+vector<int> findOverlap(vector<Point2i> p,vector<Size> size){
     vector<int> out;
+    Rect last(p[p.size()-1],size[size.size()-1]);
+    for(int i = 0 ; i < p.size()-1;i++){
+        vector<Point2i> p_rect;
+        p_rect.push_back(p[i]);
+        p_rect.push_back(p[i]+Point(0,size[i].height));
+        p_rect.push_back(p[i]+Point(size[i].width,0));
+        p_rect.push_back(p[i]+Point(size[i].width,size[i].height));
+        for(int j = 0 ;j < p_rect.size();j++){
+            if(last.contains(p_rect[j])){
+                out.push_back(i);
+                break;
+            }
+        }
+    }
     return out;
 }
 //need to re-done in some part
@@ -582,12 +596,14 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
     nearestFeature[0] = images[nearestImage].feature;
     nearestFeature[1] = images[images.size()-1].feature;
 	//change here only doing on new pic
-	//matcher::match(features, pairwise_matches,images.size()-1);
+
 	MatchesInfo matchInfo;
 	clock_t c_m1 = clock();
-	matcher::match(nearestFeature,pairwise_matches);
-    //matcher::match(images[nearestImage].feature, images[images.size()-1].feature,matchInfo);
-    //pairwise_matches.push_back(matchInfo);
+	if(EXPERIMENT){
+        matcher::match(nearestFeature,pairwise_matches);
+	}else{
+	    matcher::match(features, pairwise_matches,images.size()-1);
+	}
 	clock_t c_m2 = clock();
 
 	vector<CameraParams> cameras;
@@ -666,7 +682,6 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 
 	work_width = (warped_image_scale ) * M_PI * 2;
 	work_height = (((warped_image_scale) / cameras[0].aspect) * M_PI);//??? 1280
-
 	findWarpForSeam(warped_image_scale,seam_scale,work_scale,images,cameras);
 	clock_t c_m4 = clock();
 	warpFeature(warped_image_scale,cameras,features,p3d);
@@ -675,6 +690,7 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	vector<Mat> images_warped(num_images);
 	vector<Point> corners(num_images);
     vector<Size> masks_size(num_images);
+
 	for(int i = 0; i < images.size();i++){
 		corners[i] = images[i].corner;
         images_warped[i] = images[i].image_warped;
@@ -684,17 +700,51 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
         corners[i].x,corners[i].y,images_warped[i].size().width,images_warped[i].size().height,masks_warped[i].size().width,masks_warped[i].size().height);
 	}
 
-    overLapped(corners,masks_size);
-	clock_t c_m5 = clock();
 	Ptr<SeamFinder> seam_finder =  new detail::GraphCutSeamFinder(GraphCutSeamFinderBase::COST_COLOR);
-	//
-	seam_finder->find(images_warped, corners, masks_warped);
+
+
+
+    //This is experiment
+    if(!EXPERIMENT){
+        seam_finder->find(images_warped,corners,masks_warped);
+    }
+    else
+    {
+    vector<int> overlap_index = findOverlap(corners,masks_size);
+    vector<Mat> masks_warped_new(overlap_index.size()+1);
+    vector<Mat> images_warped_new(overlap_index.size()+1);
+    vector<Point> corners_new(overlap_index.size()+1);
+    corners_new[overlap_index.size()] = images[images.size()-1].corner;
+    masks_warped_new[overlap_index.size()] = images[images.size()-1].mask_warped;
+    images_warped_new[overlap_index.size()] = images[images.size()-1].image_warped;
+    for(int i = 0 ; i < overlap_index.size() ;i++){
+        corners_new[i] = images[overlap_index[i]].corner;
+        masks_warped_new[i] = images[overlap_index[i]].mask_warped;
+        images_warped_new[i] = images[overlap_index[i]].image_warped;
+        __android_log_print(ANDROID_LOG_ERROR,"C++ Stitching","overlap %d ",overlap_index[i]);
+    }
+    seam_finder->find(images_warped_new, corners_new, masks_warped_new);
+    }
+
+
+
+	clock_t c_m5 = clock();
+
+
+
+
+
+	for(int i = 0; i < images.size();i++){
+	__android_log_print(ANDROID_LOG_ERROR,"C++ Stitching","Seam Debug %d %d %d %d %d %d",
+            corners[i].x,corners[i].y,images_warped[i].size().width,images_warped[i].size().height,masks_warped[i].size().width,masks_warped[i].size().height);
+
+    }
 	clock_t c_m6 = clock();
 //	Mat out;
 	Mat& area = *(Mat*)areaAddr;
 	doComposition(warped_image_scale,cameras,images,nullptr,work_scale,compose_scale,blend_type,result,area);
 
-	__android_log_print(ANDROID_LOG_ERROR,"C++ Stitching","Compositioned %d Images",num_images);
+	__android_log_print(ANDROID_LOG_ERROR,"C++ Stitching","Composed %d Images",num_images);
 //	out.convertTo(result,CV_8U);
 	for(int i = 0; i < images.size() ;i++){
 		images[i].rotation = cameras[i].R;
@@ -785,7 +835,7 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
         }
     }
     if(min_y > 0.30 || min_x > 0.5){
-        return 0;
+        return 1;
     }
     return 0;
 }

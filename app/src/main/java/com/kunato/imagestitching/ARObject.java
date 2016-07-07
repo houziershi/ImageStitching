@@ -174,7 +174,6 @@ public class ARObject {
         mCameraPositionSet = true;
         mRawAngle = (-mOrientation[0] + bearing);
         double DiffAngle = mRawAngle + adjustment;
-        Log.d("ARObject","Set Angle "+(DiffAngle)*180.0/Math.PI);
         mAdjustRotation[0] = (float) Math.sin(DiffAngle - Math.PI/2.0);
         mAdjustRotation[2] = (float) Math.cos(DiffAngle - Math.PI/2.0);
         mAdjustRotation[8] = (float) -Math.cos(DiffAngle - Math.PI/2.0);
@@ -186,7 +185,6 @@ public class ARObject {
     }
     public void setAdjustment(float adjustment){
         double DiffAngle = mRawAngle + adjustment;
-        Log.d("ARObject","Set Angle "+(DiffAngle)*180.0/Math.PI);
         mAdjustRotation[0] = (float) Math.sin(DiffAngle - Math.PI/2.0);
         mAdjustRotation[2] = (float) Math.cos(DiffAngle - Math.PI/2.0);
         mAdjustRotation[8] = (float) -Math.cos(DiffAngle - Math.PI/2.0);

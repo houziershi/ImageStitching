@@ -67,15 +67,9 @@ public class SphereObject {
                     "   gl_FragColor = vec4(0,0,0,0);" +
                     "   return;" +
                     "}" +
-                    "if(v_TexCoordinate.x*width_ratio <= img_x || v_TexCoordinate.x*width_ratio >= (img_x+img_width) || " +
-                    "   v_TexCoordinate.y*height_ratio <= img_y || v_TexCoordinate.y*height_ratio >= (img_y+img_height)){" +
-                    "   gl_FragColor = vec4(0,0,0,0);"+
-                    "}" +
-                    "else{" +
-                    "   float diff_x = (((v_TexCoordinate.x*width_ratio) - (img_x))/(img_width));" +
-                    "   float diff_y = (((v_TexCoordinate.y*height_ratio) - (img_y))/(img_height));" +
-                    "   gl_FragColor = texture2D(sTexture,vec2(diff_x,diff_y));" +
-                    "}" +
+                    "float diff_x = (((v_TexCoordinate.x*width_ratio) - (img_x))/(img_width));" +
+                    "float diff_y = (((v_TexCoordinate.y*height_ratio) - (img_y))/(img_height));" +
+                    "gl_FragColor = texture2D(sTexture,vec2(diff_x,diff_y));" +
             "}";
 
     private final int mProgram;
@@ -120,9 +114,10 @@ public class SphereObject {
         GLES20.glGenTextures(1, this.mTextures, 0);
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, this.mTextures[0]);
-        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR_MIPMAP_LINEAR);
-        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
-
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST_MIPMAP_NEAREST);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_NEAREST);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S,GLES20.GL_CLAMP_TO_EDGE);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T,GLES20.GL_CLAMP_TO_EDGE);
         if(show)
         mockTexImage2D(bitmap);
     }

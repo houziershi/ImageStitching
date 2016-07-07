@@ -44,6 +44,9 @@ public class ImageStitchingNative {
         float[] areaFloat = new float[4];
         area.get(0, 0, areaFloat);
         Log.d("JAVA Stitch", "Return Area [" + Arrays.toString(areaFloat)+"]");
+        if(rtCode == -1){
+            return 1;
+        }
         if(rtCode != 1) {
             return rtCode;
         }
@@ -56,16 +59,13 @@ public class ImageStitchingNative {
         Log.d("JAVA Stitch", "Add Panorama Finished, Size :" + ret.size().width + "," + ret.size().height);
 
         Factory.getFactory(null).getGlRenderer().getSphere().updateBitmap(bitmap, areaFloat);
-//        mGLRenderer.getSphere().updateBitmap(bitmap);
         Factory.getFactory(null).getRSProcessor(null, null).requestAligning();;
-//        mProcessor.requestAligning();
-        Factory.getFactory(null).getGlRenderer().captureScreen();
-//        mGLRenderer.captureScreen();
         return rtCode;
     }
 
     public void aligning(Mat input, float[] glRot, float[] glProj){
         Factory.mainController.startRecordQuaternion();
+        Highgui.imwrite("/sdcard/stitch/align.jpg",input);
         long cStart = System.nanoTime();
         Mat glRotMat = new Mat(4,4,CvType.CV_32F);
         glRotMat.put(0, 0, glRot);
@@ -73,13 +73,10 @@ public class ImageStitchingNative {
         glProjMat.put(0, 0, glProj);
         Log.d("JAVA Stitch","Input Rotation");
         for (int i = 0; i < 4; i++) {
-
             Log.d("JAVA Stitch", String.format("[%f %f %f %f]", glRot[i * 4], glRot[i * 4 + 1], glRot[i * 4 + 2], glRot[i*4 +3]));
         }
         Mat ret = new Mat(4,4,CvType.CV_32F);
         long cBeforeNative = System.nanoTime();
-
-        Factory.mainController.startRecordQuaternion();
         nativeAligning(input.getNativeObjAddr(), glRotMat.getNativeObjAddr(), glProjMat.getNativeObjAddr(), ret.getNativeObjAddr());
         long cEnd = System.nanoTime();
         Log.d("JAVA Stitch", "Time Used: "+((cEnd-cBeforeNative)*Util.NS2S)+","+(cBeforeNative-cStart)*Util.NS2S+" Return Mat" + ret.toString());
@@ -101,12 +98,12 @@ public class ImageStitchingNative {
             data = new float[]{1,0,0,0,1,0,0,0,1};
             float[] rotmat = new float[16];
             ret.get(0, 0, rotmat);
-            float[] quad = Util.matrixToQuad(rotmat);
             for (int i = 0; i < 4; i++) {
                Log.d("JAVA Stitch", String.format("[%f %f %f %f]", rotmat[i * 4], rotmat[i * 4 + 1], rotmat[i * 4 + 2], rotmat[i*4 +3]));
             }
+
             Log.d("JAVA Stitch",Arrays.toString(Factory.mainController.mQuaternion));
-//            float[] correctedQuat = {quad[0],-quad[1], quad[2], quad[3]};
+            float[] quad = Util.matrixToQuad(rotmat);
             Factory.mainController.updateQuaternion(quad,Factory.mainController.mDeltaQuaternion);
 //            Factory.mainController.mQuaternion = quad;
 //            Log.d("quad+",Arrays.toString(Factory.mainController.mQuaternion));
@@ -115,6 +112,9 @@ public class ImageStitchingNative {
 
         GLRenderer glRenderer = Factory.getFactory(null).getGlRenderer();
         glRenderer.setHomography(data);
+
+        glRenderer.captureScreen();
+        Log.d("Debug","Capture 2");
 
     }
 

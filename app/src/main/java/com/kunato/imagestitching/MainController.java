@@ -91,7 +91,7 @@ public class MainController extends GLSurfaceView {
     public float[] mQuaternion = new float[4];
     public float[] mDeltaQuaternion = new float[4];
     private boolean mRecordQuaternion = false;
-    public int mNumPicture = 1;
+    public int mNumPicture = 0;
     private float[] lastQuaternion = new float[4];
     private final ImageReader.OnImageAvailableListener mOnImageAvailableListener = new ImageReader.OnImageAvailableListener() {
 
@@ -244,8 +244,9 @@ public class MainController extends GLSurfaceView {
                             // Log velocity of pixels per second
                             // Best practice to use VelocityTrackerCompat where possible.
 
-                            if(VelocityTrackerCompat.getXVelocity(mVelocityTracker,pointerId) > VelocityTrackerCompat.getYVelocity(mVelocityTracker,pointerId) ){
-                                if(VelocityTrackerCompat.getXVelocity(mVelocityTracker,pointerId)>500){
+                            if(VelocityTrackerCompat.getXVelocity(mVelocityTracker,pointerId) * VelocityTrackerCompat.getXVelocity(mVelocityTracker,pointerId)
+                                    > VelocityTrackerCompat.getYVelocity(mVelocityTracker,pointerId) * VelocityTrackerCompat.getYVelocity(mVelocityTracker,pointerId)){
+                                if(VelocityTrackerCompat.getXVelocity(mVelocityTracker,pointerId)* VelocityTrackerCompat.getXVelocity(mVelocityTracker,pointerId)> 500*500){
                                     mAngleAdjustment += 0.00002f * VelocityTrackerCompat.getXVelocity(mVelocityTracker, pointerId);
                                     mGLRenderer.setAdjustment(mAngleAdjustment);
                                 }

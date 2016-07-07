@@ -97,7 +97,7 @@ public class Util {
     public static float[] lowPass(float[] input, float[] output){
         if(output == null) return input;
         for(int i = 0 ; i < input.length ; i++){
-            output[i] = output[i] + 0.15f * (input[i] - output[i]);
+            output[i] = output[i] + 0.015f * (input[i] - output[i]);
         }
         return output;
     }
@@ -178,7 +178,7 @@ public class Util {
                 axisZ = 0;
             }
             float omegaMagnitude = (float) sqrt(axisX * axisX + axisY * axisY + axisZ * axisZ);
-            if (omegaMagnitude > 0.1f) {
+            if (omegaMagnitude > 0.00001f) {
                 axisX /= omegaMagnitude;
                 axisY /= omegaMagnitude;
                 axisZ /= omegaMagnitude;
