@@ -317,7 +317,7 @@ static const float WEIGHT_EPS = 1e-5f;
             for(int y = 0 ; y < dst_roi_.size().width ; y++){
 //                calc distance transform (replace 0.1)
                 //large = avoid seam small = avoid ghost
-                float window_size = 50.0;
+                float window_size = 100.0;
                 float dist_x = 0;
                 float dist_y = 0;
                 if(x < max_x-x){
