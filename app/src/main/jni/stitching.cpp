@@ -812,18 +812,37 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
     double min_x = 3.0;
     double min_y = 3.0;
     double min_z = 3.0;
+    double min_acos_z = 6.0;
     for(int i = 0 ; i < images.size() ; i++){
-        double x_input = atan2(rotMat.at<float>(2,1),rotMat.at<float>(2,2));
-        double y_input = atan2(-rotMat.at<float>(2,0),sqrt(rotMat.at<float>(2,1)*rotMat.at<float>(2,1)+rotMat.at<float>(2,2)*rotMat.at<float>(2,2)));
-        double z_input = atan2(rotMat.at<float>(1,0),rotMat.at<float>(0,0));
+        //double x_input = atan2(rotMat.at<float>(2,1),rotMat.at<float>(2,2));
+        //double y_input = atan2(-rotMat.at<float>(2,0),sqrt(rotMat.at<float>(2,1)*rotMat.at<float>(2,1)+rotMat.at<float>(2,2)*rotMat.at<float>(2,2)));
+        //double z_input = atan2(rotMat.at<float>(1,0),rotMat.at<float>(0,0));
 
-        double x_i = atan2(images[i].rotation.at<float>(2,1),images[i].rotation.at<float>(2,2));
-        double y_i = atan2(-images[i].rotation.at<float>(2,0),sqrt(images[i].rotation.at<float>(2,1)*images[i].rotation.at<float>(2,1)+images[i].rotation.at<float>(2,2)*images[i].rotation.at<float>(2,2)));
-        double z_i = atan2(images[i].rotation.at<float>(1,0),images[i].rotation.at<float>(0,0));
-        double x = x_i - x_input;
-        double y = y_i - y_input;
-        double z = z_i - z_input;
-        //__android_log_print(ANDROID_LOG_INFO,"NativeKeyFrameSelection","JNI %lf %lf %lf",x,y,z);
+        //double x_i = atan2(images[i].rotation.at<float>(2,1),images[i].rotation.at<float>(2,2));
+        //double y_i = atan2(-images[i].rotation.at<float>(2,0),sqrt(images[i].rotation.at<float>(2,1)*images[i].rotation.at<float>(2,1)+images[i].rotation.at<float>(2,2)*images[i].rotation.at<float>(2,2)));
+        //double z_i = atan2(images[i].rotation.at<float>(1,0),images[i].rotation.at<float>(0,0));
+
+
+        //double x = x_i - x_input;
+        //double y = y_i - y_input;
+        //double z = z_i - z_input;
+
+        Mat diff = rotMat.inv() * images[i].rotation;
+
+        double x = atan2(diff.at<float>(2,1),diff.at<float>(2,2));
+        double y = atan2(-diff.at<float>(2,0),sqrt(diff.at<float>(2,1)*diff.at<float>(2,1)+diff.at<float>(2,2)*diff.at<float>(2,2)));
+        double z = atan2(diff.at<float>(1,0),diff.at<float>(0,0));
+        Mat z_axis = Mat::zeros(3,1,CV_32F);
+        z_axis.at<float>(0,0) = 0;
+        z_axis.at<float>(1,0) = 0;
+        z_axis.at<float>(2,0) = 1;
+        Mat z_diff = diff*z_axis;
+        //__android_log_print(ANDROID_LOG_INFO,"z_diff","%lf %lf %lf",z_diff.at<float>(0,0),z_diff.at<float>(1,0),z_diff.at<float>(2,0));
+
+        normalize(z_diff,z_diff);
+        double cos_z = z_axis.at<float>(0,0) * z_diff.at<float>(0,0) + z_axis.at<float>(1,0) * z_diff.at<float>(1,0) + z_axis.at<float>(2,0) * z_diff.at<float>(2,0);
+        double acos_z = acos(cos_z);
+        __android_log_print(ANDROID_LOG_INFO,"Z_diff","%lf",acos_z*180/M_PI);
         if(abs(y) < abs(min_y)){
             min_y = abs(y);
         }
@@ -833,9 +852,17 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
         if(abs(z) < abs(min_z)){
             min_z = abs(z);
         }
+        if(abs(acos_z) < abs(min_acos_z)){
+            min_acos_z = acos_z;
+        }
+    }
+    if(min_acos_z > 0.3){
+    __android_log_print(ANDROID_LOG_INFO,"Z_diff_out","%lf",min_acos_z);
+
+        return 1;
     }
     if(min_y > 0.30 || min_x > 0.5){
-        return 1;
+        return 0;
     }
     return 0;
 }
