@@ -85,8 +85,8 @@ public class ImageStitchingNative {
         if(false) {
             data = new float[9];
             ret.get(0, 0, data);
-            data[2] /= 1080f;
-            data[5] /= 1920f;
+            data[2] /= input.height();
+            data[5] /= input.width();
 
             Log.d("JAVA Stitch","HomographyMat");
             for (int i = 0; i < 3; i++) {

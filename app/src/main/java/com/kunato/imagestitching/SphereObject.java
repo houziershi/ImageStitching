@@ -62,6 +62,7 @@ public class SphereObject {
                     "uniform float img_y;" +
                     "uniform float img_width;" +
                     "uniform float img_height;" +
+                    "uniform int alpha;" +
                     "void main() {" +
                     "if(img_x == 0.0 && img_y == 0.0 && img_width == 0.0 && img_height == 0.0){" +
                     "   gl_FragColor = vec4(0,0,0,0);" +
@@ -70,6 +71,9 @@ public class SphereObject {
                     "float diff_x = (((v_TexCoordinate.x*width_ratio) - (img_x))/(img_width));" +
                     "float diff_y = (((v_TexCoordinate.y*height_ratio) - (img_y))/(img_height));" +
                     "gl_FragColor = texture2D(sTexture,vec2(diff_x,diff_y));" +
+                    "if(alpha == 1 && gl_FragColor.a != 0.0){" +
+                    "gl_FragColor.a = 1.0;" +
+                    "}" +
             "}";
 
     private final int mProgram;
@@ -148,6 +152,7 @@ public class SphereObject {
         int yh = GLES20.glGetUniformLocation(mProgram,"img_y");
         int widthh = GLES20.glGetUniformLocation(mProgram,"img_width");
         int heighth = GLES20.glGetUniformLocation(mProgram,"img_height");
+        int alphah = GLES20.glGetUniformLocation(mProgram,"alpha");
 
         if(mTexRequireUpdate){
             Log.i("GLSphere", "Bitmap updated,Return to normal activity.");
@@ -177,6 +182,8 @@ public class SphereObject {
         GLES20.glUniform1f(yh,mArea[1]);
         GLES20.glUniform1f(widthh,mArea[2]);
         GLES20.glUniform1f(heighth,mArea[3]);
+        int alpha_fixed = readPixel ? 1 : 0;
+        GLES20.glUniform1i(alphah,alpha_fixed);
 
         mViewMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uViewMatrix");
         mProjectionMatrixHandle = GLES20.glGetUniformLocation(mProgram,"uProjectionMatrix");

@@ -83,8 +83,10 @@ public class MainController extends GLSurfaceView {
         }
 
     };
+    private Size mSize = new Size(1080,1920);
+
     //Using in OnImageAvailableListener
-    public byte[] mFrameByte = new byte[1920*1080*4];
+    public byte[] mFrameByte = new byte[mSize.getHeight()*mSize.getWidth()*4];
     public boolean mAsyncRunning = false;
     public boolean mRunning = false;
     private boolean mFirstRun = true;
@@ -276,7 +278,7 @@ public class MainController extends GLSurfaceView {
                 rotationCVMat.put(i, j, mRotmat[i * 4 + j]);
         }
 
-        Mat mat = new Mat(1080, 1920, CvType.CV_8UC4);
+        Mat mat = new Mat(mSize.getWidth(), mSize.getHeight(), CvType.CV_8UC4);
         mat.put(0, 0, mFrameByte);
         Mat image = new Mat();
         Imgproc.cvtColor(mat, image, Imgproc.COLOR_RGBA2BGR);
@@ -338,13 +340,13 @@ public class MainController extends GLSurfaceView {
                 List<Size> outputSizes = Arrays.asList(map.getOutputSizes(ImageFormat.JPEG));
                 Size largest = Collections.max(outputSizes, new Util.CompareSizesByArea());
 
-                mImageReader = ImageReader.newInstance(1080, 1920, ImageFormat.YUV_420_888, 5);
+                mImageReader = ImageReader.newInstance(mSize.getWidth(), mSize.getHeight(), ImageFormat.YUV_420_888, 5);
                 Range<Long> range = mCharacteristics.get(SENSOR_INFO_EXPOSURE_TIME_RANGE);
                 assert range != null;
-                Long minExpT = range.getLower();
-                Long maxExpT = range.getUpper();
-                Log.i("MainController","CameraCharacteristic, Largest Camera Size ("+largest.getWidth()+","+largest.getHeight()+")");
-                Log.i("CameraCharacteristic","Min : "+minExpT+", Max : "+maxExpT);
+                //Long minExpT = range.getLower();
+                //Long maxExpT = range.getUpper();
+                //Log.i("MainController","CameraCharacteristic, Largest Camera Size ("+largest.getWidth()+","+largest.getHeight()+")");
+                //Log.i("CameraCharacteristic","Min : "+minExpT+", Max : "+maxExpT);
 
                 mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
 
@@ -361,10 +363,10 @@ public class MainController extends GLSurfaceView {
             }
 
 
-            if (getActivity().checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                permissionRequest();
-                return;
-            }
+//            if (getActivity().checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+//                permissionRequest();
+//                return;
+//            }
             manager.openCamera(mCameraId, mStateCallback, mBackgroundHandler);
 
         } catch (Exception e) {
@@ -437,7 +439,7 @@ public class MainController extends GLSurfaceView {
 
             Surface mProcessSurface = mImageReader.getSurface();
             Surface mGLProcessSurface = new Surface(glProcessTexture);
-            mProcessor = mFactory.getRSProcessor(mRS,new Size(1920,1080));
+            mProcessor = mFactory.getRSProcessor(mRS,new Size(mSize.getHeight(),mSize.getWidth()));
 
             mProcessingHdrSurface = mProcessor.getInputHdrSurface();
             mProcessor.setOutputSurface(mGLProcessSurface);
@@ -488,15 +490,15 @@ public class MainController extends GLSurfaceView {
     }
 
     public void permissionRequest() {
-        if (getActivity().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
-                getActivity().checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
-                getActivity().checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
-                getActivity().checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
-                getActivity().checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            getActivity().requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                            Manifest.permission.CAMERA, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
-                    1);
-        }
+//        if (getActivity().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
+//                getActivity().checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED ||
+//                getActivity().checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
+//                getActivity().checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED ||
+//                getActivity().checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+//            getActivity().requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE,
+//                            Manifest.permission.CAMERA, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},
+//                    1);
+//        }
     }
     public void startRecordQuaternion(){
         mDeltaQuaternion[0] = 0f;
@@ -560,7 +562,7 @@ public class MainController extends GLSurfaceView {
     //Implement this in JNI
     private class ImageStitchingTask extends AsyncTask<Object, Integer, Boolean> {
         protected Boolean doInBackground(Object... objects) {
-            Mat mat = new Mat(1080, 1920, CvType.CV_8UC4);
+            Mat mat = new Mat(mSize.getWidth(), mSize.getHeight(), CvType.CV_8UC4);
             mat.put(0, 0, mFrameByte);
             Mat imageMat = new Mat();
             Imgproc.cvtColor(mat, imageMat, Imgproc.COLOR_RGBA2BGR);

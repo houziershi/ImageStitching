@@ -181,9 +181,9 @@ public class LocationServices {
         public void onConnected(Bundle bundle) {
             Log.i("LocationServices", "Connected");
             mConnected = true;
-            if (mMainController.getActivity().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && mMainController.getActivity().checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                mMainController.permissionRequest();
-            }
+//            if (mMainController.getActivity().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && mMainController.getActivity().checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+//                mMainController.permissionRequest();
+//            }
             com.google.android.gms.location.LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, mLocationCallback);
 
         }

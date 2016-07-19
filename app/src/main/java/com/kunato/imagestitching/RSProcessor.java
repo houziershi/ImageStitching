@@ -166,8 +166,10 @@ public class RSProcessor {
         }
 
         private void alignAction() {
-            Mat mat = new Mat(1080, 1920, CvType.CV_8UC4);
-            byte[] frameByte = new byte[1080*1920*4];
+//            Log.d("RSProcessing",mSize.getWidth()+","+mSize.getHeight());
+            //Swap width and height because of camera array.
+            Mat mat = new Mat(mSize.getHeight(), mSize.getWidth(), CvType.CV_8UC4);
+            byte[] frameByte = new byte[mSize.getWidth()*mSize.getHeight()*4];
             mOutputAllocation.copyTo(frameByte);
             mat.put(0, 0, frameByte);
             Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGBA2BGR);
