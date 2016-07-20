@@ -15,15 +15,13 @@
  */
 #pragma version(1)
 #pragma rs java_package_name(com.kunato.imagestitching)
-#pragma rs_fp_relaxed
 
 rs_allocation gCurrentFrame;
-rs_allocation gPrevFrame;
 int gCutPointX = 0;
 int gDoMerge = 0;
 int gFrameCounter = 0;
 
-uchar4 __attribute__((kernel)) mergeHdrFrames(uchar4 prevPixel, uint32_t x, uint32_t y) {
+uchar4 __attribute__((kernel)) mergeHdrFrames(uint32_t x, uint32_t y) {
 
     // Read in pixel values from latest frame - YUV color space
 
@@ -77,8 +75,6 @@ uchar4 __attribute__((kernel)) mergeHdrFrames(uchar4 prevPixel, uint32_t x, uint
             mergedPixel.g * 1814 / 1024 - 227;
     rgb.a = 255;
 
-    // Store current pixel for next frame
-    rsSetElementAt_uchar4(gPrevFrame, curPixel, x, y);
 
     // Write out merged HDR result
     uchar4 out = convert_uchar4(clamp(rgb, 0, 255));

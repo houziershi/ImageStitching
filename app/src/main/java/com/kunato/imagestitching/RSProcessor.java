@@ -38,13 +38,9 @@ import org.opencv.imgproc.Imgproc;
 public class RSProcessor {
 
     private Allocation mInputAllocation;
-    private Allocation mPrevAllocation;
-    private Allocation mOutputAllocation;
 
-    private Surface mOutputSurface;
     private HandlerThread mProcessingThread;
     private Handler mProcessingHandler;
-    private ScriptC_processing mergeScript;
     public ProcessingTask mTask;
     private Size mSize;
     private MainController mController;
@@ -52,29 +48,15 @@ public class RSProcessor {
     public RSProcessor(RenderScript rs, Size dimensions, MainController controller) {
         mSize = dimensions;
         mController = controller;
-
         Type.Builder yuvTypeBuilder = new Type.Builder(rs, Element.YUV(rs));
         yuvTypeBuilder.setX(dimensions.getWidth());
         yuvTypeBuilder.setY(dimensions.getHeight());
-        yuvTypeBuilder.setYuvFormat(ImageFormat.YUV_420_888);
+        yuvTypeBuilder.setYuvFormat(ImageFormat.YV12);
         mInputAllocation = Allocation.createTyped(rs, yuvTypeBuilder.create(),
-                Allocation.USAGE_IO_INPUT | Allocation.USAGE_SCRIPT);
-        Type.Builder rgbTypeBuilder = new Type.Builder(rs, Element.RGBA_8888(rs));
-        rgbTypeBuilder.setX(dimensions.getWidth());
-        rgbTypeBuilder.setY(dimensions.getHeight());
-        mPrevAllocation = Allocation.createTyped(rs, rgbTypeBuilder.create(),
-                Allocation.USAGE_SCRIPT);
-        mOutputAllocation = Allocation.createTyped(rs, rgbTypeBuilder.create(),
-                Allocation.USAGE_IO_OUTPUT | Allocation.USAGE_SCRIPT);
-
-        mProcessingThread = new HandlerThread("ViewfinderProcessor");
+                Allocation.USAGE_IO_INPUT);
+        mProcessingThread = new HandlerThread("RSProcessor");
         mProcessingThread.start();
         mProcessingHandler = new Handler(mProcessingThread.getLooper());
-
-        mergeScript = new ScriptC_processing(rs);
-
-        mergeScript.set_gPrevFrame(mPrevAllocation);
-
         mTask = new ProcessingTask(mInputAllocation);
         Log.d("RS","RS Processor init");
 
@@ -86,10 +68,6 @@ public class RSProcessor {
         return mInputAllocation.getSurface();
     }
 
-    public void setOutputSurface(Surface output) {
-        mOutputAllocation.setSurface(output);
-    }
-
 
     /**
      * Simple class to keep track of incoming frame count,
@@ -97,28 +75,26 @@ public class RSProcessor {
      */
     class ProcessingTask implements Runnable, Allocation.OnBufferAvailableListener {
         private int mPendingFrames = 0;
-        private int mFrameCounter = 0;
 
         private Allocation mInputAllocation;
 
         public ProcessingTask(Allocation input) {
             mInputAllocation = input;
             mInputAllocation.setOnBufferAvailableListener(this);
-
             Log.d("RS","processing task init");
         }
 
         @Override
         public void onBufferAvailable(Allocation a) {
-
-            synchronized(this) {
                 mPendingFrames++;
                 mProcessingHandler.post(this);
-            }
+                Log.d("RS","BufferAvailable");
+
         }
 
         @Override
         public void run() {
+            Log.d("RS","Running");
             // Find out how many frames have arrived
             int pendingFrames;
             synchronized (this) {
@@ -133,13 +109,7 @@ public class RSProcessor {
             for (int i = 0; i < pendingFrames; i++) {
                 mInputAllocation.ioReceive();
             }
-            mergeScript.set_gFrameCounter(mFrameCounter++);
-            mergeScript.set_gCurrentFrame(mInputAllocation);
-            mergeScript.set_gDoMerge(0);
 
-            // Run processing pass
-            mergeScript.forEach_mergeHdrFrames(mPrevAllocation, mOutputAllocation);
-            mOutputAllocation.ioSend();
             if(alignRequest){
                 alignAction();
                 alignRequest = false;
@@ -150,7 +120,7 @@ public class RSProcessor {
                 mController.mAsyncRunning = true;
                 mController.mRunning = false;
                 Log.d("RS", "Running");
-                mOutputAllocation.copyTo(mController.mFrameByte);
+                mInputAllocation.copyTo(mController.mFrameByte);
                 mController.doStitching();
             }
 
@@ -170,7 +140,7 @@ public class RSProcessor {
             //Swap width and height because of camera array.
             Mat mat = new Mat(mSize.getHeight(), mSize.getWidth(), CvType.CV_8UC4);
             byte[] frameByte = new byte[mSize.getWidth()*mSize.getHeight()*4];
-            mOutputAllocation.copyTo(frameByte);
+            mInputAllocation.copyTo(frameByte);
             mat.put(0, 0, frameByte);
             Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGBA2BGR);
             float[] rotMat = new float[16];

@@ -29,40 +29,6 @@ public class MainActivity extends FragmentActivity {
         b.setText("AE LOCK");
         textView.setText("Test");
         textView.setTextColor(Color.GREEN);
-        isoSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                mView.ESeekBarChanged(progress);
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-
-            }
-        });
-        fSeek.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                mView.FSeekBarChanged(progress);
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-
-            }
-        });
-        isoSeek.setLayoutParams(new ActionBar.LayoutParams(400,100));
-        fSeek.setLayoutParams(new ActionBar.LayoutParams(400,100));
 
         linearLayout.addView(textView);
 //        linearLayout.addView(fSeek);

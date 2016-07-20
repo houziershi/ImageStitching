@@ -161,9 +161,9 @@ public class LocationServices {
     }
 
     public Object[] getLocation() {
-        if (mMainController.getActivity().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && mMainController.getActivity().checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            mMainController.permissionRequest();
-        }
+//        if (mMainController.getActivity().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && mMainController.getActivity().checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+//            mMainController.permissionRequest();
+//        }
         if (mConnected && mCameraRotation != null) {
 //            mLastLocation = com.google.android.gms.location.LocationServices.FusedLocationApi.getLastLocation(
 //                    mGoogleApiClient);

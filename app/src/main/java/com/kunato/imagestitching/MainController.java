@@ -21,12 +21,14 @@ import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.location.Location;
+import android.media.Image;
 import android.media.ImageReader;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.renderscript.Allocation;
 import android.renderscript.RenderScript;
 import android.support.v4.view.VelocityTrackerCompat;
 import android.util.Log;
@@ -35,13 +37,16 @@ import android.util.Size;
 import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.SurfaceHolder;
+import android.view.TextureView;
 import android.view.VelocityTracker;
 import android.view.View;
 import android.widget.Toast;
 
 import org.opencv.core.*;
+import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -62,12 +67,12 @@ public class MainController extends GLSurfaceView {
     private Activity mActivity;
     static {
         System.loadLibrary("nonfree_stitching");
-    }
+    };
+
 
     private static final String TAG = MainController.class.getName();
     private final CameraCaptureSession.CaptureCallback mCaptureCallback = new CameraCaptureSession.CaptureCallback() {
         private void process(CaptureResult result) {
-
         }
 
         @Override
@@ -83,7 +88,9 @@ public class MainController extends GLSurfaceView {
         }
 
     };
-    private Size mSize = new Size(1080,1920);
+    //Nexus5x = 1080,1920
+    //Note10.1 = 1080,1440
+    private Size mSize = new Size(1080,1440);
 
     //Using in OnImageAvailableListener
     public byte[] mFrameByte = new byte[mSize.getHeight()*mSize.getWidth()*4];
@@ -99,6 +106,10 @@ public class MainController extends GLSurfaceView {
 
         @Override
         public void onImageAvailable(ImageReader reader) {
+            Image image = reader.acquireNextImage();
+            Image.Plane[] planes = image.getPlanes();
+            image.close();
+
         }
 
     };
@@ -141,14 +152,11 @@ public class MainController extends GLSurfaceView {
     private ImageReader mImageReader;
     private CaptureRequest.Builder mPreviewRequestBuilder;
     private Semaphore mCameraOpenCloseLock = new Semaphore(1);
-    private RSProcessor mProcessor;
     private SensorListener mSensorListener;
     private SensorManager mSensorManager;
     private CameraCharacteristics mCharacteristics;
     public GLRenderer mGLRenderer;
     private String mCameraId;
-    private Surface mProcessingHdrSurface;
-    private RenderScript mRS;
     private float TARGET_ASPECT = 3.f / 4.f;
     private float ASPECT_TOLERANCE = 0.1f;
     private Factory mFactory;
@@ -158,11 +166,10 @@ public class MainController extends GLSurfaceView {
         super(context);
         mFactory = Factory.getFactory(this);
         mActivity = (Activity) context;
-        mRS = RenderScript.create(context);
         mGLRenderer = mFactory.getGlRenderer();
         setEGLContextClientVersion(2);
         setRenderer(mGLRenderer);
-        setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
+        setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
         mLocationServices = new LocationServices(this);
         mLocationServices.start();
 
@@ -179,15 +186,6 @@ public class MainController extends GLSurfaceView {
         super.surfaceDestroyed(holder);
     }
 
-    public void ESeekBarChanged(int progress) {
-        Range<Integer> range = mCharacteristics.get(SENSOR_INFO_SENSITIVITY_RANGE);
-        assert range != null;
-        int max1 = range.getUpper();//10000
-        int min1 = range.getLower();//100
-        int iso = ((progress * (max1 - min1)) / 100 + min1);
-        mPreviewRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, iso);
-        updatePreview();
-    }
 
     public void FSeekBarChanged(float progress) {
         float minimumLens = mCharacteristics.get(LENS_INFO_MINIMUM_FOCUS_DISTANCE);
@@ -227,24 +225,16 @@ public class MainController extends GLSurfaceView {
                     switch(action) {
                         case MotionEvent.ACTION_DOWN:
                             if(mVelocityTracker == null) {
-                                // Retrieve a new VelocityTracker object to watch the velocity of a motion.
                                 mVelocityTracker = VelocityTracker.obtain();
                             }
                             else {
-                                // Reset the velocity tracker back to its initial state.
                                 mVelocityTracker.clear();
                             }
-                            // Add a user's movement to the tracker.
                             mVelocityTracker.addMovement(event);
                             break;
                         case MotionEvent.ACTION_MOVE:
                             mVelocityTracker.addMovement(event);
-                            // When you want to determine the velocity, call
-                            // computeCurrentVelocity(). Then call getXVelocity()
-                            // and getYVelocity() to retrieve the velocity for each pointer ID.
                             mVelocityTracker.computeCurrentVelocity(1000);
-                            // Log velocity of pixels per second
-                            // Best practice to use VelocityTrackerCompat where possible.
 
                             if(VelocityTrackerCompat.getXVelocity(mVelocityTracker,pointerId) * VelocityTrackerCompat.getXVelocity(mVelocityTracker,pointerId)
                                     > VelocityTrackerCompat.getYVelocity(mVelocityTracker,pointerId) * VelocityTrackerCompat.getYVelocity(mVelocityTracker,pointerId)){
@@ -292,8 +282,7 @@ public class MainController extends GLSurfaceView {
                 mLocationServices.start();
             }
             Log.d("MainController","Button Press, AE Lock");
-            mPreviewRequestBuilder.set(SENSOR_EXPOSURE_TIME, (25000000L));
-            mPreviewRequestBuilder.set(CONTROL_AF_TRIGGER,CONTROL_AF_TRIGGER_START);
+//            mPreviewRequestBuilder.set(CONTROL_AF_TRIGGER,CONTROL_AF_TRIGGER_START);
             mPreviewRequestBuilder.set(CONTROL_AWB_LOCK, Boolean.TRUE);
             mPreviewRequestBuilder.set(CONTROL_AE_LOCK, Boolean.TRUE);
             updatePreview();
@@ -335,20 +324,15 @@ public class MainController extends GLSurfaceView {
                 CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
                 if (characteristics.get(LENS_FACING) == LENS_FACING_FRONT) continue;
                 mCharacteristics = characteristics;
-                StreamConfigurationMap map = characteristics.get(SCALER_STREAM_CONFIGURATION_MAP);
-                assert map != null;
-                List<Size> outputSizes = Arrays.asList(map.getOutputSizes(ImageFormat.JPEG));
-                Size largest = Collections.max(outputSizes, new Util.CompareSizesByArea());
 
-                mImageReader = ImageReader.newInstance(mSize.getWidth(), mSize.getHeight(), ImageFormat.YUV_420_888, 5);
-                Range<Long> range = mCharacteristics.get(SENSOR_INFO_EXPOSURE_TIME_RANGE);
-                assert range != null;
-                //Long minExpT = range.getLower();
-                //Long maxExpT = range.getUpper();
-                //Log.i("MainController","CameraCharacteristic, Largest Camera Size ("+largest.getWidth()+","+largest.getHeight()+")");
-                //Log.i("CameraCharacteristic","Min : "+minExpT+", Max : "+maxExpT);
-
+                mImageReader = ImageReader.newInstance(1440, 1080, ImageFormat.YV12, 1);
                 mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
+
+                StreamConfigurationMap configs = characteristics.get(
+                        CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+                Log.d("CameraParam","Support : "+configs.isOutputSupportedFor(ImageReader.class)+","+configs.isOutputSupportedFor(mImageReader.getSurface()));
+                Log.d("CameraParam","Format : "+Arrays.toString(configs.getOutputFormats()));
+                Log.d("CameraParam","Size : "+Arrays.toString(configs.getOutputSizes(ImageFormat.YV12)));
 
                 mCameraId = cameraId;
                 break;
@@ -361,12 +345,6 @@ public class MainController extends GLSurfaceView {
             if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
                 throw new RuntimeException("Time out waiting to lock camera opening.");
             }
-
-
-//            if (getActivity().checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-//                permissionRequest();
-//                return;
-//            }
             manager.openCamera(mCameraId, mStateCallback, mBackgroundHandler);
 
         } catch (Exception e) {
@@ -398,6 +376,7 @@ public class MainController extends GLSurfaceView {
     }
 
     private void startBackgroundThread() {
+        Log.d("BackgroundThread","START");
         mBackgroundThread = new HandlerThread("CameraBackground");
         mBackgroundThread.start();
         mBackgroundHandler = new Handler(mBackgroundThread.getLooper());
@@ -431,20 +410,13 @@ public class MainController extends GLSurfaceView {
                     e.printStackTrace();
                 }
             }
-            //This is removed because of glProcessTexture via RS can be done the same work.
-//            SurfaceTexture glTexture = mGLRenderer.getSurfaceTexture();
-//            glTexture.setDefaultBufferSize(1440, 1080);
-//            Surface mGLSurface = new Surface(glTexture);
-
-
-            Surface mProcessSurface = mImageReader.getSurface();
             Surface mGLProcessSurface = new Surface(glProcessTexture);
-            mProcessor = mFactory.getRSProcessor(mRS,new Size(mSize.getHeight(),mSize.getWidth()));
 
-            mProcessingHdrSurface = mProcessor.getInputHdrSurface();
-            mProcessor.setOutputSurface(mGLProcessSurface);
+            List<Surface> surfaceList = new ArrayList<>();
+            surfaceList.add(mImageReader.getSurface());
+            surfaceList.add(mGLProcessSurface);
 
-            mCameraDevice.createCaptureSession(Arrays.asList(mProcessSurface, mProcessingHdrSurface),
+            mCameraDevice.createCaptureSession(surfaceList,
                     new CameraCaptureSession.StateCallback() {
 
                         @Override
@@ -452,15 +424,7 @@ public class MainController extends GLSurfaceView {
                             if (mCameraDevice == null)
                                 return;
                             mCaptureSession = cameraCaptureSession;
-                            Range<Long> range = mCharacteristics.get(SENSOR_INFO_EXPOSURE_TIME_RANGE);
-                            assert range != null;
-                            Long minExpT = range.getLower();
-                            Long maxExpT = range.getUpper();
-                            mPreviewRequestBuilder.set(SENSOR_EXPOSURE_TIME, ((minExpT + maxExpT) / 128));
-                            Log.i("CameraCharacteristic","Min : "+minExpT+", Max : "+maxExpT);
                             mPreviewRequestBuilder.set(CONTROL_AF_MODE, CONTROL_AF_MODE_AUTO);
-//                            mPreviewRequestBuilder.set(CONTROL_AE_MODE, CONTROL_AE_MODE_OFF);
-                            mPreviewRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION, Util.getJpegOrientation(mCharacteristics, getActivity().getWindowManager().getDefaultDisplay().getRotation()));
                             updatePreview();
                         }
 
@@ -468,12 +432,11 @@ public class MainController extends GLSurfaceView {
                         public void onConfigureFailed(CameraCaptureSession cameraCaptureSession) {
                             Toast.makeText(getActivity(), "Failed", Toast.LENGTH_SHORT).show();
                         }
-                    }, null
-            );
+                    }, mBackgroundHandler);
             mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
-//            mPreviewRequestBuilder.addTarget(mProcessSurface);
-//            mPreviewRequestBuilder.addTarget(mGLSurface);
-            mPreviewRequestBuilder.addTarget(mProcessingHdrSurface);
+            for(int i = 0 ; i < surfaceList.size() ;i++){
+                mPreviewRequestBuilder.addTarget(surfaceList.get(i));
+            }
 
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -482,6 +445,8 @@ public class MainController extends GLSurfaceView {
 
     private void updatePreview(){
         try {
+
+            mCaptureSession.stopRepeating();
             mCaptureSession.setRepeatingRequest(mPreviewRequestBuilder.build(), mCaptureCallback, mBackgroundHandler);
         } catch (Exception e) {
             e.printStackTrace();
@@ -562,8 +527,10 @@ public class MainController extends GLSurfaceView {
     //Implement this in JNI
     private class ImageStitchingTask extends AsyncTask<Object, Integer, Boolean> {
         protected Boolean doInBackground(Object... objects) {
+            Log.d("AsyncTask","doInBackground");
             Mat mat = new Mat(mSize.getWidth(), mSize.getHeight(), CvType.CV_8UC4);
             mat.put(0, 0, mFrameByte);
+            Highgui.imwrite("/sdcard/test.jpeg",mat);
             Mat imageMat = new Mat();
             Imgproc.cvtColor(mat, imageMat, Imgproc.COLOR_RGBA2BGR);
             Thread uiThread = new Thread() {
