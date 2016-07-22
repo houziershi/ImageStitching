@@ -116,13 +116,13 @@ public class RSProcessor {
             }
 
 
-            if(!mController.mAsyncRunning && mController.mRunning){
-                mController.mAsyncRunning = true;
-                mController.mRunning = false;
-                Log.d("RS", "Running");
-                mInputAllocation.copyTo(mController.mFrameByte);
-                mController.doStitching();
-            }
+//            if(!mController.mAsyncRunning && mController.mRunning){
+//                mController.mAsyncRunning = true;
+//                mController.mRunning = false;
+//                Log.d("RS", "Running");
+//                mInputAllocation.copyTo(mController.mFrameByte);
+//                mController.doStitching();
+//            }
 
 
             //WORK

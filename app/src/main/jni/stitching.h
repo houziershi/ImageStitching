@@ -55,8 +55,10 @@ struct ImagePackage{
     Mat compose_image_warped;
     int done;
     ImageFeatures feature;
+    CameraParams param;
 };
 float focal_divider = 3.45;
+float camera_focal_x=1391.6387,camera_focal_y=1408.12109740,camera_ppx=748.368019,camera_ppy=481.0012430;
 int work_width = 0;
 int work_height = 0;
 vector<ImagePackage> images;

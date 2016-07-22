@@ -137,9 +137,10 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 
 	for(int i = 0 ; i < 2; i++){
 		CameraParams tracking_camera;
-		tracking_camera.ppx = tracking_feature[i].img_size.width/2;
-		tracking_camera.ppy = tracking_feature[i].img_size.height/2;
-		tracking_camera.focal = (tracking_feature[i].img_size.width * 4.7 / focal_divider);
+		tracking_cameras[i].ppy = images[nearest_index].param.ppy;
+		tracking_cameras[i].ppx = images[nearest_index].param.ppx;
+		tracking_cameras[i].focal = images[nearest_index].param.focal;
+		tracking_cameras[i].aspect = 1;
 		if( i == 1 ){
 			tracking_camera.R = input_R;
 		}
@@ -327,7 +328,7 @@ inline int isBiggerThanThreshold(Mat mat1, Mat mat2, float threshold){
     double x_diff = abs(atan2(diff.at<float>(2,1),diff.at<float>(2,2)));
     double y_diff = abs(atan2(-diff.at<float>(2,0),sqrt(diff.at<float>(2,1)*diff.at<float>(2,1)+diff.at<float>(2,2)*diff.at<float>(2,2))));
     double z_diff = abs(atan2(diff.at<float>(1,0),diff.at<float>(0,0)));
-    __android_log_print(ANDROID_LOG_DEBUG,"Diff","[%lf %lf %lf]",x_diff,y_diff,z_diff);
+    __android_log_print(ANDROID_LOG_DEBUG,"C++ Stitching","Diff [%lf %lf %lf]",x_diff,y_diff,z_diff);
     if(x_diff < threshold)
         if(y_diff < threshold)
             if(z_diff < threshold)
@@ -565,8 +566,6 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
     __android_log_print(ANDROID_LOG_INFO, "C++ AddImage", "Start");
 	ImagePackage imagePackage;
 	Mat& full_img  = *(Mat*)imgaddr;
-	transpose(full_img, full_img);
-	flip(full_img, full_img,0);
 	Mat& rot = *(Mat*)rotaddr;
 	imagePackage.rotation = rot;
 	imagePackage.full_size = full_img.size();
@@ -640,17 +639,28 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 
 		__android_log_print(ANDROID_LOG_INFO,"C++ Stitching","Input Image Size : %d,%d ",images[i].size.height,images[i].size.width);
 		CameraParams camera;
-		camera.ppx = images[i].feature.img_size.width/2.0;
-		camera.ppy = images[i].feature.img_size.height/2.0;
-		camera.aspect = 1;//??? change to 1(1920/1080??=1.77)
-		//camera.focal = (images[i].size.height * 4.7 / 5.2) * work_scale/seam_scale; 5.2 - > 10 = bigger
+		camera.ppx = camera_ppx * work_scale;
+		camera.ppy = camera_ppy * work_scale;
+		camera.focal = camera_focal_x * work_scale;
+		camera.aspect = camera_focal_y/camera_focal_x;
+
+
+
+
+
+		//camera.ppx = images[i].feature.img_size.width/2.0;
+		//camera.ppy = images[i].feature.img_size.height/2.0;
+		//camera.aspect = 1;//??? change to 1(1920/1080??=1.77)
+		//camera.focal = (images[i].size.height * 4.7 / 5.2) * work_scale/seam_scale;
+		//5.2 - > 10 = bigger
 		//4.8 maybe better
-		camera.focal = (images[i].feature.img_size.width * 4.7 / focal_divider);
+		//camera.focal = (images[i].feature.img_size.width * 4.7 / focal_divider);
 
 		camera.R = images[i].rotation;
 		camera.t = Mat::zeros(3,1,CV_32F);
 		cameras.push_back(camera);
-		__android_log_print(ANDROID_LOG_INFO,"C++ Stitching","CameraParam focal %lf , ppx %lf , ppy %lf width %d",camera.focal,camera.ppx,camera.ppy,images[i].feature.img_size.width);
+        images[i].param = camera;
+		__android_log_print(ANDROID_LOG_INFO,"C++ Stitching","CameraParam focal %lf , ppx %lf , ppy %lf , aspect %f, width %d",camera.focal,camera.ppx,camera.ppy,camera.aspect,images[i].feature.img_size.width);
 	}
 
 

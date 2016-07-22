@@ -26,7 +26,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     public final float[] mProjectionMatrix = new float[16];
     private final float[] mViewCanvasMatrix = new float[16];
     private final float SCREEN_RATIO = 0.6239168f;
-    private final float ZOOM_RATIO = 0.5f;
+    private final float ZOOM_RATIO = 1f;
     private final float CANVAS_SIZE = 1f * ZOOM_RATIO;
     private final float HEIGHT_WIDTH_RATIO = 1f;
     private List<ARObject> mARObject = new ArrayList<>();

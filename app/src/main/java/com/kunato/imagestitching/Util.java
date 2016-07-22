@@ -71,6 +71,9 @@ public class Util {
             0,0,0,1
 
     };
+    public static float[] UP180 = {1.f ,         0.f  ,        0.f
+            , 0.f     ,   0.90128334f , 0.43323012f
+            , 0.f     ,   -0.43323012f, 0.9012833f};
     public static final float NS2S = 1.0f / 1000000000.0f;
 
     public static class CompareSizesByArea implements Comparator<Size> {

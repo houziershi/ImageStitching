@@ -59,7 +59,7 @@ public class ImageStitchingNative {
         Log.d("JAVA Stitch", "Add Panorama Finished, Size :" + ret.size().width + "," + ret.size().height);
 
         Factory.getFactory(null).getGlRenderer().getSphere().updateBitmap(bitmap, areaFloat);
-        Factory.getFactory(null).getRSProcessor(null, null).requestAligning();;
+//        Factory.getFactory(null).getRSProcessor(null, null).requestAligning();;
         return rtCode;
     }
 

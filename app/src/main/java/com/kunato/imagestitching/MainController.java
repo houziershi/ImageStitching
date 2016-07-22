@@ -16,6 +16,7 @@ import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
@@ -48,20 +49,16 @@ import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import static android.hardware.camera2.CameraCharacteristics.*;
 import static android.hardware.camera2.CameraCharacteristics.LENS_FACING;
-import static android.hardware.camera2.CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP;
 import static android.hardware.camera2.CameraMetadata.LENS_FACING_FRONT;
 import static android.hardware.camera2.CaptureRequest.CONTROL_AE_LOCK;
 import static android.hardware.camera2.CaptureRequest.CONTROL_AF_MODE;
-import static android.hardware.camera2.CaptureRequest.CONTROL_AF_TRIGGER;
 import static android.hardware.camera2.CaptureRequest.CONTROL_AWB_LOCK;
-import static android.hardware.camera2.CaptureRequest.SENSOR_EXPOSURE_TIME;
 
 public class MainController extends GLSurfaceView {
     private Activity mActivity;
@@ -93,7 +90,7 @@ public class MainController extends GLSurfaceView {
     private Size mSize = new Size(1080,1440);
 
     //Using in OnImageAvailableListener
-    public byte[] mFrameByte = new byte[mSize.getHeight()*mSize.getWidth()*4];
+    public byte[] mFrameByte;
     public boolean mAsyncRunning = false;
     public boolean mRunning = false;
     private boolean mFirstRun = true;
@@ -107,7 +104,29 @@ public class MainController extends GLSurfaceView {
         @Override
         public void onImageAvailable(ImageReader reader) {
             Image image = reader.acquireNextImage();
-            Image.Plane[] planes = image.getPlanes();
+            if(!mAsyncRunning && mRunning){
+                mAsyncRunning = true;
+                mRunning = false;
+                Log.d("ImageReader","Start!");
+//                Log.d("ImageReader","length : "+planes.length);
+                Image.Plane Y = image.getPlanes()[0];
+                Image.Plane U = image.getPlanes()[1];
+                Image.Plane V = image.getPlanes()[2];
+
+                int Yb = Y.getBuffer().remaining();
+                int Ub = U.getBuffer().remaining();
+                int Vb = V.getBuffer().remaining();
+                if(mFrameByte == null)
+                mFrameByte = new byte[Yb + Ub + Vb];
+
+                Y.getBuffer().get(mFrameByte, 0, Yb);
+                U.getBuffer().get(mFrameByte, Yb, Ub);
+                V.getBuffer().get(mFrameByte, Yb+ Ub, Vb);
+                doStitching();
+            }
+
+
+
             image.close();
 
         }
@@ -169,7 +188,7 @@ public class MainController extends GLSurfaceView {
         mGLRenderer = mFactory.getGlRenderer();
         setEGLContextClientVersion(2);
         setRenderer(mGLRenderer);
-        setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
+        setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
         mLocationServices = new LocationServices(this);
         mLocationServices.start();
 
@@ -197,7 +216,7 @@ public class MainController extends GLSurfaceView {
 
     public void doStitching(){
         SensorManager.getRotationMatrixFromVector(mRotmat,mQuaternion);
-        AsyncTask<Object, Integer, Boolean> imageStitchingTask = new ImageStitchingTask();
+        AsyncTask<Mat, Integer, Boolean> imageStitchingTask = new ImageStitchingTask();
         if (mFirstRun) {
             Object[] locationAndRotation = mLocationServices.getLocation();
             Location deviceLocation = (Location) locationAndRotation[0];
@@ -267,12 +286,7 @@ public class MainController extends GLSurfaceView {
             for (int j = 0; j < 3; j++)
                 rotationCVMat.put(i, j, mRotmat[i * 4 + j]);
         }
-
-        Mat mat = new Mat(mSize.getWidth(), mSize.getHeight(), CvType.CV_8UC4);
-        mat.put(0, 0, mFrameByte);
-        Mat image = new Mat();
-        Imgproc.cvtColor(mat, image, Imgproc.COLOR_RGBA2BGR);
-        imageStitchingTask.execute(image, rotationCVMat);
+        imageStitchingTask.execute(rotationCVMat);
     }
 
     public void runProcess(boolean firstTime){
@@ -283,6 +297,7 @@ public class MainController extends GLSurfaceView {
             }
             Log.d("MainController","Button Press, AE Lock");
 //            mPreviewRequestBuilder.set(CONTROL_AF_TRIGGER,CONTROL_AF_TRIGGER_START);
+            mPreviewRequestBuilder.set(CONTROL_AF_MODE, CONTROL_AF_MODE_AUTO);
             mPreviewRequestBuilder.set(CONTROL_AWB_LOCK, Boolean.TRUE);
             mPreviewRequestBuilder.set(CONTROL_AE_LOCK, Boolean.TRUE);
             updatePreview();
@@ -400,6 +415,7 @@ public class MainController extends GLSurfaceView {
             Log.d("CameraCharacteristic", "createCameraPreviewSession");
 
             SurfaceTexture glProcessTexture = mGLRenderer.getProcessSurfaceTexture();
+
             if (glProcessTexture == null){
                 try {
                     Thread.sleep(1000);
@@ -410,6 +426,7 @@ public class MainController extends GLSurfaceView {
                     e.printStackTrace();
                 }
             }
+            glProcessTexture.setDefaultBufferSize(1440,1080);
             Surface mGLProcessSurface = new Surface(glProcessTexture);
 
             List<Surface> surfaceList = new ArrayList<>();
@@ -424,7 +441,7 @@ public class MainController extends GLSurfaceView {
                             if (mCameraDevice == null)
                                 return;
                             mCaptureSession = cameraCaptureSession;
-                            mPreviewRequestBuilder.set(CONTROL_AF_MODE, CONTROL_AF_MODE_AUTO);
+                            mPreviewRequestBuilder.set(CONTROL_AF_MODE, CONTROL_AF_MODE_CONTINUOUS_PICTURE);
                             updatePreview();
                         }
 
@@ -525,14 +542,13 @@ public class MainController extends GLSurfaceView {
     }
 
     //Implement this in JNI
-    private class ImageStitchingTask extends AsyncTask<Object, Integer, Boolean> {
-        protected Boolean doInBackground(Object... objects) {
+    private class ImageStitchingTask extends AsyncTask<Mat, Integer, Boolean> {
+        protected Boolean doInBackground(Mat... objects) {
             Log.d("AsyncTask","doInBackground");
-            Mat mat = new Mat(mSize.getWidth(), mSize.getHeight(), CvType.CV_8UC4);
-            mat.put(0, 0, mFrameByte);
-            Highgui.imwrite("/sdcard/test.jpeg",mat);
-            Mat imageMat = new Mat();
-            Imgproc.cvtColor(mat, imageMat, Imgproc.COLOR_RGBA2BGR);
+            Mat yv12 = new Mat(mSize.getWidth()*3/2, mSize.getHeight(), CvType.CV_8UC1);
+            yv12.put(0, 0, mFrameByte);
+            Mat rgb = new Mat(mSize.getWidth(),mSize.getHeight(),CvType.CV_8UC3);
+            Imgproc.cvtColor(yv12, rgb, Imgproc.COLOR_YUV2RGB_YV12,3);
             Thread uiThread = new Thread() {
 
                 @Override
@@ -548,7 +564,7 @@ public class MainController extends GLSurfaceView {
                 }
             };
             uiThread.start();
-            int rtCode = ImageStitchingNative.getNativeInstance().addToPano(imageMat, (Mat) objects[1] ,mNumPicture);
+            int rtCode = ImageStitchingNative.getNativeInstance().addToPano(rgb, (Mat) objects[0] ,mNumPicture);
             if(rtCode == 1){
                 mNumPicture++;
             }
