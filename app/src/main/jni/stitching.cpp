@@ -645,9 +645,6 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 		camera.aspect = camera_focal_y/camera_focal_x;
 
 
-
-
-
 		//camera.ppx = images[i].feature.img_size.width/2.0;
 		//camera.ppy = images[i].feature.img_size.height/2.0;
 		//camera.aspect = 1;//??? change to 1(1920/1080??=1.77)
@@ -672,7 +669,7 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 		if(pairwise_matches[i].src_img_idx == nearestImage && pairwise_matches[i].dst_img_idx == images.size()-1){
 			__android_log_print(ANDROID_LOG_INFO,"C++ Stitching","Nearest Pair %d %d %d",pairwise_matches[i].src_img_idx
 					,pairwise_matches[i].dst_img_idx,pairwise_matches[i].matches.size());
-			if(pairwise_matches[i].matches.size() < 15){
+			if(0){
 				//return
 				__android_log_print(ANDROID_LOG_WARN,"C++ Stitching","Stitch Rejected < 15 matches point..");
 				images.pop_back();
@@ -697,6 +694,7 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	Mat comparedRot = cameras[images.size()-1].R.clone();
 	int iterationCount = minimizeRotation(src,dst,cameraSet);
 	//Check with ceres minimizer should be best solution
+
 	if(isBiggerThanThreshold(comparedRot,cameraSet[1].R,0.1)){
 
         __android_log_print(ANDROID_LOG_WARN,"C++ Stitching","Stitch Rejected > 2 degree..");
@@ -854,7 +852,7 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
     double min_acos_z = 6.0;
     for(int i = 0 ; i < images.size() ; i++){
         double acos_z  = calcOpticalDiff(rotMat, images[i].rotation);
-        __android_log_print(ANDROID_LOG_INFO,"Z_diff","%lf",acos_z*180/M_PI);
+        //__android_log_print(ANDROID_LOG_INFO,"Z_diff","%lf",acos_z*180/M_PI);
         if(abs(acos_z) < abs(min_acos_z)){
             min_acos_z = acos_z;
         }

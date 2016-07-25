@@ -27,6 +27,7 @@ import static java.lang.Math.sin;
 import static java.lang.Math.sqrt;
 import static java.lang.StrictMath.cos;
 import static java.lang.System.currentTimeMillis;
+import static java.lang.System.out;
 
 /**
  * Created by kunato on 12/14/15 AD.
@@ -71,9 +72,9 @@ public class Util {
             0,0,0,1
 
     };
-    public static float[] UP180 = {1.f ,         0.f  ,        0.f
-            , 0.f     ,   0.90128334f , 0.43323012f
-            , 0.f     ,   -0.43323012f, 0.9012833f};
+    public static float[] UP180 = {1.f ,         0.f ,         0.f        ,
+            0.f,         0.86516251f, -0.5014916f ,
+            0.f,          0.5014916f,   0.86516251f};
     public static final float NS2S = 1.0f / 1000000000.0f;
 
     public static class CompareSizesByArea implements Comparator<Size> {
@@ -353,6 +354,37 @@ public class Util {
                     * input2[2]); //y = w1y2 + y1w2 + z1x2 - x1z2
         output[2] = (input1[3] * input2[2] + input1[2] * input2[3] + input1[0] * input2[1] - input1[1]
                     * input2[0]); //z = w1z2 + z1w2 + x1y2 - y1x2
+        return output;
+    }
+
+    /**
+     *  [2*K00/width,  -2*K01/width,   (width - 2*K02 + 2*x0)/width,                            0]
+        [          0, -2*K11/height, (height - 2*K12 + 2*y0)/height,                            0]
+        [          0,             0, (-zfar - znear)/(zfar - znear), -2*zfar*znear/(zfar - znear)]
+        [          0,             0,                             -1,                            0]
+     */
+    public static float[] glProjectionMatrix(){
+        float[] K = {1391.6387f,0,748.368019f,
+                0,1408.12109740f,481.0012430f,
+                0,0,1};
+        float[] output = new float[16];
+        for(int i = 0 ; i < output.length ; i++){
+            output[i] = 0.0f;
+        }
+        float width = 1440;
+        float height = 1080;
+        float x0 = 0;
+        float y0 = 0;
+        float zfar = 1000.f;
+        float znear = 0.1f;
+        output[0] = 2*K[0]/width;
+        output[4] = -2*K[1]/width;
+        output[5] = -(-2*K[4]/height);
+        output[8] = (width - 2*K[2] + 2*x0)/width;
+        output[9] = (height - 2*K[5] + 2*y0)/height;
+        output[10] = (-zfar - znear)/(zfar - znear);
+        output[11] = -1.0f;
+        output[14] = -2*zfar*znear/(zfar - znear);
         return output;
     }
 

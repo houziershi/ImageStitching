@@ -283,8 +283,10 @@ public class MainController extends GLSurfaceView {
         Mat rotationCVMat = new Mat();
         rotationCVMat.create(3, 3, CvType.CV_32F);
         for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++)
-                rotationCVMat.put(i, j, mRotmat[i * 4 + j]);
+            for (int j = 0; j < 3; j++) {
+              rotationCVMat.put(i, j, mRotmat[i * 4 + j]);
+//                rotationCVMat.put(i, j, Util.UP180[i * 3 + j]);
+            }
         }
         imageStitchingTask.execute(rotationCVMat);
     }

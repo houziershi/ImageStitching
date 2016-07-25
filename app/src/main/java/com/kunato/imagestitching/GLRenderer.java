@@ -23,7 +23,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     private boolean mUpdateST = false;
     protected MainController mView;
     private final float[] mMVPMatrix = new float[16];
-    public final float[] mProjectionMatrix = new float[16];
+    public float[] mProjectionMatrix = new float[16];
     private final float[] mViewCanvasMatrix = new float[16];
     private final float SCREEN_RATIO = 0.6239168f;
     private final float ZOOM_RATIO = 1f;
@@ -163,8 +163,14 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         //48=zoom1.5//72=zoom1
         //52 for height
         //65 default
-        Matrix.perspectiveM(mProjectionMatrix, 0, 67 / ZOOM_RATIO, ratio, 0.1f, 1000f);//48 for 4/3 64 for 1920/1080
+        //Matrix.perspectiveM(mProjectionMatrix, 0, 50 / ZOOM_RATIO, ratio, 0.1f, 1000f);//48 for 4/3 64 for 1920/1080
+        mProjectionMatrix = Util.glProjectionMatrix();
 
+
+
+        for(int i = 0 ; i < mProjectionMatrix.length ;i++){
+            Log.d("Matrix",""+mProjectionMatrix[i]);
+        }
 
     }
     public void setHomography(float[] input){

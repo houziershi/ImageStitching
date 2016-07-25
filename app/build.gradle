@@ -5,7 +5,7 @@ android {
     buildToolsVersion "23.0.2"
 
     defaultConfig {
-        applicationId "com.kunato.imagestitching"
+        applicationId "com.kunato.iar"
         minSdkVersion 22
         targetSdkVersion 22
         versionCode 1
