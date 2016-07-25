@@ -88,23 +88,20 @@ int findNearest(int from, int to, std::vector<ImagePackage> images,Mat &inputR){
 }
 
 
-JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeAligning(JNIEnv*, jobject, jlong imgaddr,jlong glrotaddr,jlong glprojaddr,jlong retaddr){
+JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeAligning(JNIEnv*, jobject, jlong imgaddr,jlong glrotaddr,jlong retaddr){
 	__android_log_print(ANDROID_LOG_DEBUG,"C++ aligning","Start");
 
 	clock_t c_start = std::clock();
 	Mat& full_img  = *(Mat*)imgaddr;
 	Mat img;
-	Mat dst;
 	resize(full_img,img,Size(),work_scale,work_scale);
-	transpose(img, img);
-	flip(img, dst,0);
 
 	Mat& gl_rot = *(Mat*) glrotaddr;
-//	imwrite("/sdcard/stitch/tracking2.jpg",dst);
+	//imwrite("/sdcard/stitch/tracking2.jpg",img);
 	ImageFeatures input_feature;
 	Mat input_descriptor;
 	clock_t c_before_desc = std::clock();
-	findDescriptor(dst, input_feature.keypoints, input_feature.descriptors);
+	findDescriptor(img, input_feature.keypoints, input_feature.descriptors);
 	clock_t c_after_desc = std::clock();
 	vector<MatchesInfo> tracking_matches;
 	//const descriptor (img1)
@@ -859,7 +856,7 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
     }
     if(min_acos_z > 0.3){
 
-        return 1;
+        return 0;
     }
     return 0;
 }

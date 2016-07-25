@@ -92,6 +92,7 @@ public class MainController extends GLSurfaceView {
     //Using in OnImageAvailableListener
     public byte[] mFrameByte;
     public boolean mAsyncRunning = false;
+    public boolean mAlign = false;
     public boolean mRunning = false;
     private boolean mFirstRun = true;
     public float[] mQuaternion = new float[4];
@@ -124,14 +125,47 @@ public class MainController extends GLSurfaceView {
                 V.getBuffer().get(mFrameByte, Yb+ Ub, Vb);
                 doStitching();
             }
+            else if(mAlign){
+                mAlign = false;
+                Log.d("ImageReader","Align Start!");
+//                Log.d("ImageReader","length : "+planes.length);
+                Image.Plane Y = image.getPlanes()[0];
+                Image.Plane U = image.getPlanes()[1];
+                Image.Plane V = image.getPlanes()[2];
 
+                int Yb = Y.getBuffer().remaining();
+                int Ub = U.getBuffer().remaining();
+                int Vb = V.getBuffer().remaining();
+                if(mFrameByte == null)
+                    mFrameByte = new byte[Yb + Ub + Vb];
 
-
+                Y.getBuffer().get(mFrameByte, 0, Yb);
+                U.getBuffer().get(mFrameByte, Yb, Ub);
+                V.getBuffer().get(mFrameByte, Yb+ Ub, Vb);
+                doAlign();
+            }
             image.close();
 
         }
 
     };
+    public void requireAlign(){
+        mAlign = true;
+    }
+
+
+
+    private void doAlign() {
+        Mat mat = new Mat(mSize.getHeight(), mSize.getWidth(), CvType.CV_8UC4);
+        byte[] frameByte = new byte[mSize.getWidth()*mSize.getHeight()*4];
+        mat.put(0, 0, frameByte);
+        Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGBA2BGR);
+        float[] rotMat = new float[16];
+        AsyncTask<Mat, Integer, Boolean> aligningTask = new ImageAligningTask();
+        aligningTask.execute();}
+
+
+
     private VelocityTracker mVelocityTracker = null;
 
 
@@ -205,13 +239,6 @@ public class MainController extends GLSurfaceView {
         super.surfaceDestroyed(holder);
     }
 
-
-    public void FSeekBarChanged(float progress) {
-        float minimumLens = mCharacteristics.get(LENS_INFO_MINIMUM_FOCUS_DISTANCE);
-        float num = (progress * minimumLens / 100);
-        mPreviewRequestBuilder.set(CaptureRequest.LENS_FOCUS_DISTANCE, num);
-        updatePreview();
-    }
     public float[] mRotmat = new float[16];
 
     public void doStitching(){
@@ -543,7 +570,6 @@ public class MainController extends GLSurfaceView {
         }
     }
 
-    //Implement this in JNI
     private class ImageStitchingTask extends AsyncTask<Mat, Integer, Boolean> {
         protected Boolean doInBackground(Mat... objects) {
             Log.d("AsyncTask","doInBackground");
@@ -599,4 +625,31 @@ public class MainController extends GLSurfaceView {
 
         }
     }
+
+
+    private class ImageAligningTask extends AsyncTask<Mat, Integer, Boolean> {
+        protected Boolean doInBackground(Mat... objects) {
+            Log.d("AsyncTask","doInBackground");
+            Mat yv12 = new Mat(mSize.getWidth()*3/2, mSize.getHeight(), CvType.CV_8UC1);
+            yv12.put(0, 0, mFrameByte);
+            Mat rgb = new Mat(mSize.getWidth(),mSize.getHeight(),CvType.CV_8UC3);
+            Imgproc.cvtColor(yv12, rgb, Imgproc.COLOR_YUV2RGB_YV12,3);
+            float[] rotMat = new float[16];
+            SensorManager.getRotationMatrixFromVector(rotMat, mQuaternion);
+            ImageStitchingNative.getNativeInstance().aligning(rgb,rotMat);
+            return true;
+        }
+
+        protected void onProgressUpdate(Integer... progress) {
+
+        }
+
+        protected void onPostExecute(Boolean bool) {
+
+            Log.i("GLSurface Connector","Algin Complete.");
+
+        }
+    }
+
+
 }

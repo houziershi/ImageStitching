@@ -30,7 +30,7 @@
 #include "util.h"
 #define M_PI 3.14159265358979323846
 #define HQ_COMPOSE
-double work_scale = 0.4, seam_scale = 0.2, compose_scale = 1.0, align_scale = 0.2;
+double work_scale = 0.6, seam_scale = 0.2, compose_scale = 1.0;
 double tracking_scale = 0.2;
 string result_name = "/mnt/sdcard/result.png";
 int blend_type = Blender::NO;
@@ -72,7 +72,7 @@ Ptr<Feature2D> detector = Algorithm::create<Feature2D>("Feature2D.ORB");
 int detector_setup = 1;
 extern "C" {
 
-JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeAligning(JNIEnv*, jobject, jlong imgaddr,jlong glRotAddr,jlong glProjAddr,jlong retaddr);
+JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeAligning(JNIEnv*, jobject, jlong imgaddr,jlong glRotAddr,jlong retaddr);
 JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeAddStitch(JNIEnv*, jobject, jlong imgaddr,jlong rotaddr);
 JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeStitch(JNIEnv*, jobject,jlong retAddr,jlong areaAddr,jlong rotAddr);
 JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeKeyFrameSelection(JNIEnv *env, jobject,jfloatArray rotMat);

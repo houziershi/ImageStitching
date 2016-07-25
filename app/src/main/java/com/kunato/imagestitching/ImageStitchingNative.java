@@ -25,7 +25,7 @@ public class ImageStitchingNative {
     }
 
     public native int nativeKeyFrameSelection(float[] rotMat);
-    public native void nativeAligning(long imgAddr,long glRotAddr,long glProjAddr,long retMatAddr);
+    public native void nativeAligning(long imgAddr,long glRotAddr,long retMatAddr);
     public native int nativeStitch(long retAddr,long areaAddr,long rotAddr);
     public native void nativeAddStitch(long imgAddr,long rotAddr);
     public int keyFrameSelection(float[] rotMat) {
@@ -43,8 +43,8 @@ public class ImageStitchingNative {
         Log.d("JAVA Stitch", "JNI Return Code : "+rtCode + "");
         float[] areaFloat = new float[4];
         area.get(0, 0, areaFloat);
-        areaFloat[0]+=0;
-        areaFloat[1]-=85;
+        //areaFloat[0]+=0;
+        areaFloat[1]-=70;
         Log.d("JAVA Stitch", "Return Area [" + Arrays.toString(areaFloat)+"]");
         if(rtCode == -1){
             return 1;
@@ -62,24 +62,23 @@ public class ImageStitchingNative {
 
         Factory.getFactory(null).getGlRenderer().getSphere().updateBitmap(bitmap, areaFloat);
 //        Factory.getFactory(null).getRSProcessor(null, null).requestAligning();;
+//        Factory.mainController.requireAlign();
         return rtCode;
     }
 
-    public void aligning(Mat input, float[] glRot, float[] glProj){
+    public void aligning(Mat input, float[] glRot){
         Factory.mainController.startRecordQuaternion();
         Highgui.imwrite("/sdcard/stitch/align.jpg",input);
         long cStart = System.nanoTime();
         Mat glRotMat = new Mat(4,4,CvType.CV_32F);
         glRotMat.put(0, 0, glRot);
-        Mat glProjMat = new Mat(4,4,CvType.CV_32F);
-        glProjMat.put(0, 0, glProj);
-        Log.d("JAVA Stitch","Input Rotation");
+        Log.d("JAVA Stitch","Align Input Rotation :"+ Arrays.toString(glRot));
         for (int i = 0; i < 4; i++) {
             Log.d("JAVA Stitch", String.format("[%f %f %f %f]", glRot[i * 4], glRot[i * 4 + 1], glRot[i * 4 + 2], glRot[i*4 +3]));
         }
         Mat ret = new Mat(4,4,CvType.CV_32F);
         long cBeforeNative = System.nanoTime();
-        nativeAligning(input.getNativeObjAddr(), glRotMat.getNativeObjAddr(), glProjMat.getNativeObjAddr(), ret.getNativeObjAddr());
+        nativeAligning(input.getNativeObjAddr(), glRotMat.getNativeObjAddr(), ret.getNativeObjAddr());
         long cEnd = System.nanoTime();
         Log.d("JAVA Stitch", "Time Used: "+((cEnd-cBeforeNative)*Util.NS2S)+","+(cBeforeNative-cStart)*Util.NS2S+" Return Mat" + ret.toString());
         //using return as homo
@@ -100,13 +99,12 @@ public class ImageStitchingNative {
             data = new float[]{1,0,0,0,1,0,0,0,1};
             float[] rotmat = new float[16];
             ret.get(0, 0, rotmat);
-            for (int i = 0; i < 4; i++) {
-               Log.d("JAVA Stitch", String.format("[%f %f %f %f]", rotmat[i * 4], rotmat[i * 4 + 1], rotmat[i * 4 + 2], rotmat[i*4 +3]));
-            }
 
             Log.d("JAVA Stitch",Arrays.toString(Factory.mainController.mQuaternion));
             float[] quad = Util.matrixToQuad(rotmat);
             Factory.mainController.updateQuaternion(quad,Factory.mainController.mDeltaQuaternion);
+
+            Log.d("JAVA Stitch", "Align Output Rotation :"+Arrays.toString(Factory.mainController.mDeltaQuaternion));
 //            Factory.mainController.mQuaternion = quad;
 //            Log.d("quad+",Arrays.toString(Factory.mainController.mQuaternion));
 //            Factory.mainController.mRotmat = rotmat;
