@@ -364,8 +364,8 @@ public class Util {
         [          0,             0,                             -1,                            0]
      */
     public static float[] glProjectionMatrix(){
-        float[] K = {1391.6387f,0,748.368019f,
-                0,1408.12109740f,481.0012430f,
+        float[] K = {1425.559961560f,0,745.027494f,
+                0,1425.559961560f,436.7257419f,
                 0,0,1};
         float[] output = new float[16];
         for(int i = 0 ; i < output.length ; i++){

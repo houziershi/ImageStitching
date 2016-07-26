@@ -56,8 +56,8 @@ public class SphereObject {
             "uniform sampler2D sTexture;"+
             "varying vec2 v_TexCoordinate;"+
             "varying vec4 fragmentColor;" +
-                    "float width_ratio = 8763.0;" +
-                    "float height_ratio = 4392.0;" +
+                    "float width_ratio = 8976.0;" +
+                    "float height_ratio = 4488.0;" +
                     "uniform float img_x;" +
                     "uniform float img_y;" +
                     "uniform float img_width;" +
@@ -90,7 +90,7 @@ public class SphereObject {
     private int mTextureCoordinateHandle;
     private boolean mTexRequireUpdate = false;
     private Bitmap mQueueBitmap;
-    public boolean readPixel = false;
+    public boolean readPixel = true;
     private ByteBuffer mScreenBuffer;
     private GLRenderer glRenderer;
     public float[] mArea = {0,0,0,0};
@@ -153,7 +153,7 @@ public class SphereObject {
         int widthh = GLES20.glGetUniformLocation(mProgram,"img_width");
         int heighth = GLES20.glGetUniformLocation(mProgram,"img_height");
         int alphah = GLES20.glGetUniformLocation(mProgram,"alpha");
-
+        
         if(mTexRequireUpdate){
             Log.i("GLSphere", "Bitmap updated,Return to normal activity.");
             GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
@@ -182,7 +182,8 @@ public class SphereObject {
         GLES20.glUniform1f(yh,mArea[1]);
         GLES20.glUniform1f(widthh,mArea[2]);
         GLES20.glUniform1f(heighth,mArea[3]);
-        int alpha_fixed = readPixel ? 1 : 0;
+//        int alpha_fixed = readPixel ? 1 : 0;
+        int alpha_fixed = 0;
         GLES20.glUniform1i(alphah,alpha_fixed);
 
         mViewMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uViewMatrix");
@@ -196,19 +197,14 @@ public class SphereObject {
 
         if(readPixel) {
             Log.d("GL","ReadPixel");
-            mScreenBuffer = ByteBuffer.allocateDirect(glRenderer.mHeight * glRenderer.mWidth * 4);
+            mScreenBuffer = ByteBuffer.allocateDirect(glRenderer.mWidth * 4);
             mScreenBuffer.order(ByteOrder.nativeOrder());
-            GLES20.glReadPixels(0, 0, glRenderer.mWidth, glRenderer.mHeight, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, mScreenBuffer);
+            GLES20.glReadPixels(0, 0, glRenderer.mWidth, 0, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, mScreenBuffer);
             Log.d("mScreenBuffer", "Remaining " + mScreenBuffer.remaining());
             mScreenBuffer.rewind();
-            byte pixelsBuffer[] = new byte[4*glRenderer.mHeight*glRenderer.mWidth];
+            byte pixelsBuffer[] = new byte[4*glRenderer.mWidth];
             mScreenBuffer.get(pixelsBuffer);
-            Mat mat = new Mat(glRenderer.mHeight, glRenderer.mWidth, CvType.CV_8UC4);
-            mat.put(0, 0, pixelsBuffer);
-            Mat m = new Mat();
-            Imgproc.cvtColor(mat, m, Imgproc.COLOR_RGBA2BGR);
-            Core.flip(m, mat, 0);
-            Highgui.imwrite("/sdcard/stitch/readpixel.jpg",mat);
+//            Highgui.imwrite("/sdcard/stitch/readpixel.jpg",mat);
 
         }
     }

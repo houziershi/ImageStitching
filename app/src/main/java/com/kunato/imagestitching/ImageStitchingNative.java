@@ -44,7 +44,7 @@ public class ImageStitchingNative {
         float[] areaFloat = new float[4];
         area.get(0, 0, areaFloat);
         //areaFloat[0]+=0;
-        areaFloat[1]-=70;
+        areaFloat[1]-=150;
         Log.d("JAVA Stitch", "Return Area [" + Arrays.toString(areaFloat)+"]");
         if(rtCode == -1){
             return 1;

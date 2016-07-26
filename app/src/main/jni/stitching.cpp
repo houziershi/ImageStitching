@@ -510,10 +510,10 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
 			for(int i = 0; i < p_img.size() ;i++){
 				corners[i] = p_img[i].compose_corner;
 				sizes[i] = p_img[i].compose_size;
-			}
+			    __android_log_print(ANDROID_LOG_DEBUG,"C++","%d : (%d,%d) (%d,%d)",i,corners[i].x,corners[i].y,sizes[i].width,sizes[i].height);
+            }
 			Rect dst = resultRoi(corners, sizes);
 			//Rect dst = full;
-			__android_log_print(ANDROID_LOG_DEBUG,"Test","%d %d",dst.x,dst.y);
 			//dst.x = -(width/2) + ((np2((width/2)+dst.x) - (np2((width/2)+dst.x) >> 1)));
             dst.x -= 10;
             dst.y -= 10;
@@ -856,7 +856,7 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
     }
     if(min_acos_z > 0.3){
 
-        return 0;
+        return 1;
     }
     return 0;
 }

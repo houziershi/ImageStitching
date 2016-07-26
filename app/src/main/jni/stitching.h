@@ -35,8 +35,6 @@ double tracking_scale = 0.2;
 string result_name = "/mnt/sdcard/result.png";
 int blend_type = Blender::NO;
 #define TAG "NATIVE_DEBUG"
-#define GL_HEIGHT 1731
-#define GL_WIDTH 1080
 cv::FileStorage debug("/sdcard/stitch/debug.yml", cv::FileStorage::WRITE);
 
 struct ImagePackage{
@@ -58,7 +56,7 @@ struct ImagePackage{
     CameraParams param;
 };
 float focal_divider = 3.45;
-float camera_focal_x=1391.6387,camera_focal_y=1408.12109740,camera_ppx=748.368019,camera_ppy=481.0012430;
+float camera_focal_x=1425.559961560,camera_focal_y=1425.559961560,camera_ppx=745.027494,camera_ppy=436.7257419;
 int work_width = 0;
 int work_height = 0;
 vector<ImagePackage> images;
