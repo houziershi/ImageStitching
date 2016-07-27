@@ -75,7 +75,7 @@ public class SphereObject {
                     "gl_FragColor.a = 1.0;" +
                     "}" +
             "}";
-
+    public boolean mRealRender = false;
     private final int mProgram;
     private int mPositionHandle;
     private int mTextureHandle;
@@ -90,19 +90,22 @@ public class SphereObject {
     private int mTextureCoordinateHandle;
     private boolean mTexRequireUpdate = false;
     private Bitmap mQueueBitmap;
-    public boolean readPixel = true;
+    public boolean readPixel = false;
     private ByteBuffer mScreenBuffer;
+    private ByteBuffer mScreenTopSeamBuffer;
+    private ByteBuffer mScreenBotSeamBuffer;
+    private ByteBuffer mScreenLeftSeamBuffer;
+    private ByteBuffer mScreenRightSeamBuffer;
     private GLRenderer glRenderer;
     public float[] mArea = {0,0,0,0};
     public SphereObject(GLRenderer renderer) {
+        Context context = renderer.mView.getActivity();
         glRenderer = renderer;
-                Context context = renderer.mView.getActivity();
         mSphereShape = new SphereShape(20,210,1);
         mSphereBuffer = mSphereShape.getVertices();
         mSphereBuffer.position(0);
         mIndexBuffer = mSphereShape.getIndices()[0];
         mIndexBuffer.position(0);
-
         mProgram = Util.loadShader(vertexShaderCode, fragmentShaderCode);
 
         loadGLTexture(context, R.drawable.pano, false);
@@ -185,7 +188,6 @@ public class SphereObject {
 //        int alpha_fixed = readPixel ? 1 : 0;
         int alpha_fixed = 0;
         GLES20.glUniform1i(alphah,alpha_fixed);
-
         mViewMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uViewMatrix");
         mProjectionMatrixHandle = GLES20.glGetUniformLocation(mProgram,"uProjectionMatrix");
         GLES20.glUniformMatrix4fv(mViewMatrixHandle, 1, false, viewMatrix, 0);
@@ -193,19 +195,67 @@ public class SphereObject {
         GLES20.glDrawElements(GLES20.GL_TRIANGLES, mSphereShape.getNumIndices()[0], GLES20.GL_UNSIGNED_SHORT, mIndexBuffer);
         GLES20.glDisableVertexAttribArray(mPositionHandle);
         GLES20.glDisableVertexAttribArray(mTextureCoordinateHandle);
-
-
-        if(readPixel) {
+        if(!mRealRender){
             Log.d("GL","ReadPixel");
             mScreenBuffer = ByteBuffer.allocateDirect(glRenderer.mWidth * 4);
+            mScreenTopSeamBuffer = ByteBuffer.allocate(glRenderer.mWidth * 4);
+            mScreenTopSeamBuffer.order(ByteOrder.nativeOrder());
+            mScreenBotSeamBuffer = ByteBuffer.allocate(glRenderer.mWidth * 4);
+            mScreenBotSeamBuffer.order(ByteOrder.nativeOrder());
+            mScreenLeftSeamBuffer = ByteBuffer.allocate(glRenderer.mHeight * 4);
+            mScreenLeftSeamBuffer.order(ByteOrder.nativeOrder());
+            mScreenRightSeamBuffer = ByteBuffer.allocate(glRenderer.mHeight * 4);
+            mScreenRightSeamBuffer.order(ByteOrder.nativeOrder());
+            GLES20.glReadPixels(0, 0, glRenderer.mWidth, 1, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, mScreenBotSeamBuffer);
+            GLES20.glReadPixels(0, glRenderer.mHeight-1, glRenderer.mWidth, 1, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, mScreenTopSeamBuffer);
+
+            GLES20.glReadPixels(0, 0, 1, glRenderer.mHeight, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, mScreenLeftSeamBuffer);
+            GLES20.glReadPixels(glRenderer.mWidth-1, 0, 1, glRenderer.mHeight, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, mScreenRightSeamBuffer);
+            mScreenTopSeamBuffer.rewind();
+            mScreenRightSeamBuffer.rewind();
+            mScreenLeftSeamBuffer.rewind();
+            mScreenBotSeamBuffer.rewind();
+            byte pixelsBuffer[] = new byte[8*glRenderer.mWidth+8*glRenderer.mHeight];
+            mScreenTopSeamBuffer.get(pixelsBuffer,0,4*glRenderer.mWidth);
+            mScreenBotSeamBuffer.get(pixelsBuffer,4*glRenderer.mWidth,4*glRenderer.mWidth);
+            mScreenLeftSeamBuffer.get(pixelsBuffer,8*glRenderer.mWidth,4*glRenderer.mHeight);
+            mScreenRightSeamBuffer.get(pixelsBuffer,8*glRenderer.mWidth+4*glRenderer.mHeight,4*glRenderer.mHeight);
+            int count = 0;
+            for(int i = 0 ; i < pixelsBuffer.length ;i+=4){
+                if(pixelsBuffer[i] == 0){
+                    count++;
+                }
+            }
+            if(count < 3000){
+                if(!glRenderer.mUsingOldMatrix == true){
+                    glRenderer.mUsingOldMatrix = true;
+
+                    glRenderer.mPreviousRotMatrix = viewMatrix;
+                }
+            }
+            else{
+                glRenderer.mUsingOldMatrix = false;
+            }
+            Log.d("GL","ReadPixel :"+count);
+        }
+
+        if(readPixel) {
+            //byte fPixelsBuffer[] = new byte[4*glRenderer.mHeight*glRenderer.mWidth];
+            //mScreenBuffer.get(fPixelsBuffer);
+            Log.d("GL","ReadPixel");
+            mScreenBuffer = ByteBuffer.allocateDirect(glRenderer.mHeight * glRenderer.mWidth * 4);
             mScreenBuffer.order(ByteOrder.nativeOrder());
-            GLES20.glReadPixels(0, 0, glRenderer.mWidth, 0, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, mScreenBuffer);
+            GLES20.glReadPixels(0, 0, glRenderer.mWidth, glRenderer.mHeight, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, mScreenBuffer);
             Log.d("mScreenBuffer", "Remaining " + mScreenBuffer.remaining());
             mScreenBuffer.rewind();
-            byte pixelsBuffer[] = new byte[4*glRenderer.mWidth];
+            byte pixelsBuffer[] = new byte[4*glRenderer.mHeight*glRenderer.mWidth];
             mScreenBuffer.get(pixelsBuffer);
-//            Highgui.imwrite("/sdcard/stitch/readpixel.jpg",mat);
-
+            Mat mat = new Mat(glRenderer.mHeight, glRenderer.mWidth, CvType.CV_8UC4);
+            mat.put(0, 0, pixelsBuffer);
+            Mat m = new Mat();
+            Imgproc.cvtColor(mat, m, Imgproc.COLOR_RGBA2BGR);
+            Core.flip(m, mat, 0);
+            Highgui.imwrite("/sdcard/stitch/readpixel.jpg",mat);
         }
     }
 

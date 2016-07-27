@@ -4,7 +4,6 @@ import android.graphics.SurfaceTexture;
 import android.location.Location;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
-import android.opengl.Matrix;
 import android.util.Log;
 
 import java.util.ArrayList;
@@ -22,6 +21,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     private SurfaceTexture mTextureProcessed;
     private boolean mUpdateST = false;
     protected MainController mView;
+    public boolean mUsingOldMatrix = false;
     private final float[] mMVPMatrix = new float[16];
     public float[] mProjectionMatrix = new float[16];
     private final float[] mViewCanvasMatrix = new float[16];
@@ -31,6 +31,10 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     private final float HEIGHT_WIDTH_RATIO = 1f;
     private List<ARObject> mARObject = new ArrayList<>();
     public float[] mRotationMatrix = {1f,0,0,0
+            ,0,1f,0,0
+            ,0,0,1f,0
+            ,0,0,0,1f};
+    public float[] mPreviousRotMatrix = {1f,0,0,0
             ,0,1f,0,0
             ,0,0,1f,0
             ,0,0,0,1f};
@@ -77,7 +81,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         mTextureProcessed = new SurfaceTexture(mCanvasObjectProcessed.getTexturePos()[0]);
         mTextureNormal.setOnFrameAvailableListener(this);
         mTextureProcessed.setOnFrameAvailableListener(this);
-        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         //(x (vertical),(horizontal)y,z)
         GLES20.glEnable(GLES20.GL_BLEND);
         GLES20.glBlendFunc(GLES20.GL_SRC_ALPHA, GLES20.GL_ONE_MINUS_SRC_ALPHA);
@@ -135,7 +139,6 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         //multiply MM(retMat, retMatOffset, mat1 * mat2 (includeOffset))
 //        mCanvasObject.draw(mMVPMatrix);
         if(readInProgress){
-            GLES20.glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
             mSphere.draw(mRotationMatrix,mProjectionMatrix);
             GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
             GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT);
@@ -143,10 +146,22 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
             readInProgress = false;
         }
 
-
+        mSphere.draw(mRotationMatrix,mProjectionMatrix);
+        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
+        GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT);
+        mSphere.mRealRender = true;
 
         mCanvasObjectProcessed.draw(mViewCanvasMatrix,mHomography);
-        mSphere.draw(mRotationMatrix,mProjectionMatrix);
+        if(mUsingOldMatrix){
+            mSphere.draw(mPreviousRotMatrix,mProjectionMatrix);
+            Log.d("GL","Using PreviousRotationMatrix");
+        }
+        else{
+
+            mSphere.draw(mRotationMatrix,mProjectionMatrix);
+
+        }
+        mSphere.mRealRender = false;
         for(int i = 0 ; i < mARObject.size() ; i++)
             mARObject.get(i).draw(mRotationMatrix,mProjectionMatrix);
         GLES20.glFlush();
@@ -189,6 +204,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     }
 
     public void setRotationMatrix(float[] rotationMatrix){
+        //mPreviousRotMatrix = mRotationMatrix;
         mRotationMatrix = rotationMatrix;
     }
     public SphereObject getSphere(){
