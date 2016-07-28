@@ -377,14 +377,16 @@ public class Util {
         float y0 = 0;
         float zfar = 1000.f;
         float znear = 0.1f;
-        output[0] = 2*K[0]/width;
-        output[4] = -2*K[1]/width;
-        output[5] = -(-2*K[4]/height);
-        output[8] = (width - 2*K[2] + 2*x0)/width;
-        output[9] = (height - 2*K[5] + 2*y0)/height;
-        output[10] = (-zfar - znear)/(zfar - znear);
+        output[0] = (2*K[0]/width)*GLRenderer.ZOOM_RATIO;
+        output[4] = (-2*K[1]/width);
+        output[5] = (-(-2*K[4]/height))*GLRenderer.ZOOM_RATIO;
+        output[8] = ((width - 2*K[2] + 2*x0)/width);
+        output[9] = ((height - 2*K[5] + 2*y0)/height);
+
+        //kankeinai
+        output[10] = ((-zfar - znear)/(zfar - znear));
         output[11] = -1.0f;
-        output[14] = -2*zfar*znear/(zfar - znear);
+        output[14] = (-2*zfar*znear/(zfar - znear));
         return output;
     }
 

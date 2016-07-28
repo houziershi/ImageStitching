@@ -221,6 +221,7 @@ public class MainController extends GLSurfaceView {
         mActivity = (Activity) context;
         mGLRenderer = mFactory.getGlRenderer();
         setEGLContextClientVersion(2);
+        setEGLConfigChooser(8,8,8,8,16,8);
         setRenderer(mGLRenderer);
         setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);
         mLocationServices = new LocationServices(this);

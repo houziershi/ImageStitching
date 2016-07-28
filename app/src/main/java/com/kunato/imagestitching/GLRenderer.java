@@ -2,6 +2,7 @@ package com.kunato.imagestitching;
 
 import android.graphics.SurfaceTexture;
 import android.location.Location;
+import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.util.Log;
@@ -26,7 +27,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     public float[] mProjectionMatrix = new float[16];
     private final float[] mViewCanvasMatrix = new float[16];
     private final float SCREEN_RATIO = 0.6239168f;
-    private final float ZOOM_RATIO = 1f;
+    public static final float ZOOM_RATIO = 1.7f;
     private final float CANVAS_SIZE = 1f * ZOOM_RATIO;
     private final float HEIGHT_WIDTH_RATIO = 1f;
     private List<ARObject> mARObject = new ArrayList<>();
@@ -145,25 +146,29 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
             mSphere.readPixel = false;
             readInProgress = false;
         }
-
+        //Test mRotation
         mSphere.draw(mRotationMatrix,mProjectionMatrix);
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
         GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT);
+
         mSphere.mRealRender = true;
 
         mCanvasObjectProcessed.draw(mViewCanvasMatrix,mHomography);
+
         if(mUsingOldMatrix){
             mSphere.draw(mPreviousRotMatrix,mProjectionMatrix);
             Log.d("GL","Using PreviousRotationMatrix");
+            for(int i = 0 ; i < mARObject.size() ; i++)
+                mARObject.get(i).draw(mPreviousRotMatrix,mProjectionMatrix);
         }
         else{
 
             mSphere.draw(mRotationMatrix,mProjectionMatrix);
-
+            for(int i = 0 ; i < mARObject.size() ; i++)
+                mARObject.get(i).draw(mRotationMatrix,mProjectionMatrix);
         }
         mSphere.mRealRender = false;
-        for(int i = 0 ; i < mARObject.size() ; i++)
-            mARObject.get(i).draw(mRotationMatrix,mProjectionMatrix);
+
         GLES20.glFlush();
     }
 
@@ -172,9 +177,9 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         mHeight = height;
 
         GLES20.glViewport(0, 0, mWidth, mHeight);
-        Log.v("GL", "Screen" + String.format("(Width:Height)[%d,%d]", mWidth,mHeight));
-        float ratio = 9f/16f; //always because camera input as 3/4
 
+        GLES20.glRenderbufferStorage(GLES20.GL_RENDERBUFFER, GLES11Ext.GL_RGBA8_OES,mWidth,mHeight);
+        Log.v("GL", "Screen" + String.format("(Width:Height)[%d,%d]", mWidth,mHeight));
         //48=zoom1.5//72=zoom1
         //52 for height
         //65 default

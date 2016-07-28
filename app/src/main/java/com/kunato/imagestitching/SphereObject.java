@@ -222,18 +222,18 @@ public class SphereObject {
             mScreenRightSeamBuffer.get(pixelsBuffer,8*glRenderer.mWidth+4*glRenderer.mHeight,4*glRenderer.mHeight);
             int count = 0;
             for(int i = 0 ; i < pixelsBuffer.length ;i+=4){
-                if(pixelsBuffer[i] == 0){
+                if(pixelsBuffer[i+3] == 0){
                     count++;
                 }
             }
-            if(count < 3000){
+            if(count > 0){
                 if(!glRenderer.mUsingOldMatrix == true){
                     glRenderer.mUsingOldMatrix = true;
 
-                    glRenderer.mPreviousRotMatrix = viewMatrix;
                 }
             }
             else{
+                glRenderer.mPreviousRotMatrix = viewMatrix;
                 glRenderer.mUsingOldMatrix = false;
             }
             Log.d("GL","ReadPixel :"+count);

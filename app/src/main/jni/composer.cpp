@@ -78,10 +78,10 @@ namespace composer{
                 if(dist_y > 1.0)
                     dist_y = 1.0;
                 if(dist_x > dist_y){
-                    dst_dt_.at<uchar>(x,y) = dist_y*255;
+                    dst_dt_.at<uchar>(x,y) = 255;
                 }
                 else{
-                    dst_dt_.at<uchar>(x,y) = dist_x*255;
+                    dst_dt_.at<uchar>(x,y) = 255;
                 }
             }
         }
