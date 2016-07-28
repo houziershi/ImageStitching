@@ -77,7 +77,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         mCanvasObject = new CanvasObject(vertices,textures, mView.getActivity());
         mCanvasObjectProcessed = new CanvasObject(vertices,textures,mView.getActivity());
 
-        mSphere = new SphereObject(this);
+
         mTextureNormal = new SurfaceTexture (mCanvasObject.getTexturePos()[0]);
         mTextureProcessed = new SurfaceTexture(mCanvasObjectProcessed.getTexturePos()[0]);
         mTextureNormal.setOnFrameAvailableListener(this);
@@ -177,7 +177,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         mHeight = height;
 
         GLES20.glViewport(0, 0, mWidth, mHeight);
-
+        mSphere = new SphereObject(this,mWidth,mHeight);
         GLES20.glRenderbufferStorage(GLES20.GL_RENDERBUFFER, GLES11Ext.GL_RGBA8_OES,mWidth,mHeight);
         Log.v("GL", "Screen" + String.format("(Width:Height)[%d,%d]", mWidth,mHeight));
         //48=zoom1.5//72=zoom1
