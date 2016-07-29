@@ -248,7 +248,6 @@ public class SphereObject {
         GLES20.glDisableVertexAttribArray(mPositionHandle);
         GLES20.glDisableVertexAttribArray(mTextureCoordinateHandle);
         if(!mRealRender){
-            Log.d("GL","ReadPixel");
             mScreenBuffer = ByteBuffer.allocateDirect(mWidth * 4);
             mScreenTopSeamBuffer = ByteBuffer.allocate(mWidth * 4);
             mScreenTopSeamBuffer.order(ByteOrder.nativeOrder());
@@ -281,14 +280,12 @@ public class SphereObject {
             if(count > 0){
                 if(!glRenderer.mUsingOldMatrix == true){
                     glRenderer.mUsingOldMatrix = true;
-
                 }
             }
             else{
                 glRenderer.mPreviousRotMatrix = viewMatrix;
                 glRenderer.mUsingOldMatrix = false;
             }
-            Log.d("GL","ReadPixel :"+count);
             GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
         }
 

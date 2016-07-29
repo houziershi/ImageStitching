@@ -53,7 +53,7 @@ void findDescriptor(Mat img,std::vector<KeyPoint> &keypoints ,Mat &descriptor){
 //		detector->set("nOctaves", 3);
 //		detector->set("nOctaveLayers", 4);
 		detector_setup = 0;
-		detector->set("nFeatures",100);
+		detector->set("nFeatures",500);
 	}
 	Mat grayImg;
 	cvtColor(img,grayImg,CV_BGR2GRAY);
@@ -662,11 +662,13 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 //	minimizeRotation(features,pairwise_matches,cameras);
 	vector<Point2f> src;
 	vector<Point2f> dst;
+
 	for(int i = 0 ; i < pairwise_matches.size();i++){
+		__android_log_print(ANDROID_LOG_DEBUG,"C++ Stitching","Pair Number : %d %d %d",i,pairwise_matches[i].src_img_idx,pairwise_matches[i].dst_img_idx);
 		if(pairwise_matches[i].src_img_idx == nearestImage && pairwise_matches[i].dst_img_idx == images.size()-1){
 			__android_log_print(ANDROID_LOG_INFO,"C++ Stitching","Nearest Pair %d %d %d",pairwise_matches[i].src_img_idx
 					,pairwise_matches[i].dst_img_idx,pairwise_matches[i].matches.size());
-			if(0){
+			if(pairwise_matches[i].matches.size() < 15){
 				//return
 				__android_log_print(ANDROID_LOG_WARN,"C++ Stitching","Stitch Rejected < 15 matches point..");
 				images.pop_back();
@@ -676,7 +678,7 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 				for (int j = 0; j < pairwise_matches[i].matches.size(); j++) {
 					if (pairwise_matches[i].inliers_mask[j]) {
 						src.push_back(
-								features[nearestImage].keypoints[pairwise_matches[i].matches[j].queryIdx].pt);
+						    features[nearestImage].keypoints[pairwise_matches[i].matches[j].queryIdx].pt);
 						dst.push_back(features[images.size() -
 											   1].keypoints[pairwise_matches[i].matches[j].trainIdx].pt);
 					}
@@ -689,8 +691,12 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	cameraSet[0] = cameras[nearestImage];
 	cameraSet[1] = cameras[images.size()-1];
 	Mat comparedRot = cameras[images.size()-1].R.clone();
+	printMatrix(cameraSet[0].R,"Input 0 Minimized Rot");
+	printMatrix(cameraSet[1].R,"Input 1 Minimized Rot");
+	__android_log_print(ANDROID_LOG_DEBUG,"C++ Stitching","Minimized Point %d : %d",src.size(),dst.size());
 	int iterationCount = minimizeRotation(src,dst,cameraSet);
 	//Check with ceres minimizer should be best solution
+	__android_log_print(ANDROID_LOG_DEBUG,"C++ Stitching","Minimize Iteration %d",iterationCount);
 
 	if(isBiggerThanThreshold(comparedRot,cameraSet[1].R,0.1)){
 
@@ -849,11 +855,12 @@ JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_native
     double min_acos_z = 6.0;
     for(int i = 0 ; i < images.size() ; i++){
         double acos_z  = calcOpticalDiff(rotMat, images[i].rotation);
-        //__android_log_print(ANDROID_LOG_INFO,"Z_diff","%lf",acos_z*180/M_PI);
         if(abs(acos_z) < abs(min_acos_z)){
             min_acos_z = acos_z;
         }
     }
+    //__android_log_print(ANDROID_LOG_INFO,"Z_diff","%lf",min_acos_z*180/M_PI);
+
     if(min_acos_z > 0.3){
         return 1;
     }

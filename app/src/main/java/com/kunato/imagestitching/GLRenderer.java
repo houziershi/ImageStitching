@@ -157,7 +157,6 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
 
         if(mUsingOldMatrix){
             mSphere.draw(mPreviousRotMatrix,mProjectionMatrix);
-            Log.d("GL","Using PreviousRotationMatrix");
             for(int i = 0 ; i < mARObject.size() ; i++)
                 mARObject.get(i).draw(mPreviousRotMatrix,mProjectionMatrix);
         }

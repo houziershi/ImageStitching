@@ -1,4 +1,7 @@
 
+#define BLENDING
+
+#ifndef BLENDING
 #include "composer.h"
 using namespace std;
 using namespace cv;
@@ -97,9 +100,7 @@ namespace composer{
         dst_mask_.release();
     }
 }
-
-
-
+#else
 //
 //  $$$$$$$         $$$   $$$           $$$$$
 //  $$               $$$ $$$            $$$ $$
@@ -107,7 +108,6 @@ namespace composer{
 //  $$               $$$ $$$            $$$
 //  $$$$$$$         $$$   $$$           $$$
 
-/*
 
 // Pyramid Blending
 
@@ -336,19 +336,16 @@ static const float WEIGHT_EPS = 1e-5f;
                 if(dst_mask_.at<uchar>(x,y) == 255)
                     weight = 1;
                 if(dist_x > dist_y){
-                    dst_dt_.at<uchar>(x,y) = dist_y*255*weight;
+                    dst_dt_.at<uchar>(x,y) = 255*weight;
                 }
                 else{
-                    dst_dt_.at<uchar>(x,y) = dist_x*255*weight;
+                    dst_dt_.at<uchar>(x,y) = 255*weight;
                 }
             }
         }
-        imwrite("/sdcard/stitch/dt.jpg",dst_dt_);
-        imwrite("/sdcard/stitch/mask.jpg",dst_mask_);
         Mat uchar_dst;
         dst_.convertTo(uchar_dst,CV_8UC3);
         //Mat temp = dst_mask_.mul(dst_dt_);
-        imwrite("/sdcard/stitch/temp.jpg",dst_dt_);
 
         Mat out[] = {uchar_dst,dst_dt_};
 
@@ -363,5 +360,4 @@ static const float WEIGHT_EPS = 1e-5f;
         uchar_dst.release();
     }
 }
-
-*/
+#endif
