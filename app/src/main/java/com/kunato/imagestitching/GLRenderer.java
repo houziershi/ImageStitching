@@ -23,6 +23,7 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     private boolean mUpdateST = false;
     protected MainController mView;
     public boolean mUsingOldMatrix = false;
+    public float mFadeAlpha = 1.0f;
     private final float[] mMVPMatrix = new float[16];
     public float[] mProjectionMatrix = new float[16];
     private final float[] mViewCanvasMatrix = new float[16];
@@ -140,14 +141,14 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         //multiply MM(retMat, retMatOffset, mat1 * mat2 (includeOffset))
 //        mCanvasObject.draw(mMVPMatrix);
         if(readInProgress){
-            mSphere.draw(mRotationMatrix,mProjectionMatrix);
+            mSphere.draw(mRotationMatrix,mProjectionMatrix,1.0f);
             GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
             GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT);
             mSphere.readPixel = false;
             readInProgress = false;
         }
         //Test mRotation
-        mSphere.draw(mRotationMatrix,mProjectionMatrix);
+        mSphere.draw(mRotationMatrix,mProjectionMatrix,1.0f);
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
         GLES20.glClear(GLES20.GL_DEPTH_BUFFER_BIT);
 
@@ -156,13 +157,16 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         mCanvasObjectProcessed.draw(mViewCanvasMatrix,mHomography);
 
         if(mUsingOldMatrix){
-            mSphere.draw(mPreviousRotMatrix,mProjectionMatrix);
+            Log.d("GLRendering","mFadeAlpha " + mFadeAlpha);
+            mSphere.draw(mPreviousRotMatrix,mProjectionMatrix,mFadeAlpha);
+            if(mFadeAlpha > 0.0){
+                mFadeAlpha -= 1f/10f;
+            }
             for(int i = 0 ; i < mARObject.size() ; i++)
                 mARObject.get(i).draw(mPreviousRotMatrix,mProjectionMatrix);
         }
         else{
-
-            mSphere.draw(mRotationMatrix,mProjectionMatrix);
+            mSphere.draw(mRotationMatrix,mProjectionMatrix,1.0f);
             for(int i = 0 ; i < mARObject.size() ; i++)
                 mARObject.get(i).draw(mRotationMatrix,mProjectionMatrix);
         }
@@ -174,19 +178,17 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
     public void onSurfaceChanged ( GL10 unused, int width, int height ) {
         mWidth = width;
         mHeight = height;
-
         GLES20.glViewport(0, 0, mWidth, mHeight);
         mSphere = new SphereObject(this,mWidth,mHeight);
         GLES20.glRenderbufferStorage(GLES20.GL_RENDERBUFFER, GLES11Ext.GL_RGBA8_OES,mWidth,mHeight);
         Log.v("GL", "Screen" + String.format("(Width:Height)[%d,%d]", mWidth,mHeight));
+
         //48=zoom1.5//72=zoom1
         //52 for height
         //65 default
         //Matrix.perspectiveM(mProjectionMatrix, 0, 50 / ZOOM_RATIO, ratio, 0.1f, 1000f);//48 for 4/3 64 for 1920/1080
+
         mProjectionMatrix = Util.glProjectionMatrix();
-
-
-
         for(int i = 0 ; i < mProjectionMatrix.length ;i++){
             Log.d("Matrix",""+mProjectionMatrix[i]);
         }
