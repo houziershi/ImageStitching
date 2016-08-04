@@ -277,6 +277,7 @@ public class SphereObject {
                     count++;
                 }
             }
+            Log.d("GLRenderer","Count :"+count);
             if(count > 0){
                 if(!glRenderer.mUsingOldMatrix == true){
                     glRenderer.mUsingOldMatrix = true;
@@ -285,7 +286,7 @@ public class SphereObject {
             else{
                 glRenderer.mPreviousRotMatrix = viewMatrix;
                 glRenderer.mUsingOldMatrix = false;
-                glRenderer.mFadeAlpha = 1.0f;
+                Log.d("GLRenderer","mFade :"+glRenderer.mFadeAlpha);
             }
             GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
         }

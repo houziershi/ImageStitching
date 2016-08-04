@@ -1,5 +1,5 @@
 
-#define BLENDING
+
 
 #ifndef BLENDING
 #include "composer.h"

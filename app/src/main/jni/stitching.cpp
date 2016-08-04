@@ -556,17 +556,20 @@ void doComposition(float warped_image_scale,vector<CameraParams> cameras,vector<
 	clock_t c_c9 = std::clock();
 	__android_log_print(ANDROID_LOG_DEBUG,"C++ Composition","Timer Merged %lf",(double)(c_c9-c_c8)/CLOCKS_PER_SEC);
 	//out as rgba
-
 }
+
 
 JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeAddStitch(JNIEnv*, jobject, jlong imgaddr,jlong rotaddr){
     __android_log_print(ANDROID_LOG_INFO, "C++ AddImage", "Start");
 	ImagePackage imagePackage;
-	Mat& full_img  = *(Mat*)imgaddr;
+	//Mat& frame  = *(Mat*)imgaddr; Mat full_img;
+	Mat& full_img = *(Mat*)imgaddr;
 	Mat& rot = *(Mat*)rotaddr;
 	imagePackage.rotation = rot;
-	imagePackage.full_size = full_img.size();
+	//GaussianBlur(frame, full_img, cv::Size(0, 0), 3);
+    //addWeighted(frame, 1.5, full_img, -0.5, 0, full_img);
 	imagePackage.full_image = full_img;
+	imagePackage.full_size = imagePackage.full_image.size();
 	ImageFeatures feature;
 	Mat img;
 	__android_log_print(ANDROID_LOG_INFO,"C++ AddImage","Recived Full Image Size: %d %d",full_img.size().width,full_img.size().height);
@@ -589,7 +592,6 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	imagePackage.feature = feature;
 	imagePackage.done = 0;
 	images.push_back(imagePackage);
-
 }
 
 

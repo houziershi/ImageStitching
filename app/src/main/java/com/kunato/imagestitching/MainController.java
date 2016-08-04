@@ -57,6 +57,7 @@ import static android.hardware.camera2.CameraCharacteristics.*;
 import static android.hardware.camera2.CameraCharacteristics.LENS_FACING;
 import static android.hardware.camera2.CameraMetadata.LENS_FACING_FRONT;
 import static android.hardware.camera2.CaptureRequest.CONTROL_AE_LOCK;
+import static android.hardware.camera2.CaptureRequest.CONTROL_AE_MODE;
 import static android.hardware.camera2.CaptureRequest.CONTROL_AF_MODE;
 import static android.hardware.camera2.CaptureRequest.CONTROL_AWB_LOCK;
 
@@ -70,12 +71,15 @@ public class MainController extends GLSurfaceView {
     private static final String TAG = MainController.class.getName();
     private final CameraCaptureSession.CaptureCallback mCaptureCallback = new CameraCaptureSession.CaptureCallback() {
         private void process(CaptureResult result) {
+            for(int i = 0 ; i < mCharacteristics.getAvailableCaptureResultKeys().size();i++){
+                Log.d("CameraParam","Key :"+mCharacteristics.getAvailableCaptureResultKeys().get(i).getName().toString()+" : "+result.get(mCharacteristics.getAvailableCaptureResultKeys().get(i)));
+            }
         }
 
         @Override
         public void onCaptureProgressed(CameraCaptureSession session,CaptureRequest request,
                                         CaptureResult partialResult) {
-            process(partialResult);
+           // process(partialResult);
         }
 
         @Override
@@ -325,9 +329,10 @@ public class MainController extends GLSurfaceView {
                 mLocationServices = new LocationServices(this);
                 mLocationServices.start();
             }
+
             Log.d("MainController","Button Press, AE Lock");
 //            mPreviewRequestBuilder.set(CONTROL_AF_TRIGGER,CONTROL_AF_TRIGGER_START);
-            mPreviewRequestBuilder.set(CONTROL_AF_MODE, CONTROL_AF_MODE_AUTO);
+            //mPreviewRequestBuilder.set(CONTROL_AF_MODE, CONTROL_AF_MODE_AUTO);
             mPreviewRequestBuilder.set(CONTROL_AWB_LOCK, Boolean.TRUE);
             mPreviewRequestBuilder.set(CONTROL_AE_LOCK, Boolean.TRUE);
             updatePreview();
@@ -375,6 +380,8 @@ public class MainController extends GLSurfaceView {
 
                 StreamConfigurationMap configs = characteristics.get(
                         CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+                Log.d("CameraParam","CaptureResultKey :"+Arrays.toString(characteristics.getAvailableCaptureRequestKeys().toArray()));
+
                 Log.d("CameraParam","Support : "+configs.isOutputSupportedFor(ImageReader.class)+","+configs.isOutputSupportedFor(mImageReader.getSurface()));
                 Log.d("CameraParam","Format : "+Arrays.toString(configs.getOutputFormats()));
                 Log.d("CameraParam","Size : "+Arrays.toString(configs.getOutputSizes(ImageFormat.YV12)));
@@ -472,6 +479,10 @@ public class MainController extends GLSurfaceView {
                                 return;
                             mCaptureSession = cameraCaptureSession;
                             mPreviewRequestBuilder.set(CONTROL_AF_MODE, CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, 1);
+                            Log.d("Camera","On Configured");
+//                            mPreviewRequestBuilder.set(CONTROL_AE_MODE, CONTROL_AE_MODE_OFF);
+//                            mPreviewRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, 800);
                             updatePreview();
                         }
 
