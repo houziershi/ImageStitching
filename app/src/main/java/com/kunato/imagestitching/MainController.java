@@ -71,9 +71,7 @@ public class MainController extends GLSurfaceView {
     private static final String TAG = MainController.class.getName();
     private final CameraCaptureSession.CaptureCallback mCaptureCallback = new CameraCaptureSession.CaptureCallback() {
         private void process(CaptureResult result) {
-            for(int i = 0 ; i < mCharacteristics.getAvailableCaptureResultKeys().size();i++){
-                Log.d("CameraParam","Key :"+mCharacteristics.getAvailableCaptureResultKeys().get(i).getName().toString()+" : "+result.get(mCharacteristics.getAvailableCaptureResultKeys().get(i)));
-            }
+
         }
 
         @Override
@@ -91,8 +89,10 @@ public class MainController extends GLSurfaceView {
     };
     //Nexus5x = 1080,1920
     //Note10.1 = 1080,1440
-    private Size mSize = new Size(1080,1440);
-
+//    private Size mSize = new Size(1080,1440);
+    private Size mSize = new Size(1920,1080);
+    private int mConvertType = Imgproc.COLOR_YUV2BGR_I420;
+//    private int mConvertType = Imgproc.COLOR_YUV2BGR_NV12;
     //Using in OnImageAvailableListener
     public byte[] mFrameByte;
     public boolean mAsyncRunning = false;
@@ -113,39 +113,57 @@ public class MainController extends GLSurfaceView {
                 mAsyncRunning = true;
                 mRunning = false;
                 Log.d("ImageReader","Start!");
+                //Note10.1
 //                Log.d("ImageReader","length : "+planes.length);
-                Image.Plane Y = image.getPlanes()[0];
-                Image.Plane U = image.getPlanes()[1];
-                Image.Plane V = image.getPlanes()[2];
+//                Image.Plane Y = image.getPlanes()[0];
+//                Image.Plane U = image.getPlanes()[1];
+//                Image.Plane V = image.getPlanes()[2];
+//                byte[] yBytes = new byte[Y.getBuffer().remaining()];
+//                Y.getBuffer().rewind();
+//                Y.getBuffer().get(yBytes);
+//                byte[] uBytes = new byte[U.getBuffer().remaining()];
+//                U.getBuffer().rewind();
+//                U.getBuffer().get(uBytes);
+//                byte[] vBytes = new byte[V.getBuffer().remaining()];
+//                V.getBuffer().rewind();
+//                V.getBuffer().get(vBytes);
+//
+//                int Yb = Y.getBuffer().remaining();
+//                int Ub = U.getBuffer().remaining();
+//                int Vb = V.getBuffer().remaining();
+//                if(mFrameByte == null) {
+//                    mFrameByte = new byte[Yb + Ub + Vb];
+//                }
+//                Y.getBuffer().get(mFrameByte, 0, Yb);
+//                U.getBuffer().get(mFrameByte, Yb, Ub);
+//                V.getBuffer().get(mFrameByte, Yb+ Ub, Vb);
 
-                int Yb = Y.getBuffer().remaining();
-                int Ub = U.getBuffer().remaining();
-                int Vb = V.getBuffer().remaining();
-                if(mFrameByte == null)
-                mFrameByte = new byte[Yb + Ub + Vb];
+                //Nexus5x
+                mFrameByte = Util.readImage(image);
 
-                Y.getBuffer().get(mFrameByte, 0, Yb);
-                U.getBuffer().get(mFrameByte, Yb, Ub);
-                V.getBuffer().get(mFrameByte, Yb+ Ub, Vb);
                 doStitching();
             }
             else if(mAlign){
                 mAlign = false;
                 Log.d("ImageReader","Align Start!");
+                //Note10.1
 //                Log.d("ImageReader","length : "+planes.length);
-                Image.Plane Y = image.getPlanes()[0];
-                Image.Plane U = image.getPlanes()[1];
-                Image.Plane V = image.getPlanes()[2];
+//                Image.Plane Y = image.getPlanes()[0];
+//                Image.Plane U = image.getPlanes()[1];
+//                Image.Plane V = image.getPlanes()[2];
+//
+//                int Yb = Y.getBuffer().remaining();
+//                int Ub = U.getBuffer().remaining();
+//                int Vb = V.getBuffer().remaining();
+//                if(mFrameByte == null)
+//                    mFrameByte = new byte[Yb + Ub + Vb];
+//
+//                Y.getBuffer().get(mFrameByte, 0, Yb);
+//                U.getBuffer().get(mFrameByte, Yb, Ub);
+//                V.getBuffer().get(mFrameByte, Yb+ Ub, Vb);
 
-                int Yb = Y.getBuffer().remaining();
-                int Ub = U.getBuffer().remaining();
-                int Vb = V.getBuffer().remaining();
-                if(mFrameByte == null)
-                    mFrameByte = new byte[Yb + Ub + Vb];
-
-                Y.getBuffer().get(mFrameByte, 0, Yb);
-                U.getBuffer().get(mFrameByte, Yb, Ub);
-                V.getBuffer().get(mFrameByte, Yb+ Ub, Vb);
+                //Nexus5x
+                mFrameByte = Util.readImage(image);
                 doAlign();
             }
             image.close();
@@ -153,6 +171,11 @@ public class MainController extends GLSurfaceView {
         }
 
     };
+
+
+
+
+
     public void requireAlign(){
         mAlign = true;
     }
@@ -374,8 +397,11 @@ public class MainController extends GLSurfaceView {
                 CameraCharacteristics characteristics = manager.getCameraCharacteristics(cameraId);
                 if (characteristics.get(LENS_FACING) == LENS_FACING_FRONT) continue;
                 mCharacteristics = characteristics;
+                //Note10.1
+//                mImageReader = ImageReader.newInstance(mSize.getWidth(), mSize.getHeight(), ImageFormat.YV12, 1);
+                //Nexus5x
+                mImageReader = ImageReader.newInstance(mSize.getWidth(), mSize.getHeight(), ImageFormat.YUV_420_888,1);
 
-                mImageReader = ImageReader.newInstance(1440, 1080, ImageFormat.YV12, 1);
                 mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, mBackgroundHandler);
 
                 StreamConfigurationMap configs = characteristics.get(
@@ -463,7 +489,7 @@ public class MainController extends GLSurfaceView {
                     e.printStackTrace();
                 }
             }
-            glProcessTexture.setDefaultBufferSize(1440,1080);
+            glProcessTexture.setDefaultBufferSize(mSize.getWidth(),mSize.getHeight());
             Surface mGLProcessSurface = new Surface(glProcessTexture);
 
             List<Surface> surfaceList = new ArrayList<>();
@@ -478,8 +504,13 @@ public class MainController extends GLSurfaceView {
                             if (mCameraDevice == null)
                                 return;
                             mCaptureSession = cameraCaptureSession;
-                            mPreviewRequestBuilder.set(CONTROL_AF_MODE, CONTROL_AF_MODE_CONTINUOUS_PICTURE);
-                            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, 1);
+                            //Note10.1
+//                            mPreviewRequestBuilder.set(CONTROL_AF_MODE, CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+//                            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, 1);
+                            //Nexus5x
+                            mPreviewRequestBuilder.set(CONTROL_AF_MODE, CONTROL_AF_MODE_AUTO);
+
+
                             Log.d("Camera","On Configured");
 //                            mPreviewRequestBuilder.set(CONTROL_AE_MODE, CONTROL_AE_MODE_OFF);
 //                            mPreviewRequestBuilder.set(CaptureRequest.SENSOR_SENSITIVITY, 800);
@@ -585,10 +616,11 @@ public class MainController extends GLSurfaceView {
     private class ImageStitchingTask extends AsyncTask<Mat, Integer, Boolean> {
         protected Boolean doInBackground(Mat... objects) {
             Log.d("AsyncTask","doInBackground");
-            Mat yv12 = new Mat(mSize.getWidth()*3/2, mSize.getHeight(), CvType.CV_8UC1);
+            Mat yv12 = new Mat(mSize.getHeight()*3/2, mSize.getWidth(), CvType.CV_8UC1);
             yv12.put(0, 0, mFrameByte);
+
             Mat rgb = new Mat(mSize.getWidth(),mSize.getHeight(),CvType.CV_8UC3);
-            Imgproc.cvtColor(yv12, rgb, Imgproc.COLOR_YUV2RGB_YV12,3);
+            Imgproc.cvtColor(yv12, rgb, mConvertType,3);
             Thread uiThread = new Thread() {
 
                 @Override
@@ -645,7 +677,7 @@ public class MainController extends GLSurfaceView {
             Mat yv12 = new Mat(mSize.getWidth()*3/2, mSize.getHeight(), CvType.CV_8UC1);
             yv12.put(0, 0, mFrameByte);
             Mat rgb = new Mat(mSize.getWidth(),mSize.getHeight(),CvType.CV_8UC3);
-            Imgproc.cvtColor(yv12, rgb, Imgproc.COLOR_YUV2RGB_YV12,3);
+            Imgproc.cvtColor(yv12, rgb, mConvertType,3);
             float[] rotMat = new float[16];
             SensorManager.getRotationMatrixFromVector(rotMat, mQuaternion);
             ImageStitchingNative.getNativeInstance().aligning(rgb,rotMat);

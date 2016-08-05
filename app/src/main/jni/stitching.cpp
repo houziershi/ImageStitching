@@ -93,6 +93,8 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 
 	clock_t c_start = std::clock();
 	Mat& full_img  = *(Mat*)imgaddr;
+	transpose(full_img, full_img);
+    flip(full_img, full_img,0);
 	Mat img;
 	resize(full_img,img,Size(),work_scale,work_scale);
 
@@ -565,6 +567,8 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	//Mat& frame  = *(Mat*)imgaddr; Mat full_img;
 	Mat& full_img = *(Mat*)imgaddr;
 	Mat& rot = *(Mat*)rotaddr;
+	transpose(full_img, full_img);
+    flip(full_img, full_img,0);
 	imagePackage.rotation = rot;
 	//GaussianBlur(frame, full_img, cv::Size(0, 0), 3);
     //addWeighted(frame, 1.5, full_img, -0.5, 0, full_img);
@@ -700,9 +704,9 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	//Check with ceres minimizer should be best solution
 	__android_log_print(ANDROID_LOG_DEBUG,"C++ Stitching","Minimize Iteration %d",iterationCount);
 
-	if(isBiggerThanThreshold(comparedRot,cameraSet[1].R,0.1)){
+	if(isBiggerThanThreshold(comparedRot,cameraSet[1].R,0.2)){
 
-        __android_log_print(ANDROID_LOG_WARN,"C++ Stitching","Stitch Rejected > 2 degree..");
+        __android_log_print(ANDROID_LOG_WARN,"C++ Stitching","Stitch Rejected > 4 degree..");
 	    images.pop_back();
 		return 0;
 	}

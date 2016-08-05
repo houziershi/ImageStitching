@@ -56,8 +56,12 @@ public class SphereObject {
             "uniform sampler2D sTexture;"+
             "varying vec2 v_TexCoordinate;"+
             "varying vec4 fragmentColor;" +
-                    "float width_ratio = 8976.0;" +
-                    "float height_ratio = 4488.0;" +
+                    "//Note10.1\n" +
+                    "//float width_ratio = 8976.0;\n" +
+                    "//float height_ratio = 4488.0;\n" +
+                    "//Nexus5x\n" +
+                    "float width_ratio = 9242.0;\n" +
+                    "float height_ratio = 4620.0;\n" +
                     "uniform float img_x;" +
                     "uniform float img_y;" +
                     "uniform float img_width;" +

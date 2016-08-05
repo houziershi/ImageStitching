@@ -364,15 +364,29 @@ public class Util {
         [          0,             0,                             -1,                            0]
      */
     public static float[] glProjectionMatrix(){
-        float[] K = {1425.559961560f,0,745.027494f,
-                0,1425.559961560f,436.7257419f,
+        //Note10.1
+//        float[] K = {1425.559961560f,0,745.027494f,
+//                0,1425.559961560f,436.7257419f,
+//                0,0,1};
+
+//        float width = 1440;
+//        float height = 1080;
+        //Nexus5x
+        float[] K = {1468.8033741635331f,0,556.62040323411281f,
+                0,1468.8033741635331f,987.91495706781313f,
                 0,0,1};
+
+        float width = 1080;
+        float height = 1920;
+
+
         float[] output = new float[16];
         for(int i = 0 ; i < output.length ; i++){
             output[i] = 0.0f;
         }
-        float width = 1440;
-        float height = 1080;
+
+
+
         float x0 = 0;
         float y0 = 0;
         float zfar = 1000.f;
@@ -388,6 +402,51 @@ public class Util {
         output[11] = -1.0f;
         output[14] = (-2*zfar*znear/(zfar - znear));
         return output;
+    }
+    public static byte[] readImage(Image image){
+        Image.Plane[] planes = image.getPlanes();
+        int width = image.getWidth();
+        int height = image.getHeight();
+        byte[] data = new byte[image.getWidth() * image.getHeight() * ImageFormat.getBitsPerPixel(ImageFormat.YUV_420_888) / 8];
+        byte[] rowData = new byte[planes[0].getRowStride()];
+        int offset = 0;
+        for (int i = 0; i < planes.length; i++) {
+            ByteBuffer buffer = planes[i].getBuffer();
+            int rowStride = planes[i].getRowStride();
+            int pixelStride = planes[i].getPixelStride();
+            int w = (i == 0) ? width : width / 2;
+            int h = (i == 0) ? height : height / 2;
+            for (int row = 0; row < h; row++) {
+                int bytesPerPixel = ImageFormat.getBitsPerPixel(ImageFormat.YUV_420_888) / 8;
+                if (pixelStride == bytesPerPixel) {
+                    int length = w * bytesPerPixel;
+                    buffer.get(data, offset, length);
+
+                    // Advance buffer the remainder of the row stride, unless on the last row.
+                    // Otherwise, this will throw an IllegalArgumentException because the buffer
+                    // doesn't include the last padding.
+                    if (h - row != 1) {
+                        buffer.position(buffer.position() + rowStride - length);
+                    }
+                    offset += length;
+                } else {
+
+                    // On the last row only read the width of the image minus the pixel stride
+                    // plus one. Otherwise, this will throw a BufferUnderflowException because the
+                    // buffer doesn't include the last padding.
+                    if (h - row == 1) {
+                        buffer.get(rowData, 0, width - pixelStride + 1);
+                    } else {
+                        buffer.get(rowData, 0, rowStride);
+                    }
+
+                    for (int col = 0; col < w; col++) {
+                        data[offset++] = rowData[col * pixelStride];
+                    }
+                }
+            }
+        }
+        return data;
     }
 
 }

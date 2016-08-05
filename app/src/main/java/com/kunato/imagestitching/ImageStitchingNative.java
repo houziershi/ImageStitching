@@ -20,6 +20,8 @@ import java.util.Arrays;
 public class ImageStitchingNative {
     private static ImageStitchingNative instance = null;
     private Context context;
+    private Bitmap mUploadingBitmap = null;
+    private float[] mBitmapArea;
 
     private ImageStitchingNative(){
     }
@@ -32,7 +34,6 @@ public class ImageStitchingNative {
         return nativeKeyFrameSelection(rotMat);
     }
     public int addToPano(Mat imageMat, Mat rotMat,int mPictureSize){
-        Highgui.imwrite("/sdcard/stitch/input"+mPictureSize+".jpg",imageMat);
         Log.d("JAVA Stitch", "Image Input Size : "+imageMat.size().width + "*" + imageMat.size().height);
         Mat ret = new Mat();
         Mat area = new Mat(1,4,CvType.CV_32F);
@@ -44,7 +45,7 @@ public class ImageStitchingNative {
         float[] areaFloat = new float[4];
         area.get(0, 0, areaFloat);
         //areaFloat[0]+=0;
-        areaFloat[1]-=150;
+        //areaFloat[1]-=150;
         Log.d("JAVA Stitch", "Return Area [" + Arrays.toString(areaFloat)+"]");
         if(rtCode == -1){
             return 1;
@@ -60,9 +61,10 @@ public class ImageStitchingNative {
         Utils.matToBitmap(ret, bitmap);
         Log.d("JAVA Stitch", "Add Panorama Finished, Size :" + ret.size().width + "," + ret.size().height);
 
-        Factory.getFactory(null).getGlRenderer().getSphere().updateBitmap(bitmap, areaFloat);
+        mUploadingBitmap = bitmap;
+        mBitmapArea = areaFloat;
 //        Factory.getFactory(null).getRSProcessor(null, null).requestAligning();;
-//        Factory.mainController.requireAlign();
+        Factory.mainController.requireAlign();
         return rtCode;
     }
 
@@ -115,6 +117,8 @@ public class ImageStitchingNative {
 
         glRenderer.captureScreen();
         Log.d("Debug","Capture 2");
+
+        Factory.getFactory(null).getGlRenderer().getSphere().updateBitmap(mUploadingBitmap, mBitmapArea);
 
     }
 

@@ -30,7 +30,10 @@
 #include "util.h"
 #define M_PI 3.14159265358979323846
 #define HQ_COMPOSE
-double work_scale = 0.6, seam_scale = 0.2, compose_scale = 1.0;
+//Note10.1
+//double work_scale = 0.8, seam_scale = 0.3, compose_scale = 1.0;
+//Nexus5x
+double work_scale = 0.4, seam_scale = 0.2, compose_scale = 1.0;
 double tracking_scale = 0.2;
 string result_name = "/mnt/sdcard/result.png";
 int blend_type = Blender::NO;
@@ -56,7 +59,10 @@ struct ImagePackage{
     CameraParams param;
 };
 float focal_divider = 3.45;
-float camera_focal_x=1425.559961560,camera_focal_y=1425.559961560,camera_ppx=745.027494,camera_ppy=436.7257419;
+//Note10.1
+//float camera_focal_x=1425.559961560,camera_focal_y=1425.559961560,camera_ppx=745.027494,camera_ppy=436.7257419;
+//Nexus5x
+float camera_focal_x=1468.8033741635331,camera_focal_y=1468.8033741635331,camera_ppx=556.62040323411281,camera_ppy=987.91495706781313;
 int work_width = 0;
 int work_height = 0;
 vector<ImagePackage> images;
