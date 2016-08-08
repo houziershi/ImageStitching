@@ -1,9 +1,7 @@
 package com.kunato.imagestitching;
 
-import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
@@ -16,7 +14,6 @@ import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
-import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
@@ -29,8 +26,6 @@ import android.opengl.Matrix;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.renderscript.Allocation;
-import android.renderscript.RenderScript;
 import android.support.v4.view.VelocityTrackerCompat;
 import android.util.Log;
 import android.util.Range;
@@ -38,13 +33,11 @@ import android.util.Size;
 import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.SurfaceHolder;
-import android.view.TextureView;
 import android.view.VelocityTracker;
 import android.view.View;
 import android.widget.Toast;
 
 import org.opencv.core.*;
-import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
 import static android.hardware.camera2.CaptureRequest.*;
 
@@ -69,7 +62,10 @@ public class MainController extends GLSurfaceView {
             //Nexus5x
             mLastSensorISO = capture.get(CaptureResult.SENSOR_SENSITIVITY);
             mLastShutterSpeed = capture.get(CaptureResult.SENSOR_EXPOSURE_TIME);
-            Log.d("CaptureInfo",mLastSensorISO+" : "+mLastShutterSpeed);
+            if(mAEReport && mLastShutterSpeed < MAX_SHUTTER_SPEED){
+                Log.i("CaptureRequest","ISO : "+mLastSensorISO+", ShutterSpeed : "+mLastShutterSpeed);
+               mAEReport = false;
+            }
         }
 
         @Override
@@ -85,6 +81,9 @@ public class MainController extends GLSurfaceView {
         }
 
     };
+
+
+    public static long MAX_SHUTTER_SPEED = 10000000;
     //Nexus5x = 1080,1920
     //Note10.1 = 1080,1440
 //    private Size mSize = new Size(1080,1440);
@@ -94,6 +93,7 @@ public class MainController extends GLSurfaceView {
     //Using in OnImageAvailableListener
     private int mLastSensorISO;
     private long mLastShutterSpeed;
+    private boolean mAEReport = false;
     public byte[] mFrameByte;
     public boolean mAsyncRunning = false;
     public boolean mAlign = false;
@@ -103,6 +103,7 @@ public class MainController extends GLSurfaceView {
     public float[] mDeltaQuaternion = new float[4];
     private boolean mRecordQuaternion = false;
     public int mNumPicture = 0;
+
     private float[] lastQuaternion = new float[4];
     private final ImageReader.OnImageAvailableListener mOnImageAvailableListener = new ImageReader.OnImageAvailableListener() {
 
@@ -353,18 +354,18 @@ public class MainController extends GLSurfaceView {
             mPreviewRequestBuilder.set(CONTROL_AF_TRIGGER,CONTROL_AF_TRIGGER_START);
             //mPreviewRequestBuilder.set(CONTROL_AF_MODE, CONTROL_AF_MODE_AUTO);
             mPreviewRequestBuilder.set(CONTROL_AWB_LOCK, Boolean.TRUE);
-            mPreviewRequestBuilder.set(CONTROL_AE_LOCK, Boolean.TRUE);
             //Nexus5x
-            if(mLastShutterSpeed > 10000000){
+            if(mLastShutterSpeed > MAX_SHUTTER_SPEED){
                 int i = 2;
                 for( ; i < 10 ; i+=2 ){
-                    if(mLastShutterSpeed/i < 10000000){
+                    if(mLastShutterSpeed/i < MAX_SHUTTER_SPEED){
                         break;
                     }
                 }
                 mPreviewRequestBuilder.set(CONTROL_AE_MODE,CONTROL_AE_MODE_OFF);
                 mPreviewRequestBuilder.set(SENSOR_SENSITIVITY,mLastSensorISO*i);
                 mPreviewRequestBuilder.set(SENSOR_EXPOSURE_TIME,mLastShutterSpeed/i);
+                mAEReport = true;
             }
             updatePreview();
         }

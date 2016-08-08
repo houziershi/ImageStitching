@@ -71,7 +71,6 @@ int findNearest(int from, int to, std::vector<ImagePackage> images,Mat &inputR){
 	dummy_K.ppx = images[0].feature.img_size.width/2;
 	dummy_K.ppy = images[0].feature.img_size.height/2;
 	dummy_K.focal = (images[0].feature.img_size.width * 4.7 / focal_divider);
-	__android_log_print(ANDROID_LOG_DEBUG,"FindNearest","%f %f %f",dummy_K.ppx,dummy_K.ppy,dummy_K.focal);
 	Mat dummy_K_mat;
 	dummy_K.K().convertTo(dummy_K_mat,CV_32F);
 	float max_distance = FLT_MAX;
@@ -664,7 +663,6 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 		camera.t = Mat::zeros(3,1,CV_32F);
 		cameras.push_back(camera);
         images[i].param = camera;
-		__android_log_print(ANDROID_LOG_INFO,"C++ Stitching","CameraParam focal %lf , ppx %lf , ppy %lf , aspect %f, width %d",camera.focal,camera.ppx,camera.ppy,camera.aspect,images[i].feature.img_size.width);
 	}
 
 
@@ -676,8 +674,8 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	for(int i = 0 ; i < pairwise_matches.size();i++){
 		__android_log_print(ANDROID_LOG_DEBUG,"C++ Stitching","Pair Number : %d %d %d",i,pairwise_matches[i].src_img_idx,pairwise_matches[i].dst_img_idx);
 		if(pairwise_matches[i].src_img_idx == nearest_image && pairwise_matches[i].dst_img_idx == images.size()-1){
-			__android_log_print(ANDROID_LOG_INFO,"C++ Stitching","Nearest Pair %d %d %d",pairwise_matches[i].src_img_idx
-					,pairwise_matches[i].dst_img_idx,pairwise_matches[i].matches.size());
+			//__android_log_print(ANDROID_LOG_INFO,"C++ Stitching","Nearest Pair %d %d %d",pairwise_matches[i].src_img_idx
+			//		,pairwise_matches[i].dst_img_idx,pairwise_matches[i].matches.size());
 			if(pairwise_matches[i].matches.size() < 15){
 				//return
 				__android_log_print(ANDROID_LOG_WARN,"C++ Stitching","Stitch Rejected < 15 matches point..");
@@ -800,8 +798,8 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 		images[i].rotation = cameras[i].R;
 	}
 	clock_t c_m7 = clock();
-	__android_log_print(ANDROID_LOG_INFO,"C++ Stitching,Timer","%lf [%lf %lf %lf %lf %lf %lf]",((double)c_m7-c_m1)/CLOCKS_PER_SEC,
-						((double)c_m2-c_m1)/CLOCKS_PER_SEC,((double)c_m3-c_m2)/CLOCKS_PER_SEC,((double)c_m4-c_m3)/CLOCKS_PER_SEC,((double)c_m5-c_m4)/CLOCKS_PER_SEC,((double)c_m6-c_m5)/CLOCKS_PER_SEC,((double)c_m7-c_m6)/CLOCKS_PER_SEC);
+	__android_log_print(ANDROID_LOG_INFO,"C++ Stitching,Timer","%lf [Match %lf,Optimize %lf,Warp %lf,Seam %lf,Stitch %lf]",((double)c_m7-c_m1)/CLOCKS_PER_SEC,
+						((double)c_m2-c_m1)/CLOCKS_PER_SEC,((double)c_m3-c_m2)/CLOCKS_PER_SEC,((double)c_m4-c_m3)/CLOCKS_PER_SEC,((double)c_m5-c_m4)/CLOCKS_PER_SEC,((double)c_m7-c_m6)/CLOCKS_PER_SEC);
 	cv::FileStorage fs("/sdcard/stitch/rotation.yml", cv::FileStorage::WRITE);
     for(int i = 0 ; i < images.size() ; i++){
         fs << "i" << images[i].rotation;

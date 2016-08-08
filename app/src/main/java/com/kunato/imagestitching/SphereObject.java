@@ -204,11 +204,11 @@ public class SphereObject {
         int widthh = GLES20.glGetUniformLocation(mProgram,"img_width");
         int heighth = GLES20.glGetUniformLocation(mProgram,"img_height");
         int alphah = GLES20.glGetUniformLocation(mProgram,"alpha");
-        
+
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, this.mTextures[0]);
         if(mTexRequireUpdate){
             Log.i("GLSphere", "Bitmap updated,Return to normal activity.");
-            GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
-            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, this.mTextures[0]);
             GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, mQueueBitmap, 0);
             GLES20.glGenerateMipmap(GLES20.GL_TEXTURE_2D);
             mQueueBitmap.recycle();

@@ -194,7 +194,7 @@ public class ARObject {
     }
     public void loadGLTexture(final Context context, final int texture) {
         GLES20.glGenTextures(1, this.mTextures, 0);
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE0+mNumber);
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, this.mTextures[0]);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR_MIPMAP_LINEAR);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
@@ -242,6 +242,8 @@ public class ARObject {
 
         mTextureCoordinateHandle = GLES20.glGetAttribLocation(mProgram, "a_TexCoordinate");
 
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, this.mTextures[0]);
         GLES20.glEnableVertexAttribArray(mPositionHandle);
         GLES20.glVertexAttribPointer(mPositionHandle, ObjReader.COORD_PER_VERTEX, GLES20.GL_FLOAT, false, VERTEX_STRIDE, mVertexBuffer);
         GLES20.glEnableVertexAttribArray(mTextureCoordinateHandle);
@@ -249,7 +251,7 @@ public class ARObject {
 
         // Set the active texture unit to texture unit 0.
         mTextureHandle = GLES20.glGetUniformLocation(mProgram, "sTexture");
-        GLES20.glUniform1i(mTextureHandle, mNumber);
+        GLES20.glUniform1i(mTextureHandle, 0);
         // get handle to shape's transformation matrix
         mViewMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uViewMatrix");
         mProjectionMatrixHandle = GLES20.glGetUniformLocation(mProgram, "uProjectionMatrix");
