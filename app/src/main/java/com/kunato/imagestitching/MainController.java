@@ -46,6 +46,7 @@ import android.widget.Toast;
 import org.opencv.core.*;
 import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
+import static android.hardware.camera2.CaptureRequest.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -54,12 +55,6 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import static android.hardware.camera2.CameraCharacteristics.*;
-import static android.hardware.camera2.CameraCharacteristics.LENS_FACING;
-import static android.hardware.camera2.CameraMetadata.LENS_FACING_FRONT;
-import static android.hardware.camera2.CaptureRequest.CONTROL_AE_LOCK;
-import static android.hardware.camera2.CaptureRequest.CONTROL_AE_MODE;
-import static android.hardware.camera2.CaptureRequest.CONTROL_AF_MODE;
-import static android.hardware.camera2.CaptureRequest.CONTROL_AWB_LOCK;
 
 public class MainController extends GLSurfaceView {
     private Activity mActivity;
@@ -70,8 +65,11 @@ public class MainController extends GLSurfaceView {
 
     private static final String TAG = MainController.class.getName();
     private final CameraCaptureSession.CaptureCallback mCaptureCallback = new CameraCaptureSession.CaptureCallback() {
-        private void process(CaptureResult result) {
-
+        private void process(CaptureResult capture) {
+            //Nexus5x
+            mLastSensorISO = capture.get(CaptureResult.SENSOR_SENSITIVITY);
+            mLastShutterSpeed = capture.get(CaptureResult.SENSOR_EXPOSURE_TIME);
+            Log.d("CaptureInfo",mLastSensorISO+" : "+mLastShutterSpeed);
         }
 
         @Override
@@ -94,6 +92,8 @@ public class MainController extends GLSurfaceView {
     private int mConvertType = Imgproc.COLOR_YUV2BGR_I420;
 //    private int mConvertType = Imgproc.COLOR_YUV2BGR_NV12;
     //Using in OnImageAvailableListener
+    private int mLastSensorISO;
+    private long mLastShutterSpeed;
     public byte[] mFrameByte;
     public boolean mAsyncRunning = false;
     public boolean mAlign = false;
@@ -183,13 +183,9 @@ public class MainController extends GLSurfaceView {
 
 
     private void doAlign() {
-        Mat mat = new Mat(mSize.getHeight(), mSize.getWidth(), CvType.CV_8UC4);
-        byte[] frameByte = new byte[mSize.getWidth()*mSize.getHeight()*4];
-        mat.put(0, 0, frameByte);
-        Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGBA2BGR);
-        float[] rotMat = new float[16];
         AsyncTask<Mat, Integer, Boolean> aligningTask = new ImageAligningTask();
-        aligningTask.execute();}
+        aligningTask.execute();
+    }
 
 
 
@@ -354,10 +350,22 @@ public class MainController extends GLSurfaceView {
             }
 
             Log.d("MainController","Button Press, AE Lock");
-//            mPreviewRequestBuilder.set(CONTROL_AF_TRIGGER,CONTROL_AF_TRIGGER_START);
+            mPreviewRequestBuilder.set(CONTROL_AF_TRIGGER,CONTROL_AF_TRIGGER_START);
             //mPreviewRequestBuilder.set(CONTROL_AF_MODE, CONTROL_AF_MODE_AUTO);
             mPreviewRequestBuilder.set(CONTROL_AWB_LOCK, Boolean.TRUE);
             mPreviewRequestBuilder.set(CONTROL_AE_LOCK, Boolean.TRUE);
+            //Nexus5x
+            if(mLastShutterSpeed > 10000000){
+                int i = 2;
+                for( ; i < 10 ; i+=2 ){
+                    if(mLastShutterSpeed/i < 10000000){
+                        break;
+                    }
+                }
+                mPreviewRequestBuilder.set(CONTROL_AE_MODE,CONTROL_AE_MODE_OFF);
+                mPreviewRequestBuilder.set(SENSOR_SENSITIVITY,mLastSensorISO*i);
+                mPreviewRequestBuilder.set(SENSOR_EXPOSURE_TIME,mLastShutterSpeed/i);
+            }
             updatePreview();
         }
         else {
@@ -508,8 +516,15 @@ public class MainController extends GLSurfaceView {
 //                            mPreviewRequestBuilder.set(CONTROL_AF_MODE, CONTROL_AF_MODE_CONTINUOUS_PICTURE);
 //                            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, 1);
                             //Nexus5x
+                            Range<Integer>[] ranges = mCharacteristics.get(CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
+                            long shutterS = 7666666;
+                            mPreviewRequestBuilder.set(SENSOR_EXPOSURE_TIME, shutterS);
+                            mPreviewRequestBuilder.set(CONTROL_AE_MODE, CONTROL_AE_MODE_ON);
+                            mPreviewRequestBuilder.set(CONTROL_AWB_MODE, CONTROL_AWB_MODE_AUTO);
                             mPreviewRequestBuilder.set(CONTROL_AF_MODE, CONTROL_AF_MODE_AUTO);
+                            mPreviewRequestBuilder.set(SENSOR_SENSITIVITY, 200);
 
+                            mPreviewRequestBuilder.set(CONTROL_AE_TARGET_FPS_RANGE,Range.create(30,30));
 
                             Log.d("Camera","On Configured");
 //                            mPreviewRequestBuilder.set(CONTROL_AE_MODE, CONTROL_AE_MODE_OFF);
@@ -618,7 +633,6 @@ public class MainController extends GLSurfaceView {
             Log.d("AsyncTask","doInBackground");
             Mat yv12 = new Mat(mSize.getHeight()*3/2, mSize.getWidth(), CvType.CV_8UC1);
             yv12.put(0, 0, mFrameByte);
-
             Mat rgb = new Mat(mSize.getWidth(),mSize.getHeight(),CvType.CV_8UC3);
             Imgproc.cvtColor(yv12, rgb, mConvertType,3);
             Thread uiThread = new Thread() {
@@ -674,7 +688,7 @@ public class MainController extends GLSurfaceView {
     private class ImageAligningTask extends AsyncTask<Mat, Integer, Boolean> {
         protected Boolean doInBackground(Mat... objects) {
             Log.d("AsyncTask","doInBackground");
-            Mat yv12 = new Mat(mSize.getWidth()*3/2, mSize.getHeight(), CvType.CV_8UC1);
+            Mat yv12 = new Mat(mSize.getHeight()*3/2, mSize.getWidth(), CvType.CV_8UC1);
             yv12.put(0, 0, mFrameByte);
             Mat rgb = new Mat(mSize.getWidth(),mSize.getHeight(),CvType.CV_8UC3);
             Imgproc.cvtColor(yv12, rgb, mConvertType,3);

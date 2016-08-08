@@ -162,7 +162,6 @@ public class GLRenderer implements GLSurfaceView.Renderer, SurfaceTexture.OnFram
         mCanvasObjectProcessed.draw(mViewCanvasMatrix,mHomography);
 
         if(mUsingOldMatrix){
-            Log.d("GLRendering","mFadeAlpha " + mFadeAlpha);
             mSphere.draw(mPreviousRotMatrix,mProjectionMatrix,mFadeAlpha);
             if(mFadeAlpha > 0.0){
                 mFadeAlpha -= 1f/10f;

@@ -70,7 +70,7 @@ public class ImageStitchingNative {
 
     public void aligning(Mat input, float[] glRot){
         Factory.mainController.startRecordQuaternion();
-        Highgui.imwrite("/sdcard/stitch/align.jpg",input);
+        //Highgui.imwrite("/sdcard/stitch/align.jpg",input);
         long cStart = System.nanoTime();
         Mat glRotMat = new Mat(4,4,CvType.CV_32F);
         glRotMat.put(0, 0, glRot);
