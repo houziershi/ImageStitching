@@ -41,7 +41,7 @@ LOCAL_SRC_FILES :=				\
 	matcher.h					\
 	matcher.cpp
 
-LOCAL_MODULE := nonfree_stitching
+LOCAL_MODULE := native
 LOCAL_SHARED_LIBRARIES += nonfree
 LOCAL_STATIC_LIBRARIES += ceres
 LOCAL_CFLAGS := -O3 -ffast-math

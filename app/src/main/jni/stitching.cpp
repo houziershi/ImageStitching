@@ -40,9 +40,9 @@
 //
 //
 //M*/
+#pragma ide diagnostic ignored "ArrayIssue"
 #define EXPERIMENT 0
 #include "stitching.h"
-
 using namespace std;
 using namespace cv;
 using namespace cv::detail;
@@ -58,7 +58,7 @@ void findDescriptor(Mat img,std::vector<KeyPoint> &keypoints ,Mat &descriptor){
 	Mat gray_img;
 	cvtColor(img,gray_img,CV_BGR2GRAY);
 	(*detector)(gray_img , Mat(), keypoints, descriptor, false);
-	descriptor = descriptor.reshape(1, (int)keypoints.size());
+	descriptor = descriptor.reshape(1, static_cast<int>(keypoints.size()));
 }
 
 inline float calcDistance(float x1,float y1,float z1,float x2,float y2, float z2){
@@ -71,6 +71,7 @@ int findNearest(int from, int to, std::vector<ImagePackage> images,Mat &inputR){
 	dummy_K.ppx = images[0].feature.img_size.width/2;
 	dummy_K.ppy = images[0].feature.img_size.height/2;
 	dummy_K.focal = (images[0].feature.img_size.width * 4.7 / focal_divider);
+	size_t y;
 	Mat dummy_K_mat;
 	dummy_K.K().convertTo(dummy_K_mat,CV_32F);
 	float max_distance = FLT_MAX;

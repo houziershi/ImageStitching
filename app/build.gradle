@@ -8,9 +8,11 @@ android {
         applicationId "com.kunato.iar"
         minSdkVersion 22
         targetSdkVersion 22
-        versionCode 1
-        versionName "1.0"
-        renderscriptTargetApi 18
+        externalNativeBuild {
+            ndkBuild {
+                abiFilters "armeabi-v7a"
+            }
+        }
 
     }
     buildTypes {
@@ -18,33 +20,42 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+
     }
+
+    externalNativeBuild{
+        ndkBuild{
+            path "src/main/jni/Android.mk"
+        }
+    }
+
     sourceSets.main {
-        jni.srcDirs = ['src/main/jni'] // This prevents the auto generation of Android.mk
+        jni.srcDirs 'src/main/jni'
         jniLibs.srcDir 'src/main/libs' // This is not necessary unless you have precompiled libraries in your project.
-    }
 
-    task buildNative(type: Exec, description: 'Compile JNI source via NDK') {
-        def ndkDir = android.ndkDirectory
-        commandLine "$ndkDir/ndk-build",
-                '-C', file('src/main/jni').absolutePath, // Change src/main/jni the relative path to your jni source
-                '-j', Runtime.runtime.availableProcessors(),
-                'all',
-                'NDK_DEBUG=1'
     }
-
-    task cleanNative(type: Exec, description: 'Clean JNI object files') {
-        def ndkDir = android.ndkDirectory
-        commandLine "$ndkDir/ndk-build",
-                '-C', file('src/main/jni').absolutePath, // Change src/main/jni the relative path to your jni source
-                'clean'
-    }
-
-    clean.dependsOn 'cleanNative'
-
-    tasks.withType(JavaCompile) {
-        compileTask -> compileTask.dependsOn buildNative
-    }
+//
+//    task buildNative(type: Exec, description: 'Compile JNI source via NDK') {
+//        def ndkDir = android.ndkDirectory
+//        commandLine "$ndkDir/ndk-build",
+//                '-C', file('src/main/jni').absolutePath, // Change src/main/jni the relative path to your jni source
+//                '-j', Runtime.runtime.availableProcessors(),
+//                'all',
+//                'NDK_DEBUG=1'
+//    }
+//
+//    task cleanNative(type: Exec, description: 'Clean JNI object files') {
+//        def ndkDir = android.ndkDirectory
+//        commandLine "$ndkDir/ndk-build",
+//                '-C', file('src/main/jni').absolutePath, // Change src/main/jni the relative path to your jni source
+//                'clean'
+//    }
+//
+//    clean.dependsOn 'cleanNative'
+//
+//    tasks.withType(JavaCompile) {
+//        compileTask -> compileTask.dependsOn buildNative
+//    }
 }
 
 dependencies {
