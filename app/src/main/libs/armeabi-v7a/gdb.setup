@@ -1,3 +1,0 @@
-set solib-search-path /Users/kunato/AndroidStudioProjects/ImageStitching/app/src/main/obj/local/armeabi-v7a
-source /Users/kunato/android-ndk/prebuilt/common/gdb/common.setup
-directory /Users/kunato/android-ndk/platforms/android-3/arch-arm/usr/include /Users/kunato/AndroidStudioProjects/ImageStitching/app/src/main/jni /Users/kunato/android-ndk/sources/cxx-stl/gnu-libstdc++ /Users/kunato/android-opencv/sdk/native/jni//include /Users/kunato/ceres-solver//include /Users/kunato/ceres-solver/internal/ceres/miniglog/ /usr/local/include/eigen3/ /Users/kunato/android-ndk/sources/cxx-stl/gnu-libstdc++/4.9/include /Users/kunato/android-ndk/sources/cxx-stl/gnu-libstdc++/4.9/libs/armeabi-v7a/include /Users/kunato/android-ndk/sources/cxx-stl/gnu-libstdc++/4.9/include/backward
