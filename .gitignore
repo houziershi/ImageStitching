@@ -6,7 +6,6 @@
 /build
 /app/src/main/obj/local
 /app/src/main/libs
-/openCVLibrary2410
 /captures
 
 *.class
