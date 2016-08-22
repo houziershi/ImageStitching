@@ -1,6 +1,5 @@
 
 
-
 #ifndef BLENDING
 #include "composer.h"
 using namespace std;

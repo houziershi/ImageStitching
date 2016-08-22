@@ -134,6 +134,6 @@ public class ImageStitchingNative {
         return instance;
     }
     static {
-        System.loadLibrary("nonfree_stitching");
+        System.loadLibrary("native");
     }
 }

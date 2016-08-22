@@ -52,7 +52,7 @@ import static android.hardware.camera2.CameraCharacteristics.*;
 public class MainController extends GLSurfaceView {
     private Activity mActivity;
     static {
-        System.loadLibrary("nonfree_stitching");
+        System.loadLibrary("native");
     };
 
 

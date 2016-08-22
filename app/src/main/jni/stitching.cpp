@@ -732,8 +732,7 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	work_width = (warped_image_scale ) * M_PI * 2;
 	work_height = (((warped_image_scale) / cameras[0].aspect) * M_PI);//??? 1280
 	findWarpForSeam(warped_image_scale,seam_scale,work_scale,images,cameras);
-	clock_t c_m4 = clock();
-	warpFeature(warped_image_scale,cameras,features,p3d);
+
 	//Create vector of var because need to call seam_finder
 	vector<Mat> masks_warped(num_images);
 	vector<Mat> images_warped(num_images);
@@ -748,15 +747,15 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
         __android_log_print(ANDROID_LOG_ERROR,"C++ Stitching","Seam Debug %d %d %d %d %d %d",
         corners[i].x,corners[i].y,images_warped[i].size().width,images_warped[i].size().height,masks_warped[i].size().width,masks_warped[i].size().height);
 	}
-
+	clock_t c_m4 = clock();
 	Ptr<SeamFinder> seam_finder =  new detail::GraphCutSeamFinder(GraphCutSeamFinderBase::COST_COLOR);
-
-
 
     //This is experiment
     if(!EXPERIMENT){
         seam_finder->find(images_warped,corners,masks_warped);
+		__android_log_print(ANDROID_LOG_DEBUG,"C++ Stitching","Full Seamfinder");
     }
+
     else
     {
     vector<int> overlap_index = findOverlap(corners,masks_size);
