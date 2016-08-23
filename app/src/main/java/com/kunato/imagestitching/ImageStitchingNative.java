@@ -28,19 +28,21 @@ public class ImageStitchingNative {
 
     public native int nativeKeyFrameSelection(float[] rotMat);
     public native void nativeAligning(long imgAddr,long glRotAddr,long retMatAddr);
-    public native int nativeStitch(long retAddr,long areaAddr,long rotAddr);
+    public native int nativeStitch(long retAddr,long areaAddr,long rotAddr,long refineRotAddr);
     public native void nativeAddStitch(long imgAddr,long rotAddr);
     public int keyFrameSelection(float[] rotMat) {
         return nativeKeyFrameSelection(rotMat);
     }
     public int addToPano(Mat imageMat, Mat rotMat,int mPictureSize){
+        Factory.mainController.startRecordQuaternion();
         Log.d("JAVA Stitch", "Image Input Size : "+imageMat.size().width + "*" + imageMat.size().height);
         Mat ret = new Mat();
         Mat area = new Mat(1,4,CvType.CV_32F);
         Mat rot = new Mat(3,3,CvType.CV_32F);
         Log.d("JAVA Stitch", "Image Rotation Input : "+rotMat.dump());
         nativeAddStitch(imageMat.getNativeObjAddr(), rotMat.getNativeObjAddr());
-        int rtCode = nativeStitch(ret.getNativeObjAddr(), area.getNativeObjAddr(),rot.getNativeObjAddr());
+        Mat refinedMat = new Mat(4,4,CvType.CV_32F);
+        int rtCode = nativeStitch(ret.getNativeObjAddr(), area.getNativeObjAddr(),rot.getNativeObjAddr(),refinedMat.getNativeObjAddr());
         Log.d("JAVA Stitch", "JNI Return Code : "+rtCode + "");
         float[] areaFloat = new float[4];
         area.get(0, 0, areaFloat);
@@ -60,11 +62,17 @@ public class ImageStitchingNative {
 
         Utils.matToBitmap(ret, bitmap);
         Log.d("JAVA Stitch", "Add Panorama Finished, Size :" + ret.size().width + "," + ret.size().height);
-
+        float[] refinedMatArray = new float[16];
+        refinedMat.get(0,0,refinedMatArray);
+        float[] refinedQuad = Util.matrixToQuad(refinedMatArray);
+        Log.d("Java Stitch","Refined Quad : "+Arrays.toString(refinedQuad));
+        Factory.mainController.updateQuaternion(refinedQuad,Factory.mainController.mDeltaQuaternion);
         mUploadingBitmap = bitmap;
         mBitmapArea = areaFloat;
 //        Factory.getFactory(null).getRSProcessor(null, null).requestAligning();;
-        Factory.mainController.requireAlign();
+//        Factory.mainController.requireAlign();
+        Factory.getFactory(null).getGlRenderer().getSphere().updateBitmap(mUploadingBitmap, mBitmapArea);
+
         return rtCode;
     }
 

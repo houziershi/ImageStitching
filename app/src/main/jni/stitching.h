@@ -10,6 +10,7 @@
 #include <string>
 #include <math.h>
 #include <float.h>
+#include <thread>
 #include <ctime>
 #include "opencv2/opencv_modules.hpp"
 #include "opencv2/highgui/highgui.hpp"
@@ -44,7 +45,6 @@ struct ImagePackage{
     String name;
     Mat image;
     Mat full_image;
-    Mat rotation;
     Size size;
     Size compose_size;
     Size full_size;
@@ -78,7 +78,7 @@ extern "C" {
 
 JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeAligning(JNIEnv*, jobject, jlong imgaddr,jlong glRotAddr,jlong retaddr);
 JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeAddStitch(JNIEnv*, jobject, jlong imgaddr,jlong rotaddr);
-JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeStitch(JNIEnv*, jobject,jlong retAddr,jlong areaAddr,jlong rotAddr);
+JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeStitch(JNIEnv*, jobject,jlong retAddr,jlong areaAddr,jlong rotAddr,jlong refinedRotAddr);
 JNIEXPORT int JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativeKeyFrameSelection(JNIEnv *env, jobject,jfloatArray rotMat);
 
 
@@ -88,7 +88,6 @@ void findDescriptor(Mat img,std::vector<KeyPoint> &keypoints ,Mat &descriptor);
 inline Point3f calc3DPosition(Point2f keyPoint,float multiply_aspect);
 inline int glhProjectf(float objx, float objy, float objz, float *modelview, float *projection, int *viewport, float *windowCoordinate);
 inline float calcDistance(float x1,float y1, float z1,float x2,float y2,float z2);
-
 void printMatrix(Mat mat,string text);
 }
 

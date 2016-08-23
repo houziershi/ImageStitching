@@ -83,7 +83,7 @@ public class MainController extends GLSurfaceView {
     };
 
 
-    public static long MAX_SHUTTER_SPEED = 10000000;
+    public static long MAX_SHUTTER_SPEED = 5000000;
     //Nexus5x = 1080,1920
     //Note10.1 = 1080,1440
 //    private Size mSize = new Size(1080,1440);

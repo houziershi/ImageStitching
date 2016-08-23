@@ -49,3 +49,4 @@ LOCAL_LDLIBS := -llog -ldl
 LOCAL_LDLIBS += -latomic
 
 include $(BUILD_SHARED_LIBRARY)
+
