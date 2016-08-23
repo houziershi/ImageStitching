@@ -60,9 +60,24 @@ void findDescriptor(Mat img,std::vector<KeyPoint> &keypoints ,Mat &descriptor){
 		detector->set("nFeatures", 100);
 	}
 	Mat gray_img;
-	cvtColor(img,gray_img,CV_BGR2GRAY);
-	(*detector)(gray_img , Mat(), keypoints, descriptor, false);
+    Mat mask;
+    mask.create(img.size(), CV_8U);
+    mask.setTo(Scalar::all(255));
+    int x_margin = img.rows/3;
+    int y_margin = img.cols/3;
+    for(int i = x_margin ; i < img.rows - x_margin;i++){
+        for(int j = y_margin ; j < img.cols - y_margin;j++){
+            mask.at<uchar>(i,j) = 0;
+        }
+    }
+    cvtColor(img,gray_img,CV_BGR2GRAY);
+	(*detector)(gray_img , mask, keypoints, descriptor, false);
 	descriptor = descriptor.reshape(1, static_cast<int>(keypoints.size()));
+    Mat out;
+    drawKeypoints(img,keypoints,out);
+    char file_str[50]; // enough to hold all numbers up to 64-bits
+    sprintf(file_str, "/sdcard/stitch/keypoint%d.jpg", images.size());
+    imwrite(file_str,out);
 }
 
 inline float calcDistance(float x1,float y1,float z1,float x2,float y2, float z2){

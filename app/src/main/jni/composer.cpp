@@ -2,6 +2,8 @@
 using namespace std;
 using namespace cv;
 using namespace cv::detail;
+#define BLENDING
+#define PYRAMID
 namespace composer {
     static const float WEIGHT_EPS = 1e-5f;
 
