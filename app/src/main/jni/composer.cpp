@@ -1,12 +1,11 @@
-
-#ifndef BLENDING
 #include "composer.h"
 using namespace std;
 using namespace cv;
 using namespace cv::detail;
+namespace composer {
+    static const float WEIGHT_EPS = 1e-5f;
 
-
-namespace composer{
+#ifndef BLENDING
     Mat dst_, dst_mask_,dst_dt_;
     Rect dst_roi_;
     void prepare(Rect dst_roi){
@@ -97,26 +96,21 @@ namespace composer{
         dst_.release();
         dst_mask_.release();
     }
-}
-#else
-//
-//  $$$$$$$         $$$   $$$           $$$$$
-//  $$               $$$ $$$            $$$ $$
-//  $$$$$$$            $$$              $$$$$
-//  $$               $$$ $$$            $$$
-//  $$$$$$$         $$$   $$$           $$$
+
+#endif
+
+#ifdef PYRAMID
+    //
+    //  $$$$$$$         $$$   $$$           $$$$$
+    //  $$               $$$ $$$            $$$ $$
+    //  $$$$$$$            $$$              $$$$$
+    //  $$               $$$ $$$            $$$
+    //  $$$$$$$         $$$   $$$           $$$
 
 
-// Pyramid Blending
-
-#include "composer.h"
-using namespace std;
-using namespace cv;
-using namespace cv::detail;
+    // Pyramid Blending
 
 
-namespace composer{
-static const float WEIGHT_EPS = 1e-5f;
     Mat dst_, dst_mask_,dst_dt_;
     std::vector<Mat> dst_pyr_laplace_;
     std::vector<Mat> dst_band_weights_;
@@ -128,38 +122,38 @@ static const float WEIGHT_EPS = 1e-5f;
         __android_log_print(ANDROID_LOG_DEBUG,"Composer","Prepare Pyramid");
         dst_roi_final_ = dst_roi;
 
-            // Crop unnecessary bands
-            double max_len = static_cast<double>(max(dst_roi.width, dst_roi.height));
-            num_bands_ = min(actual_num_bands_, static_cast<int>(ceil(log(max_len) / log(2.0))));
+        // Crop unnecessary bands
+        double max_len = static_cast<double>(max(dst_roi.width, dst_roi.height));
+        num_bands_ = min(actual_num_bands_, static_cast<int>(ceil(log(max_len) / log(2.0))));
 
-            // Add border to the final image, to ensure sizes are divided by (1 << num_bands_)
-            dst_roi.width += ((1 << num_bands_) - dst_roi.width % (1 << num_bands_)) % (1 << num_bands_);
-            dst_roi.height += ((1 << num_bands_) - dst_roi.height % (1 << num_bands_)) % (1 << num_bands_);
+        // Add border to the final image, to ensure sizes are divided by (1 << num_bands_)
+        dst_roi.width += ((1 << num_bands_) - dst_roi.width % (1 << num_bands_)) % (1 << num_bands_);
+        dst_roi.height += ((1 << num_bands_) - dst_roi.height % (1 << num_bands_)) % (1 << num_bands_);
 
-             dst_.create(dst_roi.size(), CV_16SC3);
-             dst_.setTo(Scalar::all(0));
-             dst_mask_.create(dst_roi.size(), CV_8U);
-             dst_mask_.setTo(Scalar::all(0));
-             dst_roi_ = dst_roi;
-             dst_dt_.create(dst_roi.size(),CV_8U);
+        dst_.create(dst_roi.size(), CV_16SC3);
+        dst_.setTo(Scalar::all(0));
+        dst_mask_.create(dst_roi.size(), CV_8U);
+        dst_mask_.setTo(Scalar::all(0));
+        dst_roi_ = dst_roi;
+        dst_dt_.create(dst_roi.size(),CV_8U);
 
 
-            dst_pyr_laplace_.resize(num_bands_ + 1);
-            dst_pyr_laplace_[0] = dst_;
+        dst_pyr_laplace_.resize(num_bands_ + 1);
+        dst_pyr_laplace_[0] = dst_;
 
-            dst_band_weights_.resize(num_bands_ + 1);
-            dst_band_weights_[0].create(dst_roi.size(), weight_type_);
-            dst_band_weights_[0].setTo(0);
+        dst_band_weights_.resize(num_bands_ + 1);
+        dst_band_weights_[0].create(dst_roi.size(), weight_type_);
+        dst_band_weights_[0].setTo(0);
 
-            for (int i = 1; i <= num_bands_; ++i)
-            {
-                dst_pyr_laplace_[i].create((dst_pyr_laplace_[i - 1].rows + 1) / 2,
-                                           (dst_pyr_laplace_[i - 1].cols + 1) / 2, CV_16SC3);
-                dst_band_weights_[i].create((dst_band_weights_[i - 1].rows + 1) / 2,
-                                            (dst_band_weights_[i - 1].cols + 1) / 2, weight_type_);
-                dst_pyr_laplace_[i].setTo(Scalar::all(0));
-                dst_band_weights_[i].setTo(0);
-            }
+        for (int i = 1; i <= num_bands_; ++i)
+        {
+            dst_pyr_laplace_[i].create((dst_pyr_laplace_[i - 1].rows + 1) / 2,
+                                       (dst_pyr_laplace_[i - 1].cols + 1) / 2, CV_16SC3);
+            dst_band_weights_[i].create((dst_band_weights_[i - 1].rows + 1) / 2,
+                                        (dst_band_weights_[i - 1].cols + 1) / 2, weight_type_);
+            dst_pyr_laplace_[i].setTo(Scalar::all(0));
+            dst_band_weights_[i].setTo(0);
+        }
         __android_log_print(ANDROID_LOG_DEBUG,"Composer","Prepared Pyramid");
     }
 
@@ -309,7 +303,7 @@ static const float WEIGHT_EPS = 1e-5f;
         int max_y = dst_roi_final_.size().width;
         for(int x = 0 ; x < dst_roi_.size().height; x++){
             for(int y = 0 ; y < dst_roi_.size().width ; y++){
-//                calc distance transform (replace 0.1)
+                //                calc distance transform (replace 0.1)
                 //large = avoid seam small = avoid ghost
                 float window_size = 100.0;
                 float dist_x = 0;
@@ -350,12 +344,115 @@ static const float WEIGHT_EPS = 1e-5f;
         int channels_setting[] = {2,0, 1,1, 0,2, 3,3};
         __android_log_print(ANDROID_LOG_DEBUG,"C++ Composer","debug %d %d %d",dst_dt_.type(),uchar_dst.type(),dst_mask_.type());
         mixChannels(out,2,&dst,1,channels_setting,4);
-//        dst = dst_;
+        //        dst = dst_;
 
         dst_dt_.release();
         dst_mask_.release();
         dst_.release();
         uchar_dst.release();
     }
-}
 #endif
+#ifdef ALPHA
+
+    Mat idst_, dst_mask_, dst_dt_;
+    Rect dst_roi_;
+    Mat dst_weight_map_, weight_map_;
+    float sharpness_ = 0.02f;
+    void prepare(Rect dst_roi) {
+        __android_log_print(ANDROID_LOG_DEBUG, "Composer", "Prepare Alpha");
+        dst_.create(dst_roi.size(), CV_16SC3);
+        dst_.setTo(Scalar::all(0));
+        dst_mask_.create(dst_roi.size(), CV_8U);
+        dst_mask_.setTo(Scalar::all(0));
+        dst_roi_ = dst_roi;
+        dst_dt_.create(dst_roi.size(), CV_8U);
+        __android_log_print(ANDROID_LOG_DEBUG, "Composer", "Prepared");
+        dst_weight_map_.create(dst_roi.size(), CV_32F);
+        dst_weight_map_.setTo(0);
+    }
+
+
+    void feed(const Mat input_img,const Mat mask, Point tl) {
+        Mat img;
+        input_img.convertTo(img,CV_16SC3);
+        CV_Assert(img.type() == CV_16SC3);
+        CV_Assert(mask.type() == CV_8U);
+
+        createWeightMap(mask, sharpness_, weight_map_);
+        int dx = tl.x - dst_roi_.x;
+        int dy = tl.y - dst_roi_.y;
+
+        for (int y = 0; y < img.rows; ++y) {
+            const Point3_<short> *src_row = img.ptr<Point3_<short> >(y);
+            Point3_<short> *dst_row = dst_.ptr<Point3_<short> >(dy + y);
+            const float *weight_row = weight_map_.ptr<float>(y);
+            float *dst_weight_row = dst_weight_map_.ptr<float>(dy + y);
+
+            for (int x = 0; x < img.cols; ++x) {
+                dst_row[dx + x].x += static_cast<short>(src_row[x].x * weight_row[x]);
+                dst_row[dx + x].y += static_cast<short>(src_row[x].y * weight_row[x]);
+                dst_row[dx + x].z += static_cast<short>(src_row[x].z * weight_row[x]);
+                dst_weight_row[dx + x] += weight_row[x];
+            }
+        }
+    }
+
+
+    void process(Mat &dst, Mat &dst_mask) {
+        normalizeUsingWeightMap(dst_weight_map_, dst_);
+        dst_mask_ = dst_weight_map_ > WEIGHT_EPS;
+        __android_log_print(ANDROID_LOG_DEBUG,"Composer","Process Alpha");
+        Mat temp1;
+        dst_.convertTo(temp1,CV_8UC3);
+        dst_ = temp1;
+        int channels_setting[] = {2,0, 1,1, 0,2, 3,3};
+        dst.create(dst_.size(),CV_8UC4);
+        int max_x = dst_roi_.size().height;
+        int max_y = dst_roi_.size().width;
+        for(int x = 0 ; x < dst_roi_.size().height; x++){
+            for(int y = 0 ; y < dst_roi_.size().width ; y++){
+//                calc distance transform (replace 0.1)
+                //large = avoid seam small = avoid ghost
+                float window_size = 200.0;
+                float dist_x = 0;
+                float dist_y = 0;
+                if(x < max_x-x){
+                    dist_x = x/window_size;
+                }
+                else{
+                    dist_x = (max_x-x)/window_size;
+                }
+                if(y < max_y-y){
+                    dist_y = (y)/window_size;
+                }
+                else{
+                    dist_y = (max_y-y)/window_size;
+                }
+                if(dist_x > 1.0)
+                    dist_x = 1.0;
+                if(dist_y > 1.0)
+                    dist_y = 1.0;
+                if(dist_x > dist_y){
+                    dst_dt_.at<uchar>(x,y) = 255;
+                }
+                else{
+                    dst_dt_.at<uchar>(x,y) = 255;
+                }
+            }
+        }
+
+        Mat temp = dst_mask_.mul(dst_dt_);
+
+        Mat out[] = {dst_,temp};
+        mixChannels(out,2,&dst,1,channels_setting,4);
+//        dst = dst_;
+
+        dst_mask = temp;
+        dst_dt_.release();
+        dst_.release();
+        dst_mask_.release();
+    }
+
+
+#endif
+}

@@ -581,6 +581,7 @@ public class MainController extends GLSurfaceView {
     public void updateQuaternion(float[] mainQuaternion ,float[] deltaQuaternion){
         lastQuaternion = mQuaternion.clone();
         mQuaternion = Util.multiplyByQuat(deltaQuaternion, mainQuaternion);
+        Log.d("Controller","After Align Quad"+Arrays.toString(mQuaternion));
     }
 
     public Activity getActivity(){
@@ -597,6 +598,7 @@ public class MainController extends GLSurfaceView {
         public void onSensorChanged(SensorEvent event) {
             if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
                 mQuaternion = Util.getQuadFromGyro(event.values,lastTimeStamp,event.timestamp, mQuaternion,false,true,false,true);
+                Log.d("Sensor","Quad : "+Arrays.toString(mQuaternion));
                 if(mRecordQuaternion){
                     mDeltaQuaternion = Util.getQuadFromGyro(event.values,lastTimeStamp,event.timestamp,mDeltaQuaternion,false,true,false,true);
                 }

@@ -58,15 +58,19 @@ public class ImageStitchingNative {
         Bitmap bitmap = Bitmap.createBitmap(ret.cols(), ret.rows(), Bitmap.Config.ARGB_8888);
         Mat test = new Mat(ret.height(),ret.width(),CvType.CV_8UC3);
         Imgproc.cvtColor(ret, test, Imgproc.COLOR_BGRA2RGB);
-        Highgui.imwrite("/sdcard/stitch/pano"+mPictureSize+".jpg",test);
+//        Highgui.imwrite("/sdcard/stitch/pano"+mPictureSize+".jpg",test);
 
         Utils.matToBitmap(ret, bitmap);
         Log.d("JAVA Stitch", "Add Panorama Finished, Size :" + ret.size().width + "," + ret.size().height);
         float[] refinedMatArray = new float[16];
         refinedMat.get(0,0,refinedMatArray);
         float[] refinedQuad = Util.matrixToQuad(refinedMatArray);
+        Log.d("Java Stitch","Refined Matrix : "+Arrays.toString(refinedMatArray));
         Log.d("Java Stitch","Refined Quad : "+Arrays.toString(refinedQuad));
+
+        Log.d("JAVA Stitch","Before Align Quad"+Arrays.toString(Factory.mainController.mQuaternion));
         Factory.mainController.updateQuaternion(refinedQuad,Factory.mainController.mDeltaQuaternion);
+        Log.d("JAVA Stitch", "After Align Quad :"+Arrays.toString(Factory.mainController.mQuaternion));
         mUploadingBitmap = bitmap;
         mBitmapArea = areaFloat;
 //        Factory.getFactory(null).getRSProcessor(null, null).requestAligning();;

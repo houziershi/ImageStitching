@@ -591,7 +591,7 @@ JNIEXPORT void JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	Mat img;
 	char file_str[50]; // enough to hold all numbers up to 64-bits
     sprintf(file_str, "/sdcard/stitch/input%d.jpg", images.size());
-	imwrite(file_str,full_img);
+//	imwrite(file_str,full_img);
 	__android_log_print(ANDROID_LOG_INFO,"C++ AddImage","Recived Full Image Size: %d %d",full_img.size().width,full_img.size().height);
 	resize(full_img, img, Size(), work_scale, work_scale);
 	findDescriptor(img,feature.keypoints,feature.descriptors);
@@ -713,20 +713,20 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	camera_set[0] = cameras[nearest_image];
 	camera_set[1] = cameras[images.size()-1];
 	Mat comparedRot = cameras[images.size()-1].R.clone();
-	printMatrix(camera_set[0].R,"Input 0 Minimized Rot");
-	printMatrix(camera_set[1].R,"Input 1 Minimized Rot");
 	__android_log_print(ANDROID_LOG_DEBUG,"C++ Stitching","Minimized Point %d : %d",src.size(),dst.size());
 	int iterationCount = minimizeRotation(src,dst,camera_set);
 	//Check with ceres minimizer should be best solution
 	__android_log_print(ANDROID_LOG_DEBUG,"C++ Stitching","Minimize Iteration %d",iterationCount);
-
+    printMatrix(comparedRot,"Before");
+    printMatrix(camera_set[1].R,"After");
 	if(isBiggerThanThreshold(comparedRot,camera_set[1].R,0.2)){
-
         __android_log_print(ANDROID_LOG_WARN,"C++ Stitching","Stitch Rejected > 4 degree..");
-	    images.pop_back();
+        images.pop_back();
 		return 0;
 	}
+
 	cameras[images.size()-1].R = camera_set[1].R;
+    images[images.size()-1].param.R = camera_set[1].R;
 	clock_t c_m3 = clock();
 	vector<double> focals;
 	for (size_t i = 0; i < cameras.size(); ++i)
@@ -836,11 +836,11 @@ void printMatrix(Mat tmp,string text){
 	if(mat.type() != CV_32F){
 		tmp.convertTo(mat,CV_32F);
 	}
-	__android_log_print(ANDROID_LOG_VERBOSE, TAG, "Matrix %s############################", text.c_str());
-	__android_log_print(ANDROID_LOG_VERBOSE, TAG, "[%f %f %f]", mat.at<float>(0,0),mat.at<float>(0,1),mat.at<float>(0,2));
-	__android_log_print(ANDROID_LOG_VERBOSE, TAG, "[%f %f %f]", mat.at<float>(1,0),mat.at<float>(1,1),mat.at<float>(1,2));
-	__android_log_print(ANDROID_LOG_VERBOSE, TAG, "[%f %f %f]", mat.at<float>(2,0),mat.at<float>(2,1),mat.at<float>(2,2));
-	__android_log_print(ANDROID_LOG_VERBOSE, TAG, "Matrix ##############################");
+	__android_log_print(ANDROID_LOG_VERBOSE, "C++ Stitching", "Matrix %s############################", text.c_str());
+	__android_log_print(ANDROID_LOG_VERBOSE, "C++ Stitching", "[%f %f %f]", mat.at<float>(0,0),mat.at<float>(0,1),mat.at<float>(0,2));
+	__android_log_print(ANDROID_LOG_VERBOSE, "C++ Stitching", "[%f %f %f]", mat.at<float>(1,0),mat.at<float>(1,1),mat.at<float>(1,2));
+	__android_log_print(ANDROID_LOG_VERBOSE, "C++ Stitching", "[%f %f %f]", mat.at<float>(2,0),mat.at<float>(2,1),mat.at<float>(2,2));
+	__android_log_print(ANDROID_LOG_VERBOSE, "C++ Stitching", "Matrix ##############################");
 }
 inline int glhProjectf(float objx, float objy, float objz, float *modelview, float *projection, int *viewport, float *windowCoordinate) {
 	//Transformation vectors
