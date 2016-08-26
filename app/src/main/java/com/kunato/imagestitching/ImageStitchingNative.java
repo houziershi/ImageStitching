@@ -58,7 +58,7 @@ public class ImageStitchingNative {
         Bitmap bitmap = Bitmap.createBitmap(ret.cols(), ret.rows(), Bitmap.Config.ARGB_8888);
         Mat test = new Mat(ret.height(),ret.width(),CvType.CV_8UC3);
         Imgproc.cvtColor(ret, test, Imgproc.COLOR_BGRA2RGB);
-//        Highgui.imwrite("/sdcard/stitch/pano"+mPictureSize+".jpg",test);
+        Highgui.imwrite("/sdcard/stitch/pano"+mPictureSize+".jpg",test);
 
         Utils.matToBitmap(ret, bitmap);
         Log.d("JAVA Stitch", "Add Panorama Finished, Size :" + ret.size().width + "," + ret.size().height);

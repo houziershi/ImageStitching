@@ -2,8 +2,6 @@
 using namespace std;
 using namespace cv;
 using namespace cv::detail;
-#define BLENDING
-#define PYRAMID
 namespace composer {
     static const float WEIGHT_EPS = 1e-5f;
 
@@ -355,7 +353,7 @@ namespace composer {
     }
 #endif
 #ifdef ALPHA
-
+    Mat dst_;
     Mat idst_, dst_mask_, dst_dt_;
     Rect dst_roi_;
     Mat dst_weight_map_, weight_map_;
@@ -457,4 +455,5 @@ namespace composer {
 
 
 #endif
+
 }

@@ -43,9 +43,9 @@
 //
 //M*/
 #pragma ide diagnostic ignored "ArrayIssue"
-
 #define EXPERIMENT 0
 #include "stitching.h"
+#define GRAPHCUT
 using namespace std;
 using namespace cv;
 using namespace cv::detail;
@@ -65,11 +65,11 @@ void findDescriptor(Mat img,std::vector<KeyPoint> &keypoints ,Mat &descriptor){
     mask.setTo(Scalar::all(255));
     int x_margin = img.rows/3;
     int y_margin = img.cols/3;
-    for(int i = x_margin ; i < img.rows - x_margin;i++){
-        for(int j = y_margin ; j < img.cols - y_margin;j++){
-            mask.at<uchar>(i,j) = 0;
-        }
-    }
+//    for(int i = x_margin ; i < img.rows - x_margin;i++){
+//        for(int j = y_margin ; j < img.cols - y_margin;j++){
+//            mask.at<uchar>(i,j) = 0;
+//        }
+//    }
     cvtColor(img,gray_img,CV_BGR2GRAY);
 	(*detector)(gray_img , mask, keypoints, descriptor, false);
 	descriptor = descriptor.reshape(1, static_cast<int>(keypoints.size()));
@@ -767,7 +767,7 @@ JNIEXPORT jint JNICALL Java_com_kunato_imagestitching_ImageStitchingNative_nativ
 	vector<Point> corners(num_images);
     vector<Size> masks_size(num_images);
     clock_t c_m4 = clock();
-#ifdef SEAM
+#ifdef GRAPHCUT
 	for(int i = 0; i < images.size();i++){
 		corners[i] = images[i].corner;
         images_warped[i] = images[i].image_warped;
